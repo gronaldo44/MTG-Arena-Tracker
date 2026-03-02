@@ -4,6 +4,8 @@ A **standalone** MTG Arena deck tracker that automatically reads your game logs
 
 ## Features
 
+![Match Stats](images/stats.png)
+
 - **Automatic Match Tracking** - Detects matches as you play in real-time
 - **Format Grouping** - Tracks stats for Standard, Alchemy, Historic, Explorer, Pioneer, Timeless, Brawl, and more
 - **Deck Detection** - Automatically identifies your decks with full card lists
@@ -73,6 +75,8 @@ If your game is installed elsewhere, you can configure the path in **Settings**.
 
 ## Dashboard
 
+![Dashboard](images/dashboard.png)
+
 The main dashboard shows:
 - **Match Summary** - Total matches, wins, losses, win rate
 - **Your Collection** - Gems, gold, wildcards, vault progress, packs
@@ -80,6 +84,8 @@ The main dashboard shows:
 - **Recent Matches** - Last 10 matches with deck and result
 
 ## Decks & Cards
+
+![Decks](images/decks.png)
 
 - View all your decks and their win rates
 - Click any deck to see the full card list
