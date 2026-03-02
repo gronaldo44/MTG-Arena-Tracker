@@ -1,0 +1,24 @@
+{
+  "name": "mtg-arena-auto-tracker",
+  "version": "1.0.0",
+  "description": "Standalone MTG Arena auto-tracker - no Overwolf required",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "keywords": [
+    "mtg",
+    "arena",
+    "tracker",
+    "magic"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chokidar": "^3.5.3"
+  },
+  "devDependencies": {
+    "electron": "^40.6.1"
+  }
+}
