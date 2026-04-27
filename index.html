@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -63,75 +64,21 @@
             cursor: pointer;
         }
 
-        .title-bar .minimize { background: var(--warning); }
-        .title-bar .maximize { background: var(--success); }
-        .title-bar .close { background: var(--danger); }
+        .title-bar .minimize {
+            background: var(--warning);
+        }
+
+        .title-bar .maximize {
+            background: var(--success);
+        }
+
+        .title-bar .close {
+            background: var(--danger);
+        }
 
         .title-bar button:hover {
             opacity: 0.8;
             transform: scale(1.1);
-        }
-
-        /* About Page Styles */
-        .about-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .about-item:last-child {
-            border-bottom: none;
-        }
-
-        .about-item .label {
-            color: var(--text-muted);
-        }
-
-        .updates-list {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .update-item {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 15px;
-        }
-
-        .update-version {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--primary);
-            margin-bottom: 5px;
-        }
-
-        .update-date {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 10px;
-        }
-
-        .update-changes {
-            list-style: none;
-            padding: 0;
-        }
-
-        .update-changes li {
-            padding: 5px 0;
-            padding-left: 20px;
-            position: relative;
-            color: var(--text);
-        }
-
-        .update-changes li::before {
-            content: "•";
-            position: absolute;
-            left: 5px;
-            color: var(--primary);
         }
 
         /* Layout */
@@ -161,7 +108,7 @@
         }
 
         .nav-item:hover {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .nav-item.active {
@@ -172,6 +119,18 @@
 
         .nav-item .icon {
             font-size: 18px;
+        }
+
+        /* Draft nav badge */
+        .nav-item .draft-badge {
+            margin-left: auto;
+            background: var(--success);
+            color: #000;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 10px;
+            animation: pulse 2s infinite;
         }
 
         /* Main Content */
@@ -225,11 +184,18 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
         }
 
-        /* Dashboard */
+        /* Page Header */
         .page-header {
             margin-bottom: 25px;
         }
@@ -273,9 +239,17 @@
             font-weight: 700;
         }
 
-        .stat-card.wins .value { color: var(--success); }
-        .stat-card.losses .value { color: var(--danger); }
-        .stat-card.winrate .value { color: var(--primary); }
+        .stat-card.wins .value {
+            color: var(--success);
+        }
+
+        .stat-card.losses .value {
+            color: var(--danger);
+        }
+
+        .stat-card.winrate .value {
+            color: var(--primary);
+        }
 
         /* Format Cards */
         .format-grid {
@@ -366,9 +340,17 @@
             border-left: 4px solid var(--primary);
         }
 
-        .match-item.win { border-left-color: var(--success); }
-        .match-item.loss { border-left-color: var(--danger); }
-        .match-item.draw { border-left-color: var(--warning); }
+        .match-item.win {
+            border-left-color: var(--success);
+        }
+
+        .match-item.loss {
+            border-left-color: var(--danger);
+        }
+
+        .match-item.draw {
+            border-left-color: var(--warning);
+        }
 
         .match-badge {
             padding: 5px 12px;
@@ -378,9 +360,20 @@
             text-transform: uppercase;
         }
 
-        .match-badge.win { background: rgba(34, 197, 94, 0.15); color: var(--success); }
-        .match-badge.loss { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
-        .match-badge.draw { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .match-badge.win {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--success);
+        }
+
+        .match-badge.loss {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+
+        .match-badge.draw {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
 
         .match-info h4 {
             margin-bottom: 4px;
@@ -418,11 +411,16 @@
         }
 
         .data-table tr:hover {
-            background: rgba(255,255,255,0.02);
+            background: rgba(255, 255, 255, 0.02);
         }
 
-        .positive { color: var(--success); }
-        .negative { color: var(--danger); }
+        .positive {
+            color: var(--success);
+        }
+
+        .negative {
+            color: var(--danger);
+        }
 
         /* Buttons */
         .btn {
@@ -517,7 +515,6 @@
             border-color: var(--primary);
         }
 
-        /* Checkbox */
         .checkbox-row {
             display: flex;
             align-items: center;
@@ -594,11 +591,6 @@
             color: var(--warning);
         }
 
-        .inventory-item.wildcards .wc-common { color: #a0aec0; }
-        .inventory-item.wildcards .wc-uncommon { color: #68d391; }
-        .inventory-item.wildcards .wc-rare { color: #63b3ed; }
-        .inventory-item.wildcards .wc-mythic { color: #f6ad55; }
-
         .inventory-item.vault .progress-bar {
             width: 100px;
             height: 6px;
@@ -615,14 +607,14 @@
             transition: width 0.3s ease;
         }
 
-        /* Deck Card Hover */
+        /* Deck Card */
         .deck-card {
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
         .deck-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
         }
 
         /* Modal */
@@ -632,7 +624,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -714,16 +706,457 @@
             padding: 20px;
         }
 
-        /* Deck Lists Grid */
         .deck-lists {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
         }
+
+        /* About */
+        .about-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .about-item:last-child {
+            border-bottom: none;
+        }
+
+        .about-item .label {
+            color: var(--text-muted);
+        }
+
+        .updates-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .update-item {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .update-version {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .update-date {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .update-changes {
+            list-style: none;
+            padding: 0;
+        }
+
+        .update-changes li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+            color: var(--text);
+        }
+
+        .update-changes li::before {
+            content: "•";
+            position: absolute;
+            left: 5px;
+            color: var(--primary);
+        }
+
+        /* Card */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        /* ============================================================
+           DRAFT PAGE STYLES
+           ============================================================ */
+
+        .draft-layout {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 20px;
+            align-items: start;
+        }
+
+        /* Pack panel */
+        .draft-pack-panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .draft-pack-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(93, 95, 239, 0.08);
+        }
+
+        .draft-pack-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .draft-pack-info {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .draft-pack-info span {
+            background: var(--bg);
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        /* Card rows in the pack */
+        .draft-card-list {
+            padding: 8px 0;
+        }
+
+        .draft-card-row {
+            display: grid;
+            grid-template-columns: 28px 1fr 70px 50px;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            transition: background 0.15s;
+        }
+
+        .draft-card-row:last-child {
+            border-bottom: none;
+        }
+
+        .draft-card-row:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        /* Rank number */
+        .draft-rank {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .draft-card-row:nth-child(1) .draft-rank {
+            color: #ffd700;
+        }
+
+        .draft-card-row:nth-child(2) .draft-rank {
+            color: #c0c0c0;
+        }
+
+        .draft-card-row:nth-child(3) .draft-rank {
+            color: #cd7f32;
+        }
+
+        /* Card name + color pip */
+        .draft-card-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            overflow: hidden;
+        }
+
+        .draft-card-name span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .color-pip {
+            flex-shrink: 0;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .color-W {
+            background: #f5f0e0;
+            color: #333;
+        }
+
+        .color-U {
+            background: #1e6daf;
+            color: #fff;
+        }
+
+        .color-B {
+            background: #1a1a1a;
+            color: #aaa;
+            border: 1px solid #444;
+        }
+
+        .color-R {
+            background: #c1160e;
+            color: #fff;
+        }
+
+        .color-G {
+            background: #1a6b3a;
+            color: #fff;
+        }
+
+        .color-multi {
+            background: linear-gradient(135deg, #ffd700, #c1160e);
+            color: #fff;
+        }
+
+        .color-C {
+            background: #888;
+            color: #fff;
+        }
+
+        /* Rarity indicator */
+        .rarity-gem {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .rarity-C {
+            background: #aaa;
+        }
+
+        .rarity-U {
+            background: #7ec8e3;
+        }
+
+        .rarity-R {
+            background: #ffd700;
+        }
+
+        .rarity-M {
+            background: #ff6b35;
+        }
+
+        /* GIH WR pill */
+        .gih-wr {
+            font-size: 13px;
+            font-weight: 700;
+            text-align: right;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        .gih-wr.tier-great {
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.12);
+        }
+
+        .gih-wr.tier-good {
+            color: #86efac;
+            background: rgba(134, 239, 172, 0.10);
+        }
+
+        .gih-wr.tier-avg {
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .gih-wr.tier-below {
+            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.10);
+        }
+
+        .gih-wr.tier-bad {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        .gih-wr.tier-none {
+            color: var(--text-muted);
+            font-weight: 400;
+            font-style: italic;
+        }
+
+        /* Sample size warning */
+        .low-sample-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--warning);
+            flex-shrink: 0;
+            title: "Low sample size";
+        }
+
+        /* Picks history panel */
+        .draft-picks-panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .draft-picks-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+            font-weight: 600;
+            background: rgba(93, 95, 239, 0.08);
+        }
+
+        .draft-picks-list {
+            padding: 4px 0;
+            max-height: 520px;
+            overflow-y: auto;
+        }
+
+        .draft-pick-item {
+            display: grid;
+            grid-template-columns: 32px 1fr 60px;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 12px;
+        }
+
+        .draft-pick-item:last-child {
+            border-bottom: none;
+        }
+
+        .pick-num {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: center;
+            background: var(--bg);
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+
+        .pick-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+
+        .pick-wr {
+            text-align: right;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* Draft status / no-draft state */
+        .draft-waiting {
+            text-align: center;
+            padding: 80px 40px;
+            color: var(--text-muted);
+        }
+
+        .draft-waiting .icon {
+            font-size: 56px;
+            margin-bottom: 20px;
+        }
+
+        .draft-waiting h3 {
+            font-size: 20px;
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+
+        .draft-waiting p {
+            margin-bottom: 6px;
+            line-height: 1.6;
+        }
+
+        /* 17Lands status banner */
+        .csv-status-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            border: 1px solid;
+        }
+
+        .csv-status-banner.loaded {
+            background: rgba(34, 197, 94, 0.08);
+            border-color: rgba(34, 197, 94, 0.3);
+            color: var(--success);
+        }
+
+        .csv-status-banner.not-loaded {
+            background: rgba(245, 158, 11, 0.08);
+            border-color: rgba(245, 158, 11, 0.3);
+            color: var(--warning);
+        }
+
+        .csv-status-banner .csv-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .csv-status-banner .btn {
+            padding: 6px 14px;
+            font-size: 12px;
+        }
+
+        /* Draft legend */
+        .draft-legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 10px 16px;
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
     </style>
 </head>
+
 <body>
-    <!-- Title Bar -->
     <div class="title-bar">
         <div class="title">MTG Arena Tracker</div>
         <div class="controls">
@@ -734,11 +1167,14 @@
     </div>
 
     <div class="app">
-        <!-- Sidebar -->
         <nav class="sidebar">
             <div class="nav-item active" onclick="showPage('dashboard')">
                 <span class="icon">📊</span>
                 <span>Dashboard</span>
+            </div>
+            <div class="nav-item" onclick="showPage('draft')" id="nav-draft">
+                <span class="icon">🎲</span>
+                <span>Draft</span>
             </div>
             <div class="nav-item" onclick="showPage('matches')">
                 <span class="icon">🎮</span>
@@ -762,7 +1198,6 @@
             </div>
         </nav>
 
-        <!-- Main Content -->
         <main class="main">
             <!-- Dashboard Page -->
             <div class="page active" id="page-dashboard">
@@ -770,7 +1205,6 @@
                     <h1>Dashboard</h1>
                     <p>Your MTG Arena performance at a glance</p>
                 </div>
-
                 <div class="stats-grid" id="dashboard-stats">
                     <div class="stat-card">
                         <h3>Total Matches</h3>
@@ -789,7 +1223,6 @@
                         <div class="value" id="stat-winrate">0%</div>
                     </div>
                 </div>
-
                 <h2 style="margin-bottom: 20px;">Your Collection</h2>
                 <div id="inventory-widget">
                     <div class="empty-state">
@@ -797,7 +1230,6 @@
                         <p>No inventory data yet. Play a match to update your collection info.</p>
                     </div>
                 </div>
-
                 <h2 style="margin-bottom: 20px;">Performance by Format</h2>
                 <div class="format-grid" id="format-stats">
                     <div class="empty-state" style="grid-column: 1 / -1;">
@@ -805,13 +1237,83 @@
                         <p>No matches recorded yet. Start playing MTG Arena!</p>
                     </div>
                 </div>
-
                 <h2 style="margin-bottom: 20px;">Recent Matches</h2>
                 <div class="match-list" id="recent-matches">
                     <div class="empty-state">
                         <div class="icon">📝</div>
                         <p>No matches yet. Your matches will appear here automatically.</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Draft Page -->
+            <div class="page" id="page-draft">
+                <div class="page-header">
+                    <h1>Draft Assistant</h1>
+                    <p>Live pack ratings powered by 17Lands data</p>
+                </div>
+
+                <!-- 17Lands CSV status banner -->
+                <div class="csv-status-banner not-loaded" id="csv-status-banner">
+                    <div class="csv-info">
+                        <span id="csv-status-icon">⚠️</span>
+                        <span id="csv-status-text">No 17Lands data loaded — ratings unavailable</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="loadCsvFile()">Load CSV</button>
+                </div>
+
+                <!-- Content: shown when draft is active -->
+                <div id="draft-active" style="display:none;">
+                    <div class="draft-layout">
+                        <!-- Current pack -->
+                        <div class="draft-pack-panel">
+                            <div class="draft-pack-header">
+                                <h3>Current Pack</h3>
+                                <div class="draft-pack-info">
+                                    <span id="draft-pack-num">Pack 1</span>
+                                    <span id="draft-pick-num">Pick 1</span>
+                                    <span id="draft-cards-left">0 cards</span>
+                                </div>
+                            </div>
+                            <div class="draft-card-list" id="draft-card-list"></div>
+                            <div class="draft-legend">
+                                <span>GIH WR tiers:</span>
+                                <span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>
+                                    ≥63%</span>
+                                <span class="legend-item"><span class="legend-dot" style="background:#86efac"></span>
+                                    60–63%</span>
+                                <span class="legend-item"><span class="legend-dot" style="background:#888"></span>
+                                    57–60%</span>
+                                <span class="legend-item"><span class="legend-dot" style="background:#fca5a5"></span>
+                                    54–57%</span>
+                                <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>
+                                    &lt;54%</span>
+                                <span class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>
+                                    Low sample</span>
+                            </div>
+                        </div>
+
+                        <!-- Picks so far -->
+                        <div class="draft-picks-panel">
+                            <div class="draft-picks-header">My Picks (<span id="picks-count">0</span>)</div>
+                            <div class="draft-picks-list" id="draft-picks-list">
+                                <div
+                                    style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">
+                                    No picks yet</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Waiting state: shown when no draft in progress -->
+                <div id="draft-waiting" class="draft-waiting">
+                    <div class="icon">🎲</div>
+                    <h3>No draft in progress</h3>
+                    <p>Start a draft in MTG Arena and this panel will populate automatically.</p>
+                    <p style="margin-top: 16px; font-size: 13px;">
+                        For ratings, download the card ratings CSV for your set from
+                        <strong>17lands.com/card-ratings</strong> and click <strong>Load CSV</strong> above.
+                    </p>
                 </div>
             </div>
 
@@ -849,7 +1351,6 @@
                     <h1>Statistics</h1>
                     <p>Detailed performance analysis</p>
                 </div>
-
                 <h2 style="margin-bottom: 20px;">Format Breakdown</h2>
                 <table class="data-table" id="stats-formats-table">
                     <thead>
@@ -864,7 +1365,6 @@
                     </thead>
                     <tbody></tbody>
                 </table>
-
                 <h2 style="margin: 30px 0 20px;">Deck Performance</h2>
                 <table class="data-table" id="stats-decks-table">
                     <thead>
@@ -900,9 +1400,22 @@
                         <span>Scan log for matches now</span>
                         <button class="btn btn-primary" onclick="scanLogNow()">Scan Now</button>
                     </div>
-                    <small style="color: var(--text-muted);">
-                        Default: %USERPROFILE%\AppData\LocalLow\Wizards Of The Coast\MTGA\Player.log
-                    </small>
+                    <small style="color: var(--text-muted);">Default: %USERPROFILE%\AppData\LocalLow\Wizards Of The
+                        Coast\MTGA\Player.log</small>
+                </div>
+
+                <div class="settings-group">
+                    <h3>Draft Assistant — 17Lands Data</h3>
+                    <div class="form-row">
+                        <div>
+                            <div id="settings-csv-status">No CSV loaded</div>
+                            <small style="color: var(--text-muted);" id="settings-csv-details">
+                                Download a card ratings CSV from 17lands.com/card-ratings for the set you are drafting.
+                                Re-download whenever you want fresher data.
+                            </small>
+                        </div>
+                        <button class="btn btn-primary" onclick="loadCsvFile()">Load CSV</button>
+                    </div>
                 </div>
 
                 <div class="settings-group">
@@ -935,7 +1448,8 @@
                         <button class="btn btn-primary" onclick="updateCardDatabase()">Update Now</button>
                     </div>
                     <small style="color: var(--text-muted);">
-                        The card database is automatically updated from Scryfall when needed. Last updated: <span id="card-db-last-update">Unknown</span>
+                        The card database is automatically updated from Scryfall when needed. Last updated: <span
+                            id="card-db-last-update">Unknown</span>
                     </small>
                 </div>
 
@@ -944,10 +1458,9 @@
                     <div class="form-row">
                         <div>
                             <div>Inventory data updates when MTG Arena writes to the log</div>
-                            <small style="color: var(--text-muted);">
-                                Note: Pack/gold counts shown may not match in-game if earned after MTG Arena started.
-                                <br>Restart MTG Arena for the tracker to see the latest inventory.
-                            </small>
+                            <small style="color: var(--text-muted);">Note: Pack/gold counts shown may not match in-game
+                                if earned after MTG Arena started. Restart MTG Arena for the tracker to see the latest
+                                inventory.</small>
                         </div>
                         <button class="btn btn-primary" onclick="scanLogNow()">Scan Now</button>
                     </div>
@@ -955,18 +1468,12 @@
 
                 <div class="settings-group">
                     <h3>Data Management</h3>
-                    <div class="form-row">
-                        <span>Export all your match data</span>
-                        <button class="btn btn-secondary" onclick="exportData()">Export</button>
-                    </div>
-                    <div class="form-row">
-                        <span>Import data from backup</span>
-                        <button class="btn btn-secondary" onclick="importData()">Import</button>
-                    </div>
-                    <div class="form-row">
-                        <span style="color: var(--danger);">Delete all match data</span>
-                        <button class="btn btn-danger" onclick="clearAllData()">Clear Data</button>
-                    </div>
+                    <div class="form-row"><span>Export all your match data</span><button class="btn btn-secondary"
+                            onclick="exportData()">Export</button></div>
+                    <div class="form-row"><span>Import data from backup</span><button class="btn btn-secondary"
+                            onclick="importData()">Import</button></div>
+                    <div class="form-row"><span style="color: var(--danger);">Delete all match data</span><button
+                            class="btn btn-danger" onclick="clearAllData()">Clear Data</button></div>
                 </div>
 
                 <div style="margin-top: 20px;">
@@ -978,28 +1485,36 @@
             <div class="page" id="page-about">
                 <div class="page-header">
                     <h1>About</h1>
-                    <p>MTG Arena Tracker - Track your matches and stats</p>
+                    <p>MTG Arena Tracker — Track your matches and draft smarter</p>
                 </div>
-
                 <div class="card">
                     <h3>Version</h3>
                     <div class="about-item">
                         <span class="label">Current Version:</span>
-                        <span class="value" style="font-size: 18px; font-weight: 600; color: var(--primary);">v0.0.1</span>
+                        <span class="value"
+                            style="font-size: 18px; font-weight: 600; color: var(--primary);">v0.1.0</span>
                     </div>
                 </div>
-
                 <div class="card">
                     <h3>GitHub Repository</h3>
-                    <p style="margin-bottom: 15px;">View the source code, report issues, or contribute to the project:</p>
-                    <a href="#" onclick="openExternalLink('https://github.com/Shalkith/MTG-Arena-Tracker')" class="btn btn-primary">
-                        🐙 Open GitHub Repository
-                    </a>
+                    <p style="margin-bottom: 15px;">View the source code, report issues, or contribute to the project:
+                    </p>
+                    <a href="#" onclick="openExternalLink('https://github.com/Shalkith/MTG-Arena-Tracker')"
+                        class="btn btn-primary">🐙 Open GitHub Repository</a>
                 </div>
-
                 <div class="card">
                     <h3>Recent Updates</h3>
                     <div class="updates-list">
+                        <div class="update-item">
+                            <div class="update-version">v0.1.0</div>
+                            <div class="update-date">2026-04-26</div>
+                            <ul class="update-changes">
+                                <li>Draft Assistant: live pack ratings from 17Lands CSV data</li>
+                                <li>GIH WR displayed and colour-coded for every card in the pack</li>
+                                <li>Pick history panel tracks your selections with ratings</li>
+                                <li>Low sample-size warnings on unreliable data points</li>
+                            </ul>
+                        </div>
                         <div class="update-item">
                             <div class="update-version">v0.0.1</div>
                             <div class="update-date">2026-03-01</div>
@@ -1016,28 +1531,32 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="card">
                     <h3>Credits</h3>
                     <p>Built with ❤️ using:</p>
                     <ul style="color: var(--text-muted); margin-top: 10px;">
-                        <li><a href="#" onclick="openExternalLink('https://electronjs.org')">Electron</a> - Desktop app framework</li>
-                        <li><a href="#" onclick="openExternalLink('https://scryfall.com')">Scryfall</a> - Card database API</li>
-                        <li><a href="#" onclick="openExternalLink('https://github.com/paulmillr/chokidar')">Chokidar</a> - File watching</li>
+                        <li><a href="#" onclick="openExternalLink('https://electronjs.org')">Electron</a> — Desktop app
+                            framework</li>
+                        <li><a href="#" onclick="openExternalLink('https://scryfall.com')">Scryfall</a> — Card database
+                            API</li>
+                        <li><a href="#" onclick="openExternalLink('https://17lands.com')">17Lands</a> — Draft data
+                            (user-supplied CSV)</li>
+                        <li><a href="#" onclick="openExternalLink('https://github.com/paulmillr/chokidar')">Chokidar</a>
+                            — File watching</li>
                     </ul>
                 </div>
             </div>
         </main>
 
-        <!-- Status Bar -->
         <div class="status-bar">
             <div class="status-indicator" id="status-indicator">
                 <div class="dot"></div>
-                <span id="status-text">Connected - Watching for matches</span>
+                <span id="status-text">Connected — Watching for matches</span>
             </div>
         </div>
     </div>
 
     <script src="renderer.js"></script>
 </body>
+
 </html>

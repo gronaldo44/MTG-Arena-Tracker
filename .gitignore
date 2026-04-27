@@ -50,3 +50,6 @@ temp/
 
 # Downloaded files
 cards.json
+
+# My python scripts
+*.py

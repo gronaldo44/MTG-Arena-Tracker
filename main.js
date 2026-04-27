@@ -5,6 +5,8 @@ const chokidar = require('chokidar');
 const LogParser = require('./logParserV5');
 const DataStore = require('./dataStore');
 const CardUpdater = require('./cardUpdater');
+const DraftAssistant = require('./draftAssistant');
+const { clear } = require('console');
 
 let mainWindow;
 let tray;
@@ -12,10 +14,25 @@ let logWatcher;
 let parser;
 let dataStore;
 let cardUpdater;
+let draftAssistant = new DraftAssistant();
 let isQuitting = false;
+let scanInterval;
+
+let cards = {};
+
+function loadCards() {
+  try {
+    const cardsPath = path.join(__dirname, 'cards.json');
+    const data = JSON.parse(fs.readFileSync(cardsPath, 'utf8'));
+    cards = data.cards || {};
+    console.log(`[Cards] Loaded ${Object.keys(cards).length} cards`);
+  } catch (e) {
+    console.error('[Cards] Failed to load cards:', e);
+    cards = {};
+  }
+}
 
 // Default log path for MTG Arena on Windows
-// MTG Arena uses "Player.log" but sometimes "output_log.txt"
 const MTGA_LOG_DIR = path.join(
   process.env.USERPROFILE || process.env.HOME,
   'AppData',
@@ -25,7 +42,6 @@ const MTGA_LOG_DIR = path.join(
 );
 
 function getLogPath() {
-  // Try Player.log first, then output_log.txt
   const playerLog = path.join(MTGA_LOG_DIR, 'Player.log');
   const outputLog = path.join(MTGA_LOG_DIR, 'output_log.txt');
 
@@ -38,7 +54,6 @@ function getLogPath() {
     return outputLog;
   }
 
-  // Return default even if not found, so user can see error
   return playerLog;
 }
 
@@ -53,13 +68,12 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: false
     },
-    frame: false, // Borderless window
-    show: false // Don't show until ready
+    frame: false,
+    show: false
   });
 
   mainWindow.loadFile('index.html');
 
-  // Show window when ready to prevent flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
@@ -77,15 +91,12 @@ function createWindow() {
 }
 
 function createTray() {
-  // Use a default icon or create one if needed
   let iconPath;
   try {
-    // Try to use the app icon if available, otherwise use nativeImage
     const trayIconPath = path.join(__dirname, 'tray-icon.png');
     if (fs.existsSync(trayIconPath)) {
       iconPath = trayIconPath;
     } else {
-      // Use an empty native image as fallback
       iconPath = null;
     }
   } catch (e) {
@@ -96,7 +107,6 @@ function createTray() {
     if (iconPath) {
       tray = new Tray(iconPath);
     } else {
-      // Create a simple 16x16 transparent icon programmatically
       const { nativeImage } = require('electron');
       const emptyIcon = nativeImage.createEmpty();
       tray = new Tray(emptyIcon);
@@ -178,32 +188,7 @@ function updateTrayStatus(message) {
 }
 
 function startLogWatcher(logPath) {
-  if (logWatcher) {
-    logWatcher.close();
-  }
-
-  // Create parser
-  parser = new LogParser();
-  // dataStore is now created in app.whenReady() after card update
-
-  // Check if log file exists
-  if (!fs.existsSync(logPath)) {
-    console.log('Log file not found at:', logPath);
-    updateTrayStatus('Log file not found - Check settings');
-    return false;
-  }
-
-  // Watch the log file
-  logWatcher = chokidar.watch(logPath, {
-    persistent: true,
-    usePolling: true,
-    interval: 1000,
-    binaryInterval: 1000,
-    awaitWriteFinish: {
-      stabilityThreshold: 500,
-      pollInterval: 100
-    }
-  });
+  if (scanInterval) clearInterval(scanInterval);
 
   let lastSize = 0;
   try {
@@ -214,24 +199,21 @@ function startLogWatcher(logPath) {
     console.error('Error getting initial file size:', e);
   }
 
-  // Periodic full re-parse to catch new events
-  // This is more reliable than trying to parse only new data
-  console.log('[AutoScan] Starting auto-scan every 2 seconds...');
-  setInterval(async () => {
+  scanInterval = setInterval(async () => {
     try {
       const stats = fs.statSync(logPath);
       const currentSize = stats.size;
 
       if (currentSize > 0) {
-        const fullData = fs.readFileSync(logPath, 'utf8');
-
-        // Only re-parse if size changed significantly or periodically
         if (Math.abs(currentSize - lastSize) > 100 || !lastSize) {
           lastSize = currentSize;
+          const fullData = fs.readFileSync(logPath, 'utf8');
 
-          // Create fresh parser to avoid state issues
-          const freshParser = new LogParser();
-          const events = freshParser.parse(fullData);
+          if (!parser) {
+            parser = new LogParser();
+          }
+
+          const events = parser.parse(fullData);
 
           if (events.length > 0) {
             console.log(`[AutoScan] Parsed ${events.length} events from full log`);
@@ -252,9 +234,33 @@ function startLogWatcher(logPath) {
     } catch (error) {
       console.error('[AutoScan] Error in periodic log check:', error);
     }
-  }, 2000); // Check every 2 seconds
+  }, 2000);
 
-  // Also watch for file changes (for when log rotates)
+  if (logWatcher) {
+    logWatcher.close();
+  }
+
+  parser = new LogParser();
+
+  if (!fs.existsSync(logPath)) {
+    console.log('Log file not found at:', logPath);
+    updateTrayStatus('Log file not found - Check settings');
+    return false;
+  }
+
+  logWatcher = chokidar.watch(logPath, {
+    persistent: true,
+    usePolling: true,
+    interval: 1000,
+    binaryInterval: 1000,
+    awaitWriteFinish: {
+      stabilityThreshold: 500,
+      pollInterval: 100
+    }
+  });
+
+  console.log('[AutoScan] Starting auto-scan every 2 seconds...');
+
   logWatcher.on('change', async (filePath) => {
     try {
       const stats = fs.statSync(filePath);
@@ -266,10 +272,11 @@ function startLogWatcher(logPath) {
         const fullData = fs.readFileSync(filePath, 'utf8');
         lastSize = fullData.length;
 
-        // Create fresh parser
-        const freshParser = new LogParser();
-        const events = freshParser.parse(fullData);
+        if (!parser) {
+          parser = new LogParser();
+        }
 
+        const events = parser.parse(fullData);
         for (const event of events) {
           handleGameEvent(event);
         }
@@ -306,18 +313,15 @@ function handleGameEvent(event) {
       break;
 
     case 'GAME_END':
-      // Individual game ended - store for later
       console.log('Game ended, result:', event.data.result);
       break;
 
     case 'MATCH_END':
-      // Match completed
       try {
         dataStore.addMatch(event.data);
         console.log('Match saved:', event.data);
         updateTrayStatus(`Match ended: ${event.data.result}`);
 
-        // Save deck with card data if available
         if (event.data.playerDeck) {
           console.log('[Deck Save] Saving deck with card data:', JSON.stringify(event.data.playerDeck));
           dataStore.addDeck({
@@ -332,23 +336,15 @@ function handleGameEvent(event) {
           console.log('[Deck Save] No playerDeck data found in event');
         }
 
-        // Send notification
         if (mainWindow) {
           mainWindow.webContents.send('match-ended', event.data);
         }
 
-        // Show tray notification (if enabled in settings)
         const settings = dataStore.getSettings();
-        console.log('[Notification] Settings:', settings);
-        console.log('[Notification] Tray available:', !!tray);
-        console.log('[Notification] Show notifications:', settings.showNotifications);
-
         if (tray && settings.showNotifications !== false) {
           const result = event.data.result;
           const emoji = result === 'win' ? '🏆' : result === 'loss' ? '❌' : '🤝';
-          console.log('[Notification] Displaying notification');
 
-          // Use balloon on Windows, native on other platforms
           if (process.platform === 'win32') {
             tray.displayBalloon({
               title: 'MTG Arena Tracker',
@@ -363,8 +359,6 @@ function handleGameEvent(event) {
             });
             notif.show();
           }
-        } else {
-          console.log('[Notification] Skipping notification - disabled or no tray');
         }
       } catch (e) {
         console.error('Error handling match end:', e);
@@ -372,7 +366,6 @@ function handleGameEvent(event) {
       break;
 
     case 'INVENTORY_UPDATE':
-      // Inventory data updated
       try {
         dataStore.updateInventory(event.data);
         console.log('[Inventory] Updated:', event.data.gems, 'gems,', event.data.gold, 'gold,', event.data.totalVaultProgress, 'vault progress');
@@ -386,14 +379,38 @@ function handleGameEvent(event) {
       break;
 
     case 'DECK_SUBMISSION':
-      // Deck submitted for a match
       if (mainWindow) {
         mainWindow.webContents.send('deck-submitted', event.data);
       }
       break;
 
     case 'GRE_TO_CLIENT':
-      // Game state events
+      break;
+
+    case 'DRAFT_UPDATE':
+      if (mainWindow) {
+        const packData = event.data.currentPack;
+        const resolvedOptions = packData ? resolveCards(packData.options) : [];
+
+        // Rank the pack by GIH WR if a CSV is loaded; otherwise pass through unranked
+        const rankedOptions = draftAssistant.isLoaded()
+          ? draftAssistant.rankPack(resolvedOptions)
+          : resolvedOptions.map(c => ({ ...c, gihWr: null, lowSample: true, stats: null }));
+
+        mainWindow.webContents.send('draft-update', {
+          draftId: event.data.draftId,
+          currentPack: packData
+            ? { ...packData, options: rankedOptions }
+            : null,
+          picks: event.data.picks.map(p => ({
+            ...p,
+            picked: resolveCard(p.picked),
+            options: resolveCards(p.options)
+          })),
+          assistantLoaded: draftAssistant.isLoaded(),
+          assistantStatus: draftAssistant.getStatus(),
+        });
+      }
       break;
   }
 }
@@ -402,6 +419,32 @@ function handleGameEvent(event) {
 ipcMain.handle('get-inventory', async () => {
   if (!dataStore) return null;
   return dataStore.getInventory();
+});
+
+// Let the user pick a 17Lands CSV via file dialog
+ipcMain.handle('load-17lands-csv', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select 17Lands CSV',
+    filters: [{ name: 'CSV Files', extensions: ['csv'] }],
+    properties: ['openFile'],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { success: false, reason: 'cancelled' };
+  }
+
+  try {
+    const info = draftAssistant.loadCSV(result.filePaths[0]);
+    return { success: true, ...info };
+  } catch (e) {
+    console.error('[DraftAssistant] Failed to load CSV:', e.message);
+    return { success: false, reason: e.message };
+  }
+});
+ 
+// Return current assistant status (for the settings/status UI)
+ipcMain.handle('get-draft-assistant-status', async () => {
+  return draftAssistant.getStatus();
 });
 
 ipcMain.handle('get-card-name', async (event, cardId) => {
@@ -413,7 +456,6 @@ ipcMain.handle('get-deck', async (event, deckId) => {
   if (!dataStore) return null;
   const deck = dataStore.getDeck(deckId);
   if (deck) {
-    // Add card names to the deck data
     const mainDeckWithNames = deck.mainDeck.map(cardId => ({
       cardId,
       name: dataStore.getCardName(cardId)
@@ -441,7 +483,6 @@ ipcMain.handle('get-stats', async () => {
   return dataStore.getStats();
 });
 
-// Window control handlers
 ipcMain.on('minimize-window', () => {
   if (mainWindow) mainWindow.minimize();
 });
@@ -510,7 +551,6 @@ ipcMain.handle('import-data', async () => {
   return false;
 });
 
-// Debug: manually trigger a log read
 ipcMain.handle('refresh-log', async () => {
   const logPath = getLogPath();
   if (fs.existsSync(logPath)) {
@@ -520,7 +560,6 @@ ipcMain.handle('refresh-log', async () => {
       const events = freshParser.parse(data);
       console.log(`[Manual Refresh] Parsed ${events.length} events from ${data.length} bytes`);
 
-      // Actually save the events!
       let matchCount = 0;
       let inventoryUpdated = false;
       for (const event of events) {
@@ -562,7 +601,6 @@ ipcMain.handle('save-settings', async (event, settings) => {
   return true;
 });
 
-// Card database management
 ipcMain.handle('get-card-db-status', async () => {
   try {
     const cardsPath = path.join(__dirname, 'cards.json');
@@ -594,10 +632,11 @@ ipcMain.handle('update-card-db', async () => {
   try {
     const result = await cardUpdater.update();
 
-    // Reload cards in data store
     if (dataStore) {
       dataStore.reloadCards();
     }
+
+    loadCards();
 
     return {
       success: true,
@@ -612,11 +651,6 @@ ipcMain.handle('update-card-db', async () => {
   }
 });
 
-// Window controls
-ipcMain.on('minimize-window', () => {
-  if (mainWindow) mainWindow.minimize();
-});
-
 ipcMain.on('maximize-window', () => {
   if (mainWindow) {
     if (mainWindow.isMaximized()) {
@@ -627,22 +661,14 @@ ipcMain.on('maximize-window', () => {
   }
 });
 
-ipcMain.on('close-window', () => {
-  if (mainWindow) mainWindow.close();
-});
-
-// Open external link
 ipcMain.on('open-external', (event, url) => {
   console.log('[External Link] Opening:', url);
   shell.openExternal(url);
 });
 
-// Test notification
 ipcMain.handle('test-notification', async () => {
   try {
     const settings = dataStore.getSettings();
-    console.log('[Test Notification] Settings:', settings);
-    console.log('[Test Notification] Tray available:', !!tray);
 
     if (!tray) {
       return { success: false, error: 'Tray not available' };
@@ -652,12 +678,7 @@ ipcMain.handle('test-notification', async () => {
       return { success: false, error: 'Notifications are disabled in settings' };
     }
 
-    // Check if we're on Windows (balloon notifications only work reliably there)
     const isWindows = process.platform === 'win32';
-    console.log('[Test Notification] Platform:', process.platform);
-
-    // Show notification - try balloon first (Windows), fallback to native
-    let notificationMethod = 'balloon';
 
     if (isWindows) {
       tray.displayBalloon({
@@ -665,34 +686,20 @@ ipcMain.handle('test-notification', async () => {
         content: '🏆 This is a test notification! Match ended: WIN',
         iconType: 'info'
       });
-      console.log('[Test Notification] Balloon displayed');
     } else {
-      // Use native Notification API for non-Windows platforms
-      notificationMethod = 'native';
       const notification = new Notification({
         title: 'MTG Arena Tracker - Test',
         body: '🏆 This is a test notification! Match ended: WIN',
         icon: path.join(__dirname, 'icon.png')
       });
       notification.show();
-      console.log('[Test Notification] Native notification displayed');
     }
 
-    // Return platform info for troubleshooting
     return {
       success: true,
       platform: process.platform,
       isWindows,
-      method: isWindows ? 'balloon' : 'native',
-      troubleshooting: isWindows ? [
-        'Notification sent to Windows tray. If you don\'t see it:',
-        '1. Check Windows Settings → System → Notifications',
-        '2. Make sure "MTG Arena Tracker" is allowed to show notifications',
-        '3. Check Focus Assist is not blocking notifications (Win+A)',
-        '4. Look in the system tray area for the notification icon',
-        '5. Some notifications only show in Action Center (bottom-right corner)',
-        '6. Try running the app as Administrator if notifications still don\'t appear'
-      ].join('\n') : 'Using native notification API'
+      method: isWindows ? 'balloon' : 'native'
     };
   } catch (error) {
     console.error('[Test Notification] Error:', error);
@@ -700,12 +707,10 @@ ipcMain.handle('test-notification', async () => {
   }
 });
 
-// App event handlers
 app.whenReady().then(async () => {
   createWindow();
   createTray();
 
-  // Update card database on launch
   console.log('[App] Checking for card database updates...');
   cardUpdater = new CardUpdater();
 
@@ -718,13 +723,12 @@ app.whenReady().then(async () => {
     }
   } catch (error) {
     console.error('[App] Failed to update card database:', error.message);
-    // Continue anyway - we'll use existing cards or empty database
   }
 
-  // Create data store (will load the updated cards)
   dataStore = new DataStore();
 
-  // Start watching the log file
+  loadCards();
+
   const logPath = getLogPath();
   console.log('Using log path:', logPath);
   startLogWatcher(logPath);
@@ -749,7 +753,6 @@ app.on('before-quit', () => {
   }
 });
 
-// Handle app single instance
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
@@ -761,4 +764,26 @@ if (!gotTheLock) {
       mainWindow.focus();
     }
   });
+}
+
+function resolveCard(grpId) {
+  const card = cards[String(grpId)];
+
+  if (!card) {
+    return {
+      arena_id: grpId,
+      name: `Unknown (${grpId})`
+    };
+  }
+
+  return {
+    arena_id: grpId,
+    name: card.name,
+    manaCost: card.manaCost,
+    type: card.type
+  };
+}
+
+function resolveCards(ids) {
+  return ids.map(resolveCard);
 }
