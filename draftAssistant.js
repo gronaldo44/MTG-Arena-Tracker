@@ -48,6 +48,12 @@ class DraftAssistant {
     this.cardStats = new Map();
     this.csvPath = null;
     this.setName = null; // derived from the filename, e.g. "card-ratings-2026-04-26"
+
+    // Set-level statistics computed when a CSV is loaded.
+    // Used to assign relative quality tiers (mythic/gold/silver/black/brown).
+    this.setMean   = 0;
+    this.setStdDev = 1;
+    this.top20Set  = new Set(); // lowercase names of the 20 highest GIH WR cards
   }
 
   // ---------------------------------------------------------------------------
@@ -73,7 +79,9 @@ class DraftAssistant {
     this.csvPath = filePath;
     this.setName = path.basename(filePath, '.csv');
 
-    console.log(`[DraftAssistant] Loaded ${this.cardStats.size} cards from "${this.setName}"`);
+    this._computeSetStats();
+
+    console.log(`[DraftAssistant] Loaded ${this.cardStats.size} cards from "${this.setName}" (mean GIH WR: ${(this.setMean * 100).toFixed(1)}%, σ: ${(this.setStdDev * 100).toFixed(1)}%)`);
     return { cardCount: this.cardStats.size, setName: this.setName };
   }
 
@@ -95,6 +103,37 @@ class DraftAssistant {
   }
 
   /**
+   * Assign a quality tier to a single card based on set-relative statistics.
+   *
+   * Tiers (best to worst):
+   *   'mythic' — one of the top 20 cards in the set by GIH WR
+   *   'gold'   — z-score > +0.75 (significantly above average)
+   *   'silver' — z-score > +0.25 (slightly above average)
+   *   'black'  — z-score > -0.50 (roughly average)
+   *   'brown'  — z-score ≤ -0.50 (below average)
+   *   'none'   — no reliable data (null WR or low sample)
+   *
+   * @param {number|null} gihWr
+   * @param {string}      cardName
+   * @param {boolean}     lowSample
+   * @returns {'mythic'|'gold'|'silver'|'black'|'brown'|'none'}
+   */
+  getCardTier(gihWr, cardName, lowSample) {
+    if (gihWr === null || lowSample) return 'none';
+
+    if (this.top20Set.has((cardName || '').toLowerCase())) return 'mythic';
+
+    const z = this.setStdDev > 0
+      ? (gihWr - this.setMean) / this.setStdDev
+      : 0;
+
+    if (z > 0.75) return 'gold';
+    if (z > 0.25) return 'silver';
+    if (z > -0.50) return 'black';
+    return 'brown';
+  }
+
+  /**
    * Given an array of resolved card objects (from resolveCards in main.js),
    * return them sorted best-to-worst by GIH WR with stats attached.
    *
@@ -106,12 +145,15 @@ class DraftAssistant {
   rankPack(resolvedCards) {
     const ranked = resolvedCards.map(card => {
       const stats = this.getCardStats(card.name);
+      const gihWr = stats?.gihWr ?? null;
+      const lowSample = stats ? stats.lowSample : true;
       return {
         ...card,
         stats: stats ?? null,
-        gihWr: stats?.gihWr ?? null,
+        gihWr,
         gihCount: stats?.gihCount ?? 0,
-        lowSample: stats ? stats.lowSample : true,
+        lowSample,
+        tier: this.getCardTier(gihWr, card.name, lowSample),
       };
     });
 
@@ -163,6 +205,37 @@ class DraftAssistant {
   // ---------------------------------------------------------------------------
   // Internal helpers
   // ---------------------------------------------------------------------------
+
+  /**
+   * Compute set-level GIH WR statistics from the loaded cardStats.
+   * Stores mean, standard deviation, and the top-20 card name set.
+   * Only cards with reliable data (non-null, non-low-sample WR) are included.
+   */
+  _computeSetStats() {
+    const rates = [];
+    for (const stats of this.cardStats.values()) {
+      if (stats.gihWr !== null && !stats.lowSample) {
+        rates.push({ name: stats.name.toLowerCase(), gihWr: stats.gihWr });
+      }
+    }
+
+    if (rates.length === 0) {
+      this.setMean   = 0;
+      this.setStdDev = 1;
+      this.top20Set  = new Set();
+      return;
+    }
+
+    const values = rates.map(r => r.gihWr);
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
+
+    this.setMean   = mean;
+    this.setStdDev = Math.sqrt(variance) || 1; // guard against all-identical WRs
+
+    rates.sort((a, b) => b.gihWr - a.gihWr);
+    this.top20Set = new Set(rates.slice(0, 20).map(r => r.name));
+  }
 
   /**
    * Parse the full CSV text into a Map of lowercase-name → stats.
