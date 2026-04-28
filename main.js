@@ -402,11 +402,16 @@ function handleGameEvent(event) {
           currentPack: packData
             ? { ...packData, options: rankedOptions }
             : null,
-          picks: event.data.picks.map(p => ({
-            ...p,
-            picked: resolveCard(p.picked),
-            options: resolveCards(p.options)
-          })),
+          picks: event.data.picks.map(p => {
+            const picked = resolveCard(p.picked);
+            if (draftAssistant.isLoaded() && picked.name) {
+              const s = draftAssistant.getCardStats(picked.name);
+              picked.gihWr     = s?.gihWr ?? null;
+              picked.lowSample = s ? s.lowSample : true;
+              picked.tier      = draftAssistant.getCardTier(picked.gihWr, picked.name, picked.lowSample);
+            }
+            return { ...p, picked, options: resolveCards(p.options) };
+          }),
           assistantLoaded: draftAssistant.isLoaded(),
           assistantStatus: draftAssistant.getStatus(),
         });
