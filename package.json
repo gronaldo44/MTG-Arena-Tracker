@@ -5,7 +5,14 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "jest": {
+    "testMatch": ["<rootDir>/tests/test_*.js"],
+    "testEnvironment": "node",
+    "transform": {}
   },
   "keywords": [
     "mtg",
@@ -19,6 +26,7 @@
     "chokidar": "^3.5.3"
   },
   "devDependencies": {
-    "electron": "^40.6.1"
+    "electron": "^40.6.1",
+    "jest": "^30.3.0"
   }
 }
