@@ -16,6 +16,13 @@
             --text: #f1f1f1;
             --text-muted: #888;
             --border: #0f3460;
+
+            /* Draft tier colours (MTG rarity inspired) */
+            --tier-mythic: #e87030;
+            --tier-gold:   #c8a800;
+            --tier-silver: #8ab0c0;
+            --tier-black:  #606060;
+            --tier-brown:  #9c6040;
         }
 
         * {
@@ -844,8 +851,9 @@
             grid-template-columns: 28px 1fr 70px 50px;
             align-items: center;
             gap: 10px;
-            padding: 9px 16px;
+            padding: 9px 13px 9px 13px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            border-left: 3px solid transparent;
             transition: background 0.15s;
         }
 
@@ -856,6 +864,12 @@
         .draft-card-row:hover {
             background: rgba(255, 255, 255, 0.04);
         }
+
+        /* Left-border accent by tier */
+        .draft-card-row.tier-mythic { border-left-color: var(--tier-mythic); }
+        .draft-card-row.tier-gold   { border-left-color: var(--tier-gold); }
+        .draft-card-row.tier-silver { border-left-color: rgba(138, 176, 192, 0.45); }
+        .draft-card-row.tier-brown  { border-left-color: rgba(156, 96, 64, 0.40); }
 
         /* Rank number */
         .draft-rank {
@@ -965,7 +979,7 @@
             background: #ff6b35;
         }
 
-        /* GIH WR pill */
+        /* GIH WR pill — shared base */
         .gih-wr {
             font-size: 13px;
             font-weight: 700;
@@ -974,32 +988,33 @@
             border-radius: 6px;
         }
 
-        .gih-wr.tier-great {
-            color: #22c55e;
-            background: rgba(34, 197, 94, 0.12);
+        /* Tier colours applied to both the WR pill (.gih-wr) and the picks sidebar (.pick-wr) */
+        .gih-wr.tier-mythic, .pick-wr.tier-mythic {
+            color: var(--tier-mythic);
+            background: rgba(232, 112, 48, 0.14);
         }
 
-        .gih-wr.tier-good {
-            color: #86efac;
-            background: rgba(134, 239, 172, 0.10);
+        .gih-wr.tier-gold, .pick-wr.tier-gold {
+            color: var(--tier-gold);
+            background: rgba(200, 168, 0, 0.14);
         }
 
-        .gih-wr.tier-avg {
-            color: var(--text-muted);
-            background: rgba(255, 255, 255, 0.05);
+        .gih-wr.tier-silver, .pick-wr.tier-silver {
+            color: var(--tier-silver);
+            background: rgba(138, 176, 192, 0.12);
         }
 
-        .gih-wr.tier-below {
-            color: #fca5a5;
-            background: rgba(239, 68, 68, 0.10);
+        .gih-wr.tier-black, .pick-wr.tier-black {
+            color: var(--tier-black);
+            background: rgba(90, 90, 90, 0.10);
         }
 
-        .gih-wr.tier-bad {
-            color: var(--danger);
-            background: rgba(239, 68, 68, 0.15);
+        .gih-wr.tier-brown, .pick-wr.tier-brown {
+            color: var(--tier-brown);
+            background: rgba(156, 96, 64, 0.14);
         }
 
-        .gih-wr.tier-none {
+        .gih-wr.tier-none, .pick-wr.tier-none {
             color: var(--text-muted);
             font-weight: 400;
             font-style: italic;
@@ -1278,18 +1293,12 @@
                             <div class="draft-card-list" id="draft-card-list"></div>
                             <div class="draft-legend">
                                 <span>GIH WR tiers:</span>
-                                <span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>
-                                    ≥63%</span>
-                                <span class="legend-item"><span class="legend-dot" style="background:#86efac"></span>
-                                    60–63%</span>
-                                <span class="legend-item"><span class="legend-dot" style="background:#888"></span>
-                                    57–60%</span>
-                                <span class="legend-item"><span class="legend-dot" style="background:#fca5a5"></span>
-                                    54–57%</span>
-                                <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>
-                                    &lt;54%</span>
-                                <span class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>
-                                    Low sample</span>
+                                <span class="legend-item"><span class="legend-dot" style="background:var(--tier-mythic)"></span>Mythic (top 20)</span>
+                                <span class="legend-item"><span class="legend-dot" style="background:var(--tier-gold)"></span>Gold (well above avg)</span>
+                                <span class="legend-item"><span class="legend-dot" style="background:var(--tier-silver)"></span>Silver (above avg)</span>
+                                <span class="legend-item"><span class="legend-dot" style="background:var(--tier-black)"></span>Common (average)</span>
+                                <span class="legend-item"><span class="legend-dot" style="background:var(--tier-brown)"></span>Below avg</span>
+                                <span class="legend-item"><span class="legend-dot" style="background:var(--warning)"></span>Low sample</span>
                             </div>
                         </div>
 

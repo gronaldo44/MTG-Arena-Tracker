@@ -518,18 +518,18 @@ function renderCurrentPack(pack) {
     listEl.innerHTML = pack.options.map((card, idx) => {
         const rank = idx + 1;
         const name = card.name || `Card ${card.arena_id}`;
-        const gihWr = card.gihWr;          // null or 0.0–1.0
+        const gihWr = card.gihWr;
         const lowSample = card.lowSample;
         const stats = card.stats;
 
         const wrText = gihWr !== null ? `${(gihWr * 100).toFixed(1)}%` : '—';
-        const wrClass = gihWrTierClass(gihWr, lowSample);
+        const tierClass = gihWrTierClass(card.tier || 'none');
 
         const colorStr = stats?.color || '';
         const rarityStr = stats?.rarity || '';
 
         return `
-            <div class="draft-card-row">
+            <div class="draft-card-row ${tierClass}">
                 <div class="draft-rank">${rank}</div>
                 <div class="draft-card-name">
                     ${colorPip(colorStr)}
@@ -537,7 +537,7 @@ function renderCurrentPack(pack) {
                     ${rarityGem(rarityStr)}
                     ${lowSample && gihWr !== null ? '<span class="low-sample-dot" title="Low sample size"></span>' : ''}
                 </div>
-                <div class="gih-wr ${wrClass}">${wrText}</div>
+                <div class="gih-wr ${tierClass}">${wrText}</div>
                 <div style="font-size:11px;color:var(--text-muted);text-align:right;">${rarityStr || ''}</div>
             </div>`;
     }).join('');
@@ -562,7 +562,7 @@ function renderPickHistory(picks) {
         const name = card?.name || `Card ${card?.arena_id ?? '?'}`;
         const gihWr = card?.gihWr ?? null;
         const wrText = gihWr !== null ? `${(gihWr * 100).toFixed(1)}%` : '—';
-        const wrClass = gihWrTierClass(gihWr, false);
+        const wrClass = gihWrTierClass(card?.tier || 'none');
 
         return `
             <div class="draft-pick-item">
@@ -576,17 +576,20 @@ function renderPickHistory(picks) {
 // ─── Draft — helpers ──────────────────────────────────────────────────────────
 
 /**
- * Map a GIH WR value to a CSS class name for colour coding.
- * Thresholds based on 17Lands community conventions (~57% is average for most sets).
+ * Map a card tier string to a CSS class name.
+ * Tiers are assigned relative to the loaded set's GIH WR distribution
+ * by DraftAssistant.getCardTier() and arrive pre-computed on each card object.
  */
-function gihWrTierClass(gihWr, lowSample) {
-    if (gihWr === null) return 'tier-none';
-    if (lowSample) return 'tier-avg';   // de-emphasise uncertain data
-    if (gihWr >= 0.63) return 'tier-great';
-    if (gihWr >= 0.60) return 'tier-good';
-    if (gihWr >= 0.57) return 'tier-avg';
-    if (gihWr >= 0.54) return 'tier-below';
-    return 'tier-bad';
+function gihWrTierClass(tier) {
+    const map = {
+        mythic: 'tier-mythic',
+        gold:   'tier-gold',
+        silver: 'tier-silver',
+        black:  'tier-black',
+        brown:  'tier-brown',
+        none:   'tier-none',
+    };
+    return map[tier] ?? 'tier-none';
 }
 
 /**
@@ -671,3 +674,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await updateCsvStatusUI();
     loadDashboard();
 });
+
+// Export pure helpers for unit testing.
+// Only active when running in Node.js (Jest); `window` is undefined there.
+if (typeof window === 'undefined') {
+    module.exports = { gihWrTierClass, colorPip, rarityGem, rarityLabel };
+}
