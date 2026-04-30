@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const chokidar = require('chokidar');
 const LogParser = require('./logParserV5');
+const GREParser = require('./greParser');
 const DataStore = require('./dataStore');
 const CardUpdater = require('./cardUpdater');
 const DraftAssistant = require('./draftAssistant');
@@ -12,11 +13,13 @@ let mainWindow;
 let tray;
 let logWatcher;
 let parser;
+let greParser = new GREParser();
 let dataStore;
 let cardUpdater;
 let draftAssistant = new DraftAssistant();
 let isQuitting = false;
 let scanInterval;
+let lastDraftEventData = null; // raw DRAFT_UPDATE event.data for re-enrichment after CSV load
 
 let cards = {};
 
@@ -187,17 +190,43 @@ function updateTrayStatus(message) {
   }
 }
 
+async function initialLogScan(logPath) {
+  if (!fs.existsSync(logPath)) return;
+  try {
+    console.log('[Startup] Running initial log scan...');
+    const fullData = fs.readFileSync(logPath, 'utf8');
+    if (!parser) parser = new LogParser();
+
+    const events = parser.parse(fullData);
+    let matchCount = 0;
+    for (const event of events) {
+      if (event.type === 'MATCH_END') matchCount++;
+      handleGameEvent(event);
+    }
+
+    const greEvents = greParser.parse(fullData);
+    let newGames = 0;
+    for (const ev of greEvents) {
+      if (ev.type === 'GAME_STATS') {
+        const format = dataStore.getMatchFormat(ev.data.matchId) ?? 'Unknown';
+        if (dataStore.updateCardGameStats(ev.data, format)) newGames++;
+        dataStore.updateMatchColors(ev.data.matchId, deriveColors(ev.data.deckGrpIds), deriveColorCounts(ev.data.deckCardsRaw));
+      }
+    }
+
+    console.log(`[Startup] Initial scan done: ${matchCount} matches, ${newGames} new game stat(s)`);
+  } catch (e) {
+    console.error('[Startup] Initial scan error:', e);
+  }
+}
+
 function startLogWatcher(logPath) {
   if (scanInterval) clearInterval(scanInterval);
 
+  // Start at 0 so the first interval tick always processes the full log.
+  // initialLogScan() already ran at startup; the dedup in parser + dataStore
+  // prevents double-counting any events it already processed.
   let lastSize = 0;
-  try {
-    const stats = fs.statSync(logPath);
-    lastSize = stats.size;
-    console.log('Initial log size:', lastSize);
-  } catch (e) {
-    console.error('Error getting initial file size:', e);
-  }
 
   scanInterval = setInterval(async () => {
     try {
@@ -226,6 +255,23 @@ function startLogWatcher(logPath) {
               handleGameEvent(event);
             }
             console.log(`[AutoScan] Processed ${matchCount} matches`);
+          }
+
+          // GRE parser: track personal card stats
+          if (dataStore) {
+            const greEvents = greParser.parse(fullData);
+            let newGames = 0;
+            for (const ev of greEvents) {
+              if (ev.type === 'GAME_STATS') {
+                const format = dataStore.getMatchFormat(ev.data.matchId) ?? 'Unknown';
+                if (dataStore.updateCardGameStats(ev.data, format)) newGames++;
+                dataStore.updateMatchColors(ev.data.matchId, deriveColors(ev.data.deckGrpIds), deriveColorCounts(ev.data.deckCardsRaw));
+              }
+            }
+            if (newGames > 0) {
+              console.log(`[GREParser] Recorded stats for ${newGames} new game(s)`);
+              if (mainWindow) mainWindow.webContents.send('card-stats-updated');
+            }
           }
         } else {
           console.log('[AutoScan] No changes detected (log size unchanged)');
@@ -389,6 +435,7 @@ function handleGameEvent(event) {
 
     case 'DRAFT_UPDATE':
       if (mainWindow) {
+        lastDraftEventData = event.data; // persist for re-enrichment when CSV is loaded later
         const packData = event.data.currentPack;
         const resolvedOptions = packData ? resolveCards(packData.options) : [];
 
@@ -440,6 +487,12 @@ ipcMain.handle('load-17lands-csv', async () => {
 
   try {
     const info = draftAssistant.loadCSV(result.filePaths[0]);
+    // Persist path so we can auto-load it on next startup
+    if (dataStore) dataStore.saveSettings({ lastCsvPath: result.filePaths[0] });
+    // Re-enrich the cached draft state now that we have WR data
+    if (lastDraftEventData && mainWindow) {
+      handleGameEvent({ type: 'DRAFT_UPDATE', data: lastDraftEventData });
+    }
     return { success: true, ...info };
   } catch (e) {
     console.error('[DraftAssistant] Failed to load CSV:', e.message);
@@ -455,6 +508,98 @@ ipcMain.handle('get-draft-assistant-status', async () => {
 ipcMain.handle('get-card-name', async (event, cardId) => {
   if (!dataStore) return `Card ${cardId}`;
   return dataStore.getCardName(cardId);
+});
+
+ipcMain.handle('get-card-stat-formats', async () => {
+  if (!dataStore) return [];
+  return dataStore.getCardStatFormats();
+});
+
+ipcMain.handle('get-card-game-stats', async (event, format) => {
+  if (!dataStore || !format) return [];
+  const raw = dataStore.getAllCardGameStats(format);
+  const assistantLoaded = draftAssistant.isLoaded();
+
+  const results = Object.entries(raw).map(([grpId, s]) => {
+    const name          = dataStore.getCardName(grpId);
+    const gihWrPersonal = s.gamesInHand > 0 ? s.gamesWonInHand / s.gamesInHand : null;
+    const ohWrPersonal  = s.gamesOpenHand > 0 ? s.gamesWonOpenHand / s.gamesOpenHand : null;
+    const stats17l      = assistantLoaded ? draftAssistant.getCardStats(name) : null;
+    const gihWr17l      = stats17l?.gihWr ?? null;
+    const ohWr17l       = stats17l?.ohWr ?? null;
+    const delta         = (gihWrPersonal !== null && gihWr17l !== null)
+      ? gihWrPersonal - gihWr17l : null;
+    return {
+      grpId, name,
+      gamesInDeck: s.gamesInDeck, gamesInHand: s.gamesInHand, gamesWonInHand: s.gamesWonInHand,
+      gihWrPersonal,
+      gamesOpenHand: s.gamesOpenHand, gamesWonOpenHand: s.gamesWonOpenHand,
+      ohWrPersonal, gihWr17l, ohWr17l, delta,
+    };
+  });
+
+  // When a CSV is loaded, also include 17Lands cards the user has never played.
+  // They appear in the table only when the Min GIH filter is set to 0.
+  if (assistantLoaded) {
+    const personalGrpIds = new Set(Object.keys(raw));
+    const nameToGrpId = {};
+    for (const [grpId, card] of Object.entries(dataStore.cards)) {
+      if (card.name) nameToGrpId[card.name.toLowerCase()] = grpId;
+    }
+    for (const stats17l of draftAssistant.getAllCardStats()) {
+      const grpId = nameToGrpId[stats17l.name.toLowerCase()];
+      if (grpId && !personalGrpIds.has(grpId)) {
+        results.push({
+          grpId, name: stats17l.name,
+          gamesInDeck: 0, gamesInHand: 0, gamesWonInHand: 0,
+          gihWrPersonal: null,
+          gamesOpenHand: 0, gamesWonOpenHand: 0,
+          ohWrPersonal: null,
+          gihWr17l: stats17l.gihWr, ohWr17l: stats17l.ohWr,
+          delta: null,
+        });
+      }
+    }
+  }
+
+  return results.sort((a, b) => b.gamesInHand - a.gamesInHand);
+});
+
+ipcMain.handle('clear-card-stats', async () => {
+  if (!dataStore) return false;
+  dataStore.clearCardStats();
+  return true;
+});
+
+ipcMain.handle('get-card-stats-by-grpid', async (event, grpId) => {
+  if (!dataStore) return null;
+  // Aggregate personal stats across all formats for the draft-card detail drawer
+  let gamesInDeck = 0, gamesInHand = 0, gamesWonInHand = 0,
+      gamesOpenHand = 0, gamesWonOpenHand = 0;
+  for (const fmt of dataStore.getCardStatFormats()) {
+    const s = dataStore.getAllCardGameStats(fmt)[String(grpId)];
+    if (s) {
+      gamesInDeck += s.gamesInDeck;
+      gamesInHand += s.gamesInHand;
+      gamesWonInHand += s.gamesWonInHand;
+      gamesOpenHand += s.gamesOpenHand;
+      gamesWonOpenHand += s.gamesWonOpenHand;
+    }
+  }
+  if (gamesInHand === 0 && gamesInDeck === 0) return null;
+  const name          = dataStore.getCardName(grpId);
+  const gihWrPersonal = gamesInHand > 0 ? gamesWonInHand / gamesInHand : null;
+  const ohWrPersonal  = gamesOpenHand > 0 ? gamesWonOpenHand / gamesOpenHand : null;
+  const stats17l      = draftAssistant.isLoaded() ? draftAssistant.getCardStats(name) : null;
+  const gihWr17l      = stats17l?.gihWr ?? null;
+  const delta         = (gihWrPersonal !== null && gihWr17l !== null) ? gihWrPersonal - gihWr17l : null;
+  return { grpId, name, gamesInDeck, gamesInHand, gihWrPersonal, gamesOpenHand, ohWrPersonal, gihWr17l, delta };
+});
+
+ipcMain.handle('delete-format', async (event, format) => {
+  if (!dataStore || !format) return false;
+  dataStore.deleteMatchesByFormat(format);
+  return true;
 });
 
 ipcMain.handle('get-deck', async (event, deckId) => {
@@ -576,6 +721,20 @@ ipcMain.handle('refresh-log', async () => {
         }
       }
       console.log(`[Manual Refresh] Processed ${matchCount} matches, inventory updated: ${inventoryUpdated}`);
+
+      // GRE parser: process card stats on manual refresh too
+      if (dataStore) {
+        const greEvents = greParser.parse(data);
+        let newGames = 0;
+        for (const ev of greEvents) {
+          if (ev.type === 'GAME_STATS') {
+            const format = dataStore.getMatchFormat(ev.data.matchId) ?? 'Unknown';
+            if (dataStore.updateCardGameStats(ev.data, format)) newGames++;
+            dataStore.updateMatchColors(ev.data.matchId, deriveColors(ev.data.deckGrpIds), deriveColorCounts(ev.data.deckCardsRaw));
+          }
+        }
+        console.log(`[Manual Refresh] Recorded stats for ${newGames} new game(s)`);
+      }
 
       return { success: true, eventsFound: events.length, matchesProcessed: matchCount, bytesRead: data.length };
     } catch (e) {
@@ -732,10 +891,26 @@ app.whenReady().then(async () => {
 
   dataStore = new DataStore();
 
+  // Auto-load last 17Lands CSV from previous session
+  const savedCsvPath = dataStore.getSettings().lastCsvPath;
+  if (savedCsvPath && fs.existsSync(savedCsvPath)) {
+    try {
+      draftAssistant.loadCSV(savedCsvPath);
+      console.log('[App] Auto-loaded 17Lands CSV:', savedCsvPath);
+    } catch (e) {
+      console.error('[App] Failed to auto-load saved CSV:', e.message);
+    }
+  }
+
   loadCards();
 
   const logPath = getLogPath();
   console.log('Using log path:', logPath);
+
+  // Parse existing log data immediately on startup so the user sees their
+  // history right away without needing to hit "Scan Now".
+  await initialLogScan(logPath);
+
   startLogWatcher(logPath);
 
   app.on('activate', () => {
@@ -769,6 +944,36 @@ if (!gotTheLock) {
       mainWindow.focus();
     }
   });
+}
+
+function deriveColors(grpIds) {
+  const found = new Set();
+  for (const id of grpIds) {
+    const card = cards[String(id)];
+    if (!card?.manaCost) continue;
+    for (const ch of card.manaCost) {
+      if (ch === 'W' || ch === 'U' || ch === 'B' || ch === 'R' || ch === 'G') found.add(ch);
+    }
+  }
+  return ['W', 'U', 'B', 'R', 'G'].filter(c => found.has(c));
+}
+
+// Count how many deck cards contribute to each color (multi-color cards count once per color).
+// rawGrpIds is the non-deduplicated list from deckCardsRaw.
+function deriveColorCounts(rawGrpIds) {
+  const counts = {};
+  for (const id of (rawGrpIds || [])) {
+    const card = cards[String(id)];
+    if (!card?.manaCost) continue;
+    const colorsInCard = new Set();
+    for (const ch of card.manaCost) {
+      if ('WUBRG'.includes(ch)) colorsInCard.add(ch);
+    }
+    for (const c of colorsInCard) {
+      counts[c] = (counts[c] || 0) + 1;
+    }
+  }
+  return counts;
 }
 
 function resolveCard(grpId) {

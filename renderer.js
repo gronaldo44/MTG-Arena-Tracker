@@ -4,11 +4,13 @@
  */
 
 const { ipcRenderer } = require('electron');
+const { isDraftLimited } = require('./sets');
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let currentPage = 'dashboard';
 let currentDraftState = null;   // latest DRAFT_UPDATE payload
 let csvLoaded = false;          // whether 17Lands CSV is loaded in main process
+let _currentPackOptions = [];   // cached options for detail drawer lookups
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 function showPage(page) {
@@ -28,7 +30,6 @@ function showPage(page) {
     if (page === 'dashboard') loadDashboard();
     if (page === 'draft') renderDraftPage();
     if (page === 'matches') loadMatches();
-    if (page === 'decks') loadDecks();
     if (page === 'stats') loadStats();
     if (page === 'settings') loadSettings();
 }
@@ -94,135 +95,159 @@ async function loadDashboard() {
 }
 
 // ─── Matches ──────────────────────────────────────────────────────────────────
+
+let _matchesAllMatches      = [];
+let _matchesFormat          = null;
+let _matchesSelectedCombos  = new Set();
+
+// Dot background colors keyed by MTG color letter
+const _dotColor = { W: '#f5f0e0', U: '#1e6daf', B: '#555', R: '#c1160e', G: '#1a6b3a' };
+const _dotBorder = { B: 'border:1px solid #888;' };
+
+function getColorCombo(colors) {
+    return ['W', 'U', 'B', 'R', 'G'].filter(c => (colors || []).includes(c)).join('');
+}
+
+function comboDotsHtml(combo) {
+    return [...combo].map(c =>
+        `<span class="mfc-pip-dot" style="background:${_dotColor[c]};${_dotBorder[c] || ''}"></span>`
+    ).join('');
+}
+
+function colorLabel(c) {
+    return { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' }[c] || c;
+}
+
+function renderMatchColorPips(match) {
+    const colors = match.deckColors;
+    if (!colors || colors.length === 0) return '';
+    const counts = match.deckColorCounts || {};
+    const ordered = ['W', 'U', 'B', 'R', 'G'].filter(c => colors.includes(c));
+    if (ordered.length === 0) return '';
+    const pips = ordered.map(c => {
+        const count = counts[c] || 0;
+        const isSplash = count > 0 && count <= 5;
+        const title = count > 0
+            ? `${colorLabel(c)}: ${count} card${count !== 1 ? 's' : ''}`
+            : colorLabel(c);
+        return `<span class="match-pip-dot${isSplash ? ' splash' : ''}"
+            style="background:${_dotColor[c]};${_dotBorder[c] || ''}"
+            title="${title}"></span>`;
+    }).join('');
+    return `<div class="match-color-pips">${pips}</div>`;
+}
+
 async function loadMatches() {
-    const matches = await ipcRenderer.invoke('get-matches');
-    const container = document.getElementById('all-matches');
-
-    container.innerHTML = matches.length === 0
-        ? `<div class="empty-state"><div class="icon">📝</div><p>No matches recorded yet.</p></div>`
-        : `<div class="match-list">${matches.map(renderMatchItem).join('')}</div>`;
+    _matchesAllMatches = await ipcRenderer.invoke('get-matches');
+    renderMatchFormatCards();
+    renderMatchList();
 }
 
-// ─── Decks ────────────────────────────────────────────────────────────────────
-async function loadDecks() {
-    const stats = await ipcRenderer.invoke('get-stats');
-    const deckStats = stats.decks || {};
-    const container = document.getElementById('decks-list');
-    const decksWithMatches = Object.values(deckStats).filter(d => d.total > 0);
+function renderMatchFormatCards() {
+    const container = document.getElementById('matches-format-cards');
+    if (!container) return;
+    if (_matchesAllMatches.length === 0) { container.innerHTML = ''; return; }
 
-    if (decksWithMatches.length === 0) {
-        container.innerHTML = `<div class="empty-state"><div class="icon">🎴</div><p>No decks recorded yet. Decks are automatically detected from your matches.</p></div>`;
-        return;
-    }
-
-    container.innerHTML = `
-        <div class="format-grid">
-            ${decksWithMatches.sort((a, b) => b.total - a.total).map(deck => {
-        const winRate = deck.total > 0 ? Math.round((deck.wins / deck.total) * 100) : 0;
-        return `
-                    <div class="format-card deck-card" onclick="showDeckDetails('${deck.id}')" style="cursor:pointer;">
-                        <h4>
-                            <span class="format-name">${deck.name}</span>
-                            <span class="format-badge">${deck.total} matches</span>
-                        </h4>
-                        <div class="format-stats">
-                            <div class="mini-stat"><span class="number">${deck.wins}</span><span class="label">Wins</span></div>
-                            <div class="mini-stat"><span class="number">${deck.losses}</span><span class="label">Losses</span></div>
-                            <div class="mini-stat"><span class="number" style="color:${winRate >= 50 ? 'var(--success)' : 'var(--danger)'}">${winRate}%</span><span class="label">Win Rate</span></div>
-                        </div>
-                        <div class="winrate-bar"><div class="fill" style="width:${winRate}%"></div></div>
-                        <div style="margin-top:10px;text-align:center;font-size:12px;color:var(--text-muted);">Click to view deck list</div>
-                    </div>`;
-    }).join('')}
-        </div>`;
-}
-
-// ─── Deck modal ───────────────────────────────────────────────────────────────
-async function showDeckDetails(deckId) {
-    const deck = await ipcRenderer.invoke('get-deck', deckId);
-    if (!deck) { alert('Deck not found'); return; }
-
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width:800px;max-height:90vh;overflow-y:auto;">
-            <div class="modal-header">
-                <h2>${deck.name}</h2>
-                <div style="display:flex;gap:10px;">
-                    <button class="btn btn-primary" onclick="exportDeckToClipboard('${deckId}')">📋 Copy</button>
-                    <button class="btn btn-secondary" onclick="closeDeckModal()">✕</button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <div class="deck-info">
-                    <p><strong>Format:</strong> ${deck.format || 'Unknown'}</p>
-                    <p><strong>Last Used:</strong> ${new Date(deck.lastUsed).toLocaleDateString()}</p>
-                </div>
-                <div class="deck-lists">
-                    <div class="deck-section">
-                        <h3>Main Deck (${deck.mainDeck?.length || 0} cards)</h3>
-                        <div class="card-list">${renderCardList(deck.mainDeck)}</div>
-                    </div>
-                    ${deck.sideboard?.length > 0 ? `<div class="deck-section"><h3>Sideboard (${deck.sideboard.length} cards)</h3><div class="card-list">${renderCardList(deck.sideboard)}</div></div>` : ''}
-                    ${deck.commandZone?.length > 0 ? `<div class="deck-section"><h3>Command Zone (${deck.commandZone.length} cards)</h3><div class="card-list">${renderCardList(deck.commandZone)}</div></div>` : ''}
-                </div>
-            </div>
-        </div>`;
-    document.body.appendChild(modal);
-    modal.addEventListener('click', e => { if (e.target === modal) closeDeckModal(); });
-}
-
-function renderCardList(cards) {
-    if (!cards || cards.length === 0) return '<p class="empty">No cards</p>';
-    const cardCounts = {};
-    cards.forEach(card => {
-        const cardId = typeof card === 'number' ? card : card.cardId;
-        const cardName = typeof card === 'object' && card.name ? card.name : `Card ${cardId}`;
-        if (!cardCounts[cardId]) cardCounts[cardId] = { count: 0, name: cardName };
-        cardCounts[cardId].count++;
-    });
-    return `<ul class="card-list-items">${Object.entries(cardCounts).map(([, d]) => `<li>${d.count}x ${d.name}</li>`).join('')}</ul>`;
-}
-
-function closeDeckModal() {
-    const modal = document.querySelector('.modal-overlay');
-    if (modal) modal.remove();
-}
-
-async function exportDeckToClipboard(deckId) {
-    const deck = await ipcRenderer.invoke('get-deck', deckId);
-    if (!deck) { alert('Deck not found'); return; }
-
-    let exportText = `About\nName ${deck.name}\n\n`;
-    const formatCardList = async (cards) => {
-        if (!cards || cards.length === 0) return '';
-        const counts = {};
-        for (const card of cards) {
-            const cardId = typeof card === 'number' ? card : card.cardId;
-            const cardName = await ipcRenderer.invoke('get-card-name', cardId);
-            counts[cardName] = (counts[cardName] || 0) + 1;
+    // Build per-format totals and per-combo breakdown
+    const fmtMap = {};
+    for (const m of _matchesAllMatches) {
+        const fmt   = m.format || 'Unknown';
+        const combo = getColorCombo(m.deckColors);
+        if (!fmtMap[fmt]) fmtMap[fmt] = { total: 0, wins: 0, losses: 0, combos: {} };
+        fmtMap[fmt].total++;
+        if (m.result === 'win')  fmtMap[fmt].wins++;
+        if (m.result === 'loss') fmtMap[fmt].losses++;
+        if (combo) {
+            if (!fmtMap[fmt].combos[combo]) fmtMap[fmt].combos[combo] = { total: 0, wins: 0, losses: 0 };
+            fmtMap[fmt].combos[combo].total++;
+            if (m.result === 'win')  fmtMap[fmt].combos[combo].wins++;
+            if (m.result === 'loss') fmtMap[fmt].combos[combo].losses++;
         }
-        return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0])).map(([n, c]) => `${c} ${n}`).join('\n');
-    };
-
-    if (deck.commandZone?.length > 0) exportText += `Commander\n${await formatCardList(deck.commandZone)}\n\n`;
-    exportText += `Deck\n${await formatCardList(deck.mainDeck)}\n`;
-    if (deck.sideboard?.length > 0) exportText += `\nSideboard\n${await formatCardList(deck.sideboard)}\n`;
-
-    try {
-        await navigator.clipboard.writeText(exportText);
-    } catch {
-        const ta = document.createElement('textarea');
-        ta.value = exportText;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
     }
-    alert('Deck copied to clipboard!');
+
+    const cardsHtml = Object.entries(fmtMap)
+        .sort((a, b) => b[1].total - a[1].total)
+        .map(([fmt, data]) => {
+            const contested = data.wins + data.losses;
+            const wr        = contested > 0 ? Math.round(data.wins / contested * 100) : 0;
+            const isActive  = fmt === _matchesFormat;
+            const safeF     = fmt.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+            const comboRows = Object.entries(data.combos)
+                .sort((a, b) => b[1].total - a[1].total)
+                .map(([combo, cd]) => {
+                    const cContested = cd.wins + cd.losses;
+                    const cWr        = cContested > 0 ? Math.round(cd.wins / cContested * 100) : 0;
+                    const rowActive  = isActive && _matchesSelectedCombos.has(combo);
+                    return `<div class="mfc-combo-row${rowActive ? ' active' : ''}"
+                        onclick="event.stopPropagation(); toggleMatchCombo('${safeF}','${combo}')">
+                        <div class="mfc-combo-dots">${comboDotsHtml(combo)}</div>
+                        <span class="mfc-combo-count">${cd.total} match${cd.total !== 1 ? 'es' : ''}</span>
+                        <span class="mfc-combo-wr ${cWr >= 50 ? 'positive' : 'negative'}">${cWr}%</span>
+                    </div>`;
+                }).join('');
+
+            return `<div class="matches-format-card${isActive ? ' active' : ''}" onclick="selectMatchFormat('${safeF}')">
+                <div class="mfc-header">
+                    <span class="mfc-name" title="${fmt}">${fmt}</span>
+                    <span class="mfc-wr ${wr >= 50 ? 'positive' : 'negative'}">${wr}%</span>
+                </div>
+                <div class="mfc-meta">${data.total} match${data.total !== 1 ? 'es' : ''}</div>
+                ${comboRows ? `<div class="mfc-combo-list">${comboRows}</div>` : ''}
+            </div>`;
+        }).join('');
+
+    container.innerHTML = `<div class="matches-format-cards-grid">${cardsHtml}</div>`;
+}
+
+function renderMatchList() {
+    const container = document.getElementById('all-matches');
+    let visible = _matchesAllMatches;
+    if (_matchesFormat) visible = visible.filter(m => m.format === _matchesFormat);
+    if (_matchesSelectedCombos.size > 0) {
+        visible = visible.filter(m => _matchesSelectedCombos.has(getColorCombo(m.deckColors)));
+    }
+    container.innerHTML = visible.length === 0
+        ? `<div class="empty-state"><div class="icon">📝</div><p>${
+            _matchesAllMatches.length === 0 ? 'No matches recorded yet.' : 'No matches for this filter.'
+          }</p></div>`
+        : `<div class="match-list">${visible.map(renderMatchItem).join('')}</div>`;
+}
+
+function selectMatchFormat(format) {
+    if (_matchesFormat === format) {
+        _matchesFormat = null;
+        _matchesSelectedCombos.clear();
+    } else {
+        _matchesFormat = format;
+        _matchesSelectedCombos.clear();
+    }
+    renderMatchFormatCards();
+    renderMatchList();
+}
+
+function toggleMatchCombo(format, combo) {
+    if (_matchesFormat !== format) {
+        _matchesFormat = format;
+        _matchesSelectedCombos.clear();
+    }
+    if (_matchesSelectedCombos.has(combo)) {
+        _matchesSelectedCombos.delete(combo);
+    } else {
+        _matchesSelectedCombos.add(combo);
+    }
+    renderMatchFormatCards();
+    renderMatchList();
 }
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
+
+let _cardStatsData     = [];
+let _cardStatsSortKey  = 'gamesInHand';
+let _cardStatsSortDir  = -1;           // -1 = desc, 1 = asc
+let _cardStatsFormats  = [];           // formats that have data
+let _cardStatsFormat   = null;         // currently selected format
+
 async function loadStats() {
     const stats = await ipcRenderer.invoke('get-stats');
 
@@ -231,19 +256,170 @@ async function loadStats() {
     formatTbody.innerHTML = Object.keys(formats).length === 0
         ? `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);">No data available</td></tr>`
         : Object.entries(formats).sort((a, b) => b[1].total - a[1].total).map(([format, data]) => {
-            const wr = data.total > 0 ? Math.round((data.wins / data.total) * 100) : 0;
-            return `<tr><td><strong>${format}</strong></td><td>${data.total}</td><td class="positive">${data.wins}</td><td class="negative">${data.losses}</td><td>${data.draws}</td><td class="${wr >= 50 ? 'positive' : 'negative'}">${wr}%</td></tr>`;
+            const contested = data.wins + data.losses;
+            const wr = contested > 0 ? Math.round((data.wins / contested) * 100) : 0;
+            const safeFormat = format.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const draftClickable = isDraftLimited(format);
+            const nameEl = draftClickable
+                ? `<strong onclick="selectCardStatsFormat('${safeFormat}')" class="format-name-link">${format}</strong>`
+                : `<strong>${format}</strong>`;
+            return `<tr>
+                <td>${nameEl}</td>
+                <td>${data.total}</td>
+                <td class="positive">${data.wins}</td>
+                <td class="negative">${data.losses}</td>
+                <td class="${wr >= 50 ? 'positive' : 'negative'}">${wr}%</td>
+                <td><button onclick="deleteFormat('${safeFormat}')" title="Delete all data for this format"
+                    style="background:none;border:none;cursor:pointer;font-size:15px;color:var(--text-muted);padding:0 4px;"
+                    onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'">🗑</button></td>
+            </tr>`;
         }).join('');
 
-    const deckTbody = document.getElementById('stats-decks-table').querySelector('tbody');
-    const deckStats = stats.decks || {};
-    const decksWithMatches = Object.values(deckStats).filter(d => d.total > 0);
-    deckTbody.innerHTML = decksWithMatches.length === 0
-        ? `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-muted);">No deck data available</td></tr>`
-        : decksWithMatches.sort((a, b) => b.total - a.total).map(deck => {
-            const wr = deck.total > 0 ? Math.round((deck.wins / deck.total) * 100) : 0;
-            return `<tr><td><strong>${deck.name}</strong></td><td>${deck.total}</td><td class="positive">${deck.wins}</td><td class="negative">${deck.losses}</td><td class="${wr >= 50 ? 'positive' : 'negative'}">${wr}%</td></tr>`;
-        }).join('');
+    // Personal card stats — load available formats, then data for selected format
+    const allFormats = await ipcRenderer.invoke('get-card-stat-formats');
+    _cardStatsFormats = allFormats.filter(isDraftLimited);
+
+    // Auto-select when exactly one format exists; otherwise keep current selection
+    if (_cardStatsFormats.length === 1) {
+        _cardStatsFormat = _cardStatsFormats[0];
+    } else if (_cardStatsFormat && !_cardStatsFormats.includes(_cardStatsFormat)) {
+        _cardStatsFormat = null; // stale selection
+    }
+
+    _cardStatsData = _cardStatsFormat
+        ? await ipcRenderer.invoke('get-card-game-stats', _cardStatsFormat)
+        : [];
+
+    renderCardStatsFormatSelector();
+    renderCardStatsTable();
+}
+
+function renderCardStatsFormatSelector() {
+    const el = document.getElementById('card-stats-format-selector');
+    if (!el) return;
+
+    const filterRow = document.getElementById('card-stats-filter-row');
+
+    if (_cardStatsFormats.length === 0) {
+        el.innerHTML = '';
+        if (filterRow) filterRow.style.display = 'none';
+        return;
+    }
+
+    if (_cardStatsFormats.length === 1) {
+        // Single format — just show a label, no dropdown needed
+        el.innerHTML = `<span style="font-size:13px;color:var(--text-muted);">Set: <strong style="color:var(--text);">${_cardStatsFormat}</strong></span>`;
+        if (filterRow) filterRow.style.display = 'flex';
+        return;
+    }
+
+    const opts = _cardStatsFormats
+        .map(f => `<option value="${f}"${f === _cardStatsFormat ? ' selected' : ''}>${f}</option>`)
+        .join('');
+
+    el.innerHTML = `
+        <label style="font-size:13px;color:var(--text-muted);">Set:
+            <select onchange="selectCardStatsFormat(this.value)"
+                style="margin-left:8px;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+                <option value="">— Select a draft set —</option>
+                ${opts}
+            </select>
+        </label>`;
+
+    if (filterRow) filterRow.style.display = _cardStatsFormat ? 'flex' : 'none';
+}
+
+async function selectCardStatsFormat(format) {
+    _cardStatsFormat = format || null;
+    _cardStatsData = _cardStatsFormat
+        ? await ipcRenderer.invoke('get-card-game-stats', _cardStatsFormat)
+        : [];
+
+    const filterRow = document.getElementById('card-stats-filter-row');
+    if (filterRow) filterRow.style.display = _cardStatsFormat ? 'flex' : 'none';
+
+    renderCardStatsTable();
+}
+
+function sortCardStats(key) {
+    if (_cardStatsSortKey === key) {
+        _cardStatsSortDir *= -1;
+    } else {
+        _cardStatsSortKey = key;
+        _cardStatsSortDir = key === 'name' ? 1 : -1;
+    }
+    renderCardStatsTable();
+}
+
+function renderCardStatsTable() {
+    // Highlight the active sort column header regardless of data state
+    document.querySelectorAll('#stats-cards-table th[data-sort-key]').forEach(th => {
+        th.classList.toggle('sort-active-col', th.dataset.sortKey === _cardStatsSortKey);
+    });
+
+    const tbody  = document.getElementById('stats-cards-tbody');
+    if (!tbody) return;
+
+    const filter = (document.getElementById('card-stats-filter')?.value || '').toLowerCase();
+    const minGih = parseInt(document.getElementById('card-stats-min-gih')?.value || '1', 10);
+
+    let rows = _cardStatsData.filter(c =>
+        c.gamesInHand >= minGih &&
+        (!filter || c.name.toLowerCase().includes(filter))
+    );
+
+    const key = _cardStatsSortKey;
+    const dir = _cardStatsSortDir;
+    rows.sort((a, b) => {
+        const av = a[key] ?? (key === 'name' ? '' : -Infinity);
+        const bv = b[key] ?? (key === 'name' ? '' : -Infinity);
+        if (typeof av === 'string') return dir * av.localeCompare(bv);
+        return dir * (av - bv);
+    });
+
+    if (!_cardStatsFormat) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);">
+            Select a draft set above to view card stats.</td></tr>`;
+        return;
+    }
+
+    if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);">
+            No card stats yet for <strong>${_cardStatsFormat}</strong> — play some games to start tracking.</td></tr>`;
+        return;
+    }
+
+    const fmt       = v => v !== null ? `${(v * 100).toFixed(1)}%` : '—';
+    const deltaClass = d => d === null ? '' : d > 0 ? 'positive' : d < 0 ? 'negative' : '';
+    const deltaStr   = d => d === null ? '—' : `${d >= 0 ? '+' : ''}${(d * 100).toFixed(1)}%`;
+
+    tbody.innerHTML = rows.map(c => `
+        <tr>
+            <td><strong>${c.name}</strong></td>
+            <td>${c.gamesInDeck}</td>
+            <td>${c.gamesInHand}</td>
+            <td>${fmt(c.gihWrPersonal)}</td>
+            <td>${fmt(c.gihWr17l)}</td>
+            <td class="${deltaClass(c.delta)}">${deltaStr(c.delta)}</td>
+            <td>${c.gamesOpenHand}</td>
+            <td>${fmt(c.ohWrPersonal)}</td>
+        </tr>`).join('');
+}
+
+async function deleteFormat(format) {
+    if (!confirm(`Delete all data for "${format}"? This cannot be undone.`)) return;
+    await ipcRenderer.invoke('delete-format', format);
+    loadStats();
+}
+
+async function clearCardStats() {
+    if (!confirm('Clear all personal card stats? This cannot be undone.')) return;
+    await ipcRenderer.invoke('clear-card-stats');
+    _cardStatsData    = [];
+    _cardStatsFormat  = null;
+    _cardStatsFormats = [];
+    renderCardStatsFormatSelector();
+    renderCardStatsTable();
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
@@ -390,13 +566,15 @@ function renderMatchItem(match) {
     const date = new Date(match.timestamp).toLocaleDateString();
     const time = new Date(match.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const opp = match.opponentName ? ` • vs ${match.opponentName}` : '';
+    const pipsHtml = renderMatchColorPips(match);
     return `
         <div class="match-item ${match.result}">
             <div class="match-badge ${match.result}">${match.result}</div>
             <div class="match-info">
-                <h4>${match.deckName || 'Unknown Deck'}</h4>
-                <p>${match.format || 'Unknown'} • ${match.gamesPlayed || 1} game${match.gamesPlayed !== 1 ? 's' : ''}${opp}</p>
+                <h4>${match.format || 'Unknown Format'}</h4>
+                <p>${match.gamesPlayed || 1} game${match.gamesPlayed !== 1 ? 's' : ''}${opp}</p>
             </div>
+            ${pipsHtml}
             <div class="match-date">${date}<br>${time}</div>
             <button class="btn btn-secondary" onclick="deleteMatch('${match.id}')" style="padding:5px 10px;font-size:12px;">Delete</button>
         </div>`;
@@ -406,7 +584,12 @@ async function deleteMatch(matchId) {
     if (!confirm('Are you sure you want to delete this match?')) return;
     await ipcRenderer.invoke('delete-match', matchId);
     if (currentPage === 'dashboard') loadDashboard();
-    if (currentPage === 'matches') loadMatches();
+    if (currentPage === 'matches') {
+        // Re-fetch but keep active format/color filters
+        _matchesAllMatches = await ipcRenderer.invoke('get-matches');
+        renderMatchFormatCards();
+        renderMatchList();
+    }
 }
 
 async function exportData() {
@@ -515,6 +698,8 @@ function renderCurrentPack(pack) {
         return;
     }
 
+    _currentPackOptions = pack.options;
+
     listEl.innerHTML = pack.options.map((card, idx) => {
         const rank = idx + 1;
         const name = card.name || `Card ${card.arena_id}`;
@@ -529,7 +714,7 @@ function renderCurrentPack(pack) {
         const rarityStr = stats?.rarity || '';
 
         return `
-            <div class="draft-card-row ${tierClass}">
+            <div class="draft-card-row ${tierClass}" data-idx="${idx}" onclick="toggleCardDetail(${idx})">
                 <div class="draft-rank">${rank}</div>
                 <div class="draft-card-name">
                     ${colorPip(colorStr)}
@@ -538,7 +723,7 @@ function renderCurrentPack(pack) {
                     ${lowSample && gihWr !== null ? '<span class="low-sample-dot" title="Low sample size"></span>' : ''}
                 </div>
                 <div class="gih-wr ${tierClass}">${wrText}</div>
-                <div style="font-size:11px;color:var(--text-muted);text-align:right;">${rarityStr || ''}</div>
+                <div style="font-size:11px;font-weight:600;color:${rarityColor(rarityStr)};text-align:right;">${rarityStr || ''}</div>
             </div>`;
     }).join('');
 }
@@ -571,6 +756,67 @@ function renderPickHistory(picks) {
                 <div class="pick-wr ${wrClass}">${wrText}</div>
             </div>`;
     }).join('');
+}
+
+// ─── Draft — card detail drawer ───────────────────────────────────────────────
+
+async function toggleCardDetail(idx) {
+    const card = _currentPackOptions[idx];
+    if (!card) return;
+
+    const rowEl = document.querySelector(`#draft-card-list [data-idx="${idx}"]`);
+    if (!rowEl) return;
+
+    // Close if already open for this card
+    const existing = rowEl.nextElementSibling;
+    if (existing && existing.classList.contains('draft-card-detail')) {
+        existing.remove();
+        rowEl.classList.remove('detail-open');
+        return;
+    }
+
+    // Close any other open drawer
+    document.querySelectorAll('.draft-card-detail').forEach(el => el.remove());
+    document.querySelectorAll('.draft-card-row.detail-open').forEach(el => el.classList.remove('detail-open'));
+
+    rowEl.classList.add('detail-open');
+
+    const personal = await ipcRenderer.invoke('get-card-stats-by-grpid', card.arena_id);
+
+    const detail = document.createElement('div');
+    detail.className = 'draft-card-detail';
+    detail.innerHTML = renderCardDetailContent(card, personal);
+    rowEl.insertAdjacentElement('afterend', detail);
+}
+
+function renderCardDetailContent(card, personal) {
+    const fmt   = v => v !== null && v !== undefined ? `${(v * 100).toFixed(1)}%` : '—';
+    const dStr  = d => d === null || d === undefined ? '—' : `${d >= 0 ? '+' : ''}${(d * 100).toFixed(1)}%`;
+    const dCls  = d => d === null || d === undefined ? '' : d > 0.02 ? 'positive' : d < -0.02 ? 'negative' : '';
+    const num   = v => v !== null && v !== undefined ? v.toLocaleString() : '—';
+    const fixed = v => v !== null && v !== undefined ? v.toFixed(1) : '—';
+
+    const stats = card.stats;
+
+    return `
+        <div class="detail-columns">
+            <div class="detail-col">
+                <div class="detail-section-label">17Lands Community</div>
+                <div class="detail-row"><span>GIH WR</span><span class="detail-val">${fmt(card.gihWr)}</span></div>
+                <div class="detail-row"><span>OH WR</span><span class="detail-val">${fmt(stats?.ohWr ?? null)}</span></div>
+                <div class="detail-row"><span>Sample</span><span class="detail-val">${num(stats?.gihCount)}</span></div>
+                <div class="detail-row"><span>ALSA</span><span class="detail-val">${fixed(stats?.alsa ?? null)}</span></div>
+                <div class="detail-row"><span>ATA</span><span class="detail-val">${fixed(stats?.ata ?? null)}</span></div>
+            </div>
+            <div class="detail-col">
+                <div class="detail-section-label">My Stats</div>
+                <div class="detail-row"><span>GIH WR</span><span class="detail-val">${fmt(personal?.gihWrPersonal ?? null)}</span></div>
+                <div class="detail-row"><span>OH WR</span><span class="detail-val">${fmt(personal?.ohWrPersonal ?? null)}</span></div>
+                <div class="detail-row"><span>GIH count</span><span class="detail-val">${personal ? personal.gamesInHand : 0}</span></div>
+                <div class="detail-row"><span>GP count</span><span class="detail-val">${personal ? personal.gamesInDeck : 0}</span></div>
+                <div class="detail-row"><span>vs 17L Δ</span><span class="detail-val ${dCls(personal?.delta ?? null)}">${dStr(personal?.delta ?? null)}</span></div>
+            </div>
+        </div>`;
 }
 
 // ─── Draft — helpers ──────────────────────────────────────────────────────────
@@ -615,6 +861,15 @@ function rarityLabel(r) {
     return { C: 'Common', U: 'Uncommon', R: 'Rare', M: 'Mythic Rare' }[r] || r;
 }
 
+function rarityColor(r) {
+    return {
+        C: 'var(--tier-black)',
+        U: 'var(--tier-silver)',
+        R: 'var(--tier-gold)',
+        M: 'var(--tier-mythic)',
+    }[r] || 'var(--text-muted)';
+}
+
 // ─── IPC event listeners ──────────────────────────────────────────────────────
 
 ipcRenderer.on('match-started', (event, data) => {
@@ -626,6 +881,7 @@ ipcRenderer.on('match-ended', (event, data) => {
     console.log('Match ended:', data);
     updateStatus(`Match ended: ${data.result}`);
     if (currentPage === 'dashboard') loadDashboard();
+    if (currentPage === 'matches') loadMatches();
 });
 
 ipcRenderer.on('deck-submitted', (event, data) => {
@@ -636,6 +892,21 @@ ipcRenderer.on('inventory-updated', (event, data) => {
     if (currentPage === 'dashboard') {
         const el = document.getElementById('inventory-widget');
         if (el) el.innerHTML = renderInventory(data);
+    }
+});
+
+ipcRenderer.on('card-stats-updated', async () => {
+    if (currentPage === 'stats') {
+        const allFormats = await ipcRenderer.invoke('get-card-stat-formats');
+        _cardStatsFormats = allFormats.filter(isDraftLimited);
+        if (_cardStatsFormats.length === 1 && !_cardStatsFormat) {
+            _cardStatsFormat = _cardStatsFormats[0];
+        }
+        _cardStatsData = _cardStatsFormat
+            ? await ipcRenderer.invoke('get-card-game-stats', _cardStatsFormat)
+            : [];
+        renderCardStatsFormatSelector();
+        renderCardStatsTable();
     }
 });
 
@@ -678,5 +949,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Export pure helpers for unit testing.
 // Only active when running in Node.js (Jest); `window` is undefined there.
 if (typeof window === 'undefined') {
-    module.exports = { gihWrTierClass, colorPip, rarityGem, rarityLabel };
+    module.exports = { gihWrTierClass, colorPip, rarityGem, rarityLabel, rarityColor };
 }
