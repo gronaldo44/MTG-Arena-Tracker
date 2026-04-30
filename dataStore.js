@@ -329,9 +329,15 @@ class DataStore {
       match.deckColors = colors;
       changed = true;
     }
-    if (colorCounts && (!match.deckColorCounts || Object.keys(match.deckColorCounts).length === 0)) {
-      match.deckColorCounts = colorCounts;
-      changed = true;
+    if (colorCounts) {
+      if (!match.deckColorCounts || Object.keys(match.deckColorCounts).length === 0) {
+        match.deckColorCounts = colorCounts;
+        changed = true;
+      } else if (!('C' in match.deckColorCounts) && 'C' in colorCounts) {
+        // Backfill colorless count for matches stored before colorless tracking was added
+        match.deckColorCounts['C'] = colorCounts['C'];
+        changed = true;
+      }
     }
     if (changed) this.saveData();
   }

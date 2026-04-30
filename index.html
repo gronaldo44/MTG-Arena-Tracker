@@ -337,7 +337,7 @@
 
         .match-item {
             display: grid;
-            grid-template-columns: auto 1fr auto auto;
+            grid-template-columns: auto 1fr auto auto auto;
             gap: 15px;
             align-items: center;
             padding: 15px;
@@ -345,6 +345,33 @@
             border: 1px solid var(--border);
             border-radius: 10px;
             border-left: 4px solid var(--primary);
+        }
+
+        /* Color pips on match items */
+        .match-color-pips {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .match-pip-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* splash pips are hollow (border only) — handled via inline style */
+
+        .match-pip-colorless {
+            background: #6b6b6b;
+            color: #e8e8e8;
+            font-size: 7px;
+            font-weight: 900;
+            line-height: 1;
         }
 
         .match-item.win {
@@ -440,10 +467,10 @@
         .matches-format-card {
             background: var(--card);
             border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 16px 18px;
-            flex: 1 1 220px;
-            max-width: 380px;
+            border-radius: 10px;
+            padding: 10px 14px;
+            flex: 1 1 160px;
+            max-width: 280px;
             cursor: pointer;
             transition: border-color 0.15s, background 0.15s;
             user-select: none;
@@ -467,7 +494,7 @@
         }
 
         .mfc-name {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             white-space: nowrap;
             overflow: hidden;
@@ -476,7 +503,7 @@
         }
 
         .mfc-wr {
-            font-size: 22px;
+            font-size: 17px;
             font-weight: 700;
             flex-shrink: 0;
         }
@@ -484,7 +511,7 @@
         .mfc-meta {
             font-size: 11px;
             color: var(--text-muted);
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         /* Combo rows inside a format card */

@@ -573,21 +573,33 @@ ipcMain.handle('clear-card-stats', async () => {
 
 ipcMain.handle('get-card-stats-by-grpid', async (event, grpId) => {
   if (!dataStore) return null;
-  // Aggregate personal stats across all formats for the draft-card detail drawer
+
+  // The draft log and GRE game events may use different grpIds for the same card
+  // (different art printings). Resolve by card name and aggregate across all grpIds
+  // that share the same name so draft pack cards always find their stored stats.
+  const name = dataStore.getCardName(String(grpId));
+  const siblingIds = new Set();
+  for (const [id, card] of Object.entries(dataStore.cards)) {
+    if (card.name === name) siblingIds.add(id);
+  }
+
   let gamesInDeck = 0, gamesInHand = 0, gamesWonInHand = 0,
       gamesOpenHand = 0, gamesWonOpenHand = 0;
   for (const fmt of dataStore.getCardStatFormats()) {
-    const s = dataStore.getAllCardGameStats(fmt)[String(grpId)];
-    if (s) {
-      gamesInDeck += s.gamesInDeck;
-      gamesInHand += s.gamesInHand;
-      gamesWonInHand += s.gamesWonInHand;
-      gamesOpenHand += s.gamesOpenHand;
-      gamesWonOpenHand += s.gamesWonOpenHand;
+    const statsMap = dataStore.getAllCardGameStats(fmt);
+    for (const id of siblingIds) {
+      const s = statsMap[id];
+      if (s) {
+        gamesInDeck      += s.gamesInDeck;
+        gamesInHand      += s.gamesInHand;
+        gamesWonInHand   += s.gamesWonInHand;
+        gamesOpenHand    += s.gamesOpenHand;
+        gamesWonOpenHand += s.gamesWonOpenHand;
+      }
     }
   }
+
   if (gamesInHand === 0 && gamesInDeck === 0) return null;
-  const name          = dataStore.getCardName(grpId);
   const gihWrPersonal = gamesInHand > 0 ? gamesWonInHand / gamesInHand : null;
   const ohWrPersonal  = gamesOpenHand > 0 ? gamesWonOpenHand / gamesOpenHand : null;
   const stats17l      = draftAssistant.isLoaded() ? draftAssistant.getCardStats(name) : null;
@@ -969,8 +981,13 @@ function deriveColorCounts(rawGrpIds) {
     for (const ch of card.manaCost) {
       if ('WUBRG'.includes(ch)) colorsInCard.add(ch);
     }
-    for (const c of colorsInCard) {
-      counts[c] = (counts[c] || 0) + 1;
+    if (colorsInCard.size === 0) {
+      // Non-land card with no colored pips — counts as colorless
+      counts['C'] = (counts['C'] || 0) + 1;
+    } else {
+      for (const c of colorsInCard) {
+        counts[c] = (counts[c] || 0) + 1;
+      }
     }
   }
   return counts;

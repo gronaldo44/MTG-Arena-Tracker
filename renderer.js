@@ -120,21 +120,30 @@ function colorLabel(c) {
 
 function renderMatchColorPips(match) {
     const colors = match.deckColors;
-    if (!colors || colors.length === 0) return '';
     const counts = match.deckColorCounts || {};
-    const ordered = ['W', 'U', 'B', 'R', 'G'].filter(c => colors.includes(c));
-    if (ordered.length === 0) return '';
+    const colorlessCnt = counts['C'] || 0;
+
+    const ordered = ['W', 'U', 'B', 'R', 'G'].filter(c => (colors || []).includes(c));
+    if (ordered.length === 0 && colorlessCnt === 0) return '';
+
     const pips = ordered.map(c => {
         const count = counts[c] || 0;
         const isSplash = count > 0 && count <= 5;
         const title = count > 0
             ? `${colorLabel(c)}: ${count} card${count !== 1 ? 's' : ''}`
             : colorLabel(c);
-        return `<span class="match-pip-dot${isSplash ? ' splash' : ''}"
-            style="background:${_dotColor[c]};${_dotBorder[c] || ''}"
-            title="${title}"></span>`;
-    }).join('');
-    return `<div class="match-color-pips">${pips}</div>`;
+        const pipStyle = isSplash
+            ? `background:transparent;border:2px solid ${c === 'B' ? '#888' : _dotColor[c]};`
+            : `background:${_dotColor[c]};${_dotBorder[c] || ''}`;
+        return `<span class="match-pip-dot" style="${pipStyle}" title="${title}"></span>`;
+    });
+
+    if (colorlessCnt > 0) {
+        pips.push(`<span class="match-pip-dot match-pip-colorless"
+            title="Colorless: ${colorlessCnt} card${colorlessCnt !== 1 ? 's' : ''}">✦</span>`);
+    }
+
+    return `<div class="match-color-pips">${pips.join('')}</div>`;
 }
 
 async function loadMatches() {
@@ -717,7 +726,7 @@ function renderCurrentPack(pack) {
             <div class="draft-card-row ${tierClass}" data-idx="${idx}" onclick="toggleCardDetail(${idx})">
                 <div class="draft-rank">${rank}</div>
                 <div class="draft-card-name">
-                    ${colorPip(colorStr)}
+                    ${draftCardColorPips(colorStr, card.manaCost || '')}
                     <span title="${name}">${name}</span>
                     ${rarityGem(rarityStr)}
                     ${lowSample && gihWr !== null ? '<span class="low-sample-dot" title="Low sample size"></span>' : ''}
@@ -840,6 +849,7 @@ function gihWrTierClass(tier) {
 
 /**
  * Render a small colour indicator pip given a 17Lands color string (e.g. "WU", "R", "").
+ * Legacy single-pip version — kept for module.exports compatibility.
  */
 function colorPip(colorStr) {
     if (!colorStr) return `<span class="color-pip color-C" title="Colorless">◆</span>`;
@@ -847,6 +857,29 @@ function colorPip(colorStr) {
     const map = { W: 'W', U: 'U', B: 'B', R: 'R', G: 'G' };
     const key = map[colorStr] || 'C';
     return `<span class="color-pip color-${key}" title="${colorStr}">◆</span>`;
+}
+
+/**
+ * Render individual colored dots for a draft card using the match-pip system.
+ * colorStr comes from the 17Lands CSV (e.g. "WU"); falls back to parsing manaCost.
+ */
+function draftCardColorPips(colorStr, manaCost) {
+    const WUBRG = ['W', 'U', 'B', 'R', 'G'];
+    const source = colorStr || manaCost || '';
+    const colors = WUBRG.filter(c => source.includes(c));
+
+    if (colors.length === 0) {
+        // Has a mana cost but no colored symbols → colorless (artifact / Eldrazi)
+        if (manaCost) {
+            return `<span class="match-pip-dot match-pip-colorless" title="Colorless">✦</span>`;
+        }
+        return ''; // Land or no data available
+    }
+
+    const dots = colors.map(c =>
+        `<span class="match-pip-dot" style="background:${_dotColor[c]};${_dotBorder[c] || ''}" title="${colorLabel(c)}"></span>`
+    ).join('');
+    return `<span style="display:inline-flex;gap:3px;align-items:center;flex-shrink:0;">${dots}</span>`;
 }
 
 /**
