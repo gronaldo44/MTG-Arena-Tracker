@@ -961,7 +961,20 @@
         }
 
         /* Left-border accent by tier */
-        .draft-card-row.tier-mythic { border-left-color: var(--tier-mythic); }
+        @keyframes flame-flicker {
+            0%   { border-left-color: #e01010; box-shadow: inset 4px 0 10px rgba(224, 16, 16, 0.22); }
+            15%  { border-left-color: #ff5500; box-shadow: inset 4px 0 18px rgba(255, 85, 0, 0.42); }
+            30%  { border-left-color: #c50000; box-shadow: inset 4px 0  7px rgba(197, 0, 0, 0.18); }
+            50%  { border-left-color: #ff7820; box-shadow: inset 4px 0 22px rgba(255, 120, 32, 0.48); }
+            65%  { border-left-color: #e01010; box-shadow: inset 4px 0 12px rgba(224, 16, 16, 0.28); }
+            80%  { border-left-color: #ff3300; box-shadow: inset 4px 0 16px rgba(255, 51, 0, 0.38); }
+            100% { border-left-color: #e01010; box-shadow: inset 4px 0 10px rgba(224, 16, 16, 0.22); }
+        }
+
+        .draft-card-row.tier-mythic {
+            border-left-color: var(--tier-mythic);
+            animation: flame-flicker 2.4s ease-in-out infinite;
+        }
         .draft-card-row.tier-gold   { border-left-color: var(--tier-gold); }
         .draft-card-row.tier-silver { border-left-color: rgba(208, 216, 224, 0.45); }
         .draft-card-row.tier-brown  { border-left-color: rgba(123, 80, 32, 0.45); }
