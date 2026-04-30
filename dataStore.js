@@ -18,9 +18,10 @@ class DataStore {
       this.dataDir = path.join(require('os').homedir(), '.mtg-arena-tracker', 'data');
     }
 
-    this.dataFile = path.join(this.dataDir, 'matches.json');
+    this.dataFile     = path.join(this.dataDir, 'matches.json');
     this.settingsFile = path.join(this.dataDir, 'settings.json');
-    this.cardsFile = path.join(__dirname, 'cards.json');
+    this.cardsFile    = path.join(__dirname, 'cards.json');
+    this.cardStatsFile = path.join(this.dataDir, 'cardStats.json');
 
     // Ensure data directory exists
     if (!fs.existsSync(this.dataDir)) {
@@ -28,9 +29,10 @@ class DataStore {
     }
 
     // Load existing data
-    this.data = this.loadData();
-    this.settings = this.loadSettings();
-    this.cards = this.loadCards();
+    this.data       = this.loadData();
+    this.settings   = this.loadSettings();
+    this.cards      = this.loadCards();
+    this.cardStats  = this.loadCardStats();
   }
 
   /**
@@ -315,11 +317,42 @@ class DataStore {
   }
 
   /**
+   * Backfill deck colors and per-color copy counts on a stored match.
+   * Only writes fields that are currently empty to avoid redundant saves.
+   */
+  updateMatchColors(matchId, colors, colorCounts) {
+    if (!colors || colors.length === 0) return;
+    const match = this.data.matches.find(m => m.matchId === matchId);
+    if (!match) return;
+    let changed = false;
+    if (!match.deckColors || match.deckColors.length === 0) {
+      match.deckColors = colors;
+      changed = true;
+    }
+    if (colorCounts && (!match.deckColorCounts || Object.keys(match.deckColorCounts).length === 0)) {
+      match.deckColorCounts = colorCounts;
+      changed = true;
+    }
+    if (changed) this.saveData();
+  }
+
+  /**
    * Delete a match by ID
    */
   deleteMatch(matchId) {
     this.data.matches = this.data.matches.filter(m => m.id !== matchId);
     this.saveData();
+  }
+
+  /**
+   * Delete all matches and card stats for a given format.
+   */
+  deleteMatchesByFormat(format) {
+    this.data.matches = this.data.matches.filter(m => m.format !== format);
+    delete this.cardStats.statsByFormat[format];
+    this.saveData();
+    this.saveCardStats();
+    console.log(`[DataStore] Deleted all data for format: ${format}`);
   }
 
   /**
@@ -446,6 +479,116 @@ class DataStore {
     }
 
     this.saveData();
+  }
+
+  // ─── Personal card game stats ────────────────────────────────────────────
+
+  loadCardStats() {
+    try {
+      if (fs.existsSync(this.cardStatsFile)) {
+        const content = fs.readFileSync(this.cardStatsFile, 'utf8');
+        const parsed = JSON.parse(content);
+
+        // Migration: old format had a flat `stats` key, new format uses `statsByFormat`.
+        // Resetting processedGames forces a full rebuild on next scan so every game
+        // gets attributed to its correct format.
+        if (parsed.stats && !parsed.statsByFormat) {
+          console.log('[DataStore] Migrating card stats to format-segmented structure');
+          return { processedGames: new Set(), statsByFormat: {} };
+        }
+
+        return {
+          processedGames: new Set(parsed.processedGames || []),
+          statsByFormat:  parsed.statsByFormat || {},
+        };
+      }
+    } catch (e) {
+      console.error('[DataStore] Error loading card stats:', e);
+    }
+    return { processedGames: new Set(), statsByFormat: {} };
+  }
+
+  saveCardStats() {
+    try {
+      const serialized = {
+        processedGames: Array.from(this.cardStats.processedGames),
+        statsByFormat:  this.cardStats.statsByFormat,
+      };
+      fs.writeFileSync(this.cardStatsFile, JSON.stringify(serialized, null, 2));
+    } catch (e) {
+      console.error('[DataStore] Error saving card stats:', e);
+    }
+  }
+
+  /**
+   * Record card stats from one completed game, bucketed by format.
+   * gameSummary: { matchId, gameNumber, result, deckGrpIds[], handGrpIds[], openingHandGrpIds[] }
+   * format: string — the format label (e.g. "Secrets of Strixhaven Draft")
+   * Returns true if the game was new (not already processed).
+   */
+  updateCardGameStats(gameSummary, format = 'Unknown') {
+    const key = `${gameSummary.matchId}_game${gameSummary.gameNumber}`;
+    if (this.cardStats.processedGames.has(key)) return false;
+
+    this.cardStats.processedGames.add(key);
+    const won = gameSummary.result === 'win';
+
+    if (!this.cardStats.statsByFormat[format]) {
+      this.cardStats.statsByFormat[format] = {};
+    }
+    const stats = this.cardStats.statsByFormat[format];
+
+    const ensureEntry = grpId => {
+      if (!stats[grpId]) {
+        stats[grpId] = {
+          gamesInDeck: 0, gamesInHand: 0, gamesWonInHand: 0,
+          gamesOpenHand: 0, gamesWonOpenHand: 0,
+        };
+      }
+      return stats[grpId];
+    };
+
+    for (const grpId of gameSummary.deckGrpIds) {
+      ensureEntry(grpId).gamesInDeck++;
+    }
+
+    const openSet = new Set(gameSummary.openingHandGrpIds);
+    for (const grpId of gameSummary.handGrpIds) {
+      const s = ensureEntry(grpId);
+      s.gamesInHand++;
+      if (won) s.gamesWonInHand++;
+    }
+    for (const grpId of openSet) {
+      const s = ensureEntry(grpId);
+      s.gamesOpenHand++;
+      if (won) s.gamesWonOpenHand++;
+    }
+
+    this.saveCardStats();
+    console.log(`[DataStore] Card stats updated for game ${key} (${format}): ${gameSummary.handGrpIds.length} cards in hand`);
+    return true;
+  }
+
+  /** Return the raw per-grpId stats object for a specific format. */
+  getAllCardGameStats(format) {
+    if (!format) return {};
+    return this.cardStats.statsByFormat[format] ?? {};
+  }
+
+  /** Return sorted list of formats that have any card stats recorded. */
+  getCardStatFormats() {
+    return Object.keys(this.cardStats.statsByFormat).sort();
+  }
+
+  /** Look up the format string for a stored match by its Arena matchId. */
+  getMatchFormat(matchId) {
+    const match = this.data.matches.find(m => m.matchId === matchId);
+    return match?.format ?? null;
+  }
+
+  clearCardStats() {
+    this.cardStats = { processedGames: new Set(), statsByFormat: {} };
+    this.saveCardStats();
   }
 
   /**
