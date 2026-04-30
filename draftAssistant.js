@@ -188,6 +188,13 @@ class DraftAssistant {
   }
 
   /**
+   * Return all card stats as an array (for "show all 17Lands cards" mode).
+   */
+  getAllCardStats() {
+    return Array.from(this.cardStats.values());
+  }
+
+  /**
    * Describe the currently loaded dataset (for display in settings UI).
    */
   getStatus() {

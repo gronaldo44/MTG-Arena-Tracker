@@ -2,7 +2,9 @@
  * MTG Arena Log Parser v5
  * Handles actual UnityCrossThreadLogger format with timestamps
  */
- 
+
+const { SET_NAMES, SKIP_CODES } = require('./sets');
+
 class LogParserV5 {
   constructor() {
     this.currentMatch = null;
@@ -689,24 +691,57 @@ class LogParserV5 {
   detectFormatFromEventName(eventName) {
     if (!eventName) return 'Unknown';
     const name = eventName.toLowerCase();
- 
+
     if (name.includes('standard')) return 'Standard';
     if (name.includes('alchemy')) return 'Alchemy';
     if (name.includes('historic')) {
       if (name.includes('brawl')) return 'Historic Brawl';
-      if (name.includes('play')) return 'Historic';
       return 'Historic';
     }
-    if (name === 'historic_play') return 'Historic';
     if (name.includes('explorer')) return 'Explorer';
     if (name.includes('pioneer')) return 'Pioneer';
     if (name.includes('timeless')) return 'Timeless';
     if (name.includes('brawl')) return 'Brawl';
-    if (name.includes('draft')) return 'Draft';
-    if (name.includes('sealed')) return 'Sealed';
     if (name.includes('constructed')) return 'Constructed';
- 
+    if (name.includes('draft') || name.includes('sealed')) return this.detectDraftFormat(eventName);
+
     return 'Unknown';
+  }
+
+  /**
+   * Given a draft/sealed event name, return a specific format label that
+   * includes the set name, e.g. "Secrets of Strixhaven Quick Draft".
+   *
+   * MTGA event names follow patterns like:
+   *   Human_PremierDraft_SOS_20260401
+   *   Traditional_PremierDraft_SOS
+   *   Draft_QuickDraft_SOS
+   *   Human_SealedDeck_SOS
+   *
+   * The set code is the 2–4 uppercase-only segment that isn't a type keyword.
+   */
+  detectDraftFormat(eventName) {
+    const name = eventName.toLowerCase();
+
+    // Determine draft subtype
+    let draftType;
+    if (name.includes('sealed')) draftType = 'Sealed';
+    else if (name.includes('quick')) draftType = 'Quick Draft';
+    else if (name.includes('traditional')) draftType = 'Traditional Draft';
+    else draftType = 'Draft';
+
+    // Extract set code: a segment of 2–4 all-uppercase letters that isn't a
+    // common keyword (those use mixed case like "PremierDraft", "QuickDraft").
+    const setCode = eventName
+      .split(/[_\-\s]+/)
+      .find(p => /^[A-Z]{2,4}$/.test(p) && !SKIP_CODES.has(p)) ?? null;
+
+    if (setCode) {
+      const setName = SET_NAMES[setCode] ?? setCode;
+      return `${setName} ${draftType}`;
+    }
+
+    return draftType;
   }
 }
  
