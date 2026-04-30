@@ -44,6 +44,7 @@ class DataStore {
         const content = fs.readFileSync(this.cardsFile, 'utf8');
         const cardsData = JSON.parse(content);
         const cards = cardsData.cards || {};
+        this.mainDraftSets = Array.isArray(cardsData.mainDraftSets) ? cardsData.mainDraftSets : [];
         const cardCount = Object.keys(cards).length;
         console.log(`[DataStore] Loaded ${cardCount} cards from database`);
         if (cardsData.lastUpdated) {
@@ -54,6 +55,7 @@ class DataStore {
     } catch (error) {
       console.error('[DataStore] Error loading cards database:', error);
     }
+    this.mainDraftSets = [];
     console.log('[DataStore] No card database found, card names will not be available');
     return {};
   }
@@ -64,6 +66,32 @@ class DataStore {
   reloadCards() {
     this.cards = this.loadCards();
     return this.cards;
+  }
+
+  /**
+   * Returns the precomputed list of main draftable sets, ordered most-recent-first.
+   * Each entry: { code, primaryCount, firstGrpId }. Populated by import_sos.py.
+   */
+  getMainDraftSets() {
+    return this.mainDraftSets || [];
+  }
+
+  /**
+   * Returns [{ grpId, name, manaCost, type }] for every card whose `set`
+   * matches the given code. Special Guests for the same parent set
+   * (digitalReleaseSet === `SPG-${setCode}`) are included so the browse view
+   * mirrors the actual draft pool.
+   */
+  getCardsBySet(setCode) {
+    if (!setCode) return [];
+    const spgKey = `SPG-${setCode}`;
+    const result = [];
+    for (const [grpId, card] of Object.entries(this.cards)) {
+      if (card.set === setCode || card.digitalReleaseSet === spgKey) {
+        result.push({ grpId, ...card });
+      }
+    }
+    return result;
   }
 
   /**

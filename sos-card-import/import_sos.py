@@ -1,9 +1,14 @@
 """
 import_sos.py
 
-Reads GrpIds for Secrets of Strixhaven (SOS) cards from the MTGA SQLite DB,
-matches them to Scryfall data by card name to get mana costs, then merges the
-results into cards.json.
+Reads GrpIds for the Secrets of Strixhaven (SOS) draft pool from the MTGA
+SQLite DB, matches them to Scryfall data by card name to get mana costs,
+then merges the results into cards.json.
+
+The "draft pool" includes three set codes:
+  - SOS: the main set
+  - SOA: the Mystical Archive-style bonus sheet that drafts alongside SOS
+  - SPG (DigitalReleaseSet='SPG-SOS'): Special Guests for SOS
 
 Usage:
     python import_sos.py <mtga_db_path> <scryfall_json_path> <cards_json_path>
@@ -26,6 +31,32 @@ def strip_html(text):
     return _HTML_TAG_RE.sub("", text).strip()
 
 
+# OldSchoolManaText tokens: 'o' followed by one of:
+#   - a parenthesized hybrid like (2/G), (W/B)
+#   - a digit run (1, 2, 10)
+#   - a single uppercase letter (W, U, B, R, G, X, S, ...)
+_MANA_TOKEN_RE = re.compile(r"o(\([^)]+\)|\d+|[A-Z])")
+
+
+def mtga_mana_to_scryfall(text):
+    """Convert MTGA OldSchoolManaText to Scryfall mana_cost format.
+
+    Examples:
+        'oW' -> '{W}'
+        'o1oWoW' -> '{1}{W}{W}'
+        'o(2/G)o(2/G)' -> '{2/G}{2/G}'
+        'oXoUoR' -> '{X}{U}{R}'
+    """
+    if not text:
+        return ""
+    parts = []
+    for sym in _MANA_TOKEN_RE.findall(text):
+        if sym.startswith("(") and sym.endswith(")"):
+            sym = sym[1:-1]
+        parts.append("{" + sym + "}")
+    return "".join(parts)
+
+
 def normalize_name(name):
     """Lowercase, strip HTML tags, and normalize quotes for fuzzy matching."""
     name = strip_html(name)
@@ -39,15 +70,51 @@ def load_mtga_sos_cards(db_path):
     con = sqlite3.connect(db_path)
     cur = con.cursor()
     cur.execute("""
-        SELECT c.GrpId, en.Loc AS Name, et.Loc AS TypeText, c.IsToken, c.IsPrimaryCard
+        SELECT c.GrpId, en.Loc AS Name, et.Loc AS TypeText, c.IsToken, c.IsPrimaryCard,
+               c.OldSchoolManaText, c.ExpansionCode, c.DigitalReleaseSet
         FROM Cards c
         LEFT JOIN Localizations_enUS en ON c.TitleId = en.LocId AND en.Formatted = 1
         LEFT JOIN Localizations_enUS et ON c.TypeTextId = et.LocId AND et.Formatted = 1
-        WHERE c.ExpansionCode = 'SOS'
+        WHERE c.ExpansionCode IN ('SOS', 'SOA')
+           OR (c.ExpansionCode = 'SPG' AND c.DigitalReleaseSet = 'SPG-SOS')
     """)
     rows = cur.fetchall()
     con.close()
     return rows
+
+
+# Threshold for "main draftable set" — bonus sheets like SOA/STA/MUL/FCA/OTP
+# all sit at 63–76 primary cards, so 100 separates them from real sets.
+MAIN_SET_MIN_CARDS = 100
+
+
+def compute_main_draft_sets(db_path):
+    """Return the list of "main" draftable sets ordered by recency.
+
+    A main set has ≥100 primary, non-token cards with an empty
+    DigitalReleaseSet (which excludes Special Guests, Alchemy supplements,
+    and bonus packs). Recency is approximated by MIN(GrpId): unlike MAX,
+    it isn't polluted by alt-art reprints retroactively added to old sets.
+    """
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute("""
+        SELECT ExpansionCode,
+               COUNT(*) AS primary_count,
+               MIN(GrpId) AS first_grp_id
+        FROM Cards
+        WHERE IsToken = 0 AND IsPrimaryCard = 1
+          AND (DigitalReleaseSet IS NULL OR DigitalReleaseSet = '')
+        GROUP BY ExpansionCode
+        HAVING primary_count >= ?
+        ORDER BY first_grp_id DESC
+    """, (MAIN_SET_MIN_CARDS,))
+    sets = [
+        {"code": code, "primaryCount": n, "firstGrpId": first}
+        for code, n, first in cur.fetchall()
+    ]
+    con.close()
+    return sets
 
 
 def load_scryfall_sos(scryfall_path):
@@ -94,7 +161,7 @@ def main():
 
     db_path, scryfall_path, cards_json_path = sys.argv[1], sys.argv[2], sys.argv[3]
 
-    print("Loading MTGA SOS cards from DB...")
+    print("Loading MTGA SOS draft-pool cards from DB (SOS + SOA + SPG-SOS)...")
     mtga_rows = load_mtga_sos_cards(db_path)
     print(f"  {len(mtga_rows)} rows found")
 
@@ -114,18 +181,25 @@ def main():
 
     matched = 0
     skipped_token = 0
-    unmatched = []
+    db_fallback = []
+    by_set = {}
 
-    for grp_id, name, type_text, is_token, is_primary in mtga_rows:
+    for grp_id, name, type_text, is_token, is_primary, old_school_mana, exp_code, drs in mtga_rows:
+        by_set[exp_code] = by_set.get(exp_code, 0) + 1
         if is_token:
             skipped_token += 1
             continue
 
         key = str(grp_id)
 
-        # Skip if already present with mana cost data (don't overwrite good data)
+        # Always backfill set provenance — even on entries we already had,
+        # since previous imports didn't write these fields.
         existing = cards.get(key)
-        if existing and existing.get("manaCost") != "":
+        existing_has_cost = bool(existing and existing.get("manaCost"))
+
+        if existing_has_cost:
+            existing["set"] = exp_code
+            existing["digitalReleaseSet"] = drs or ""
             matched += 1
             continue
 
@@ -140,32 +214,54 @@ def main():
                 "name": sf["name"],
                 "manaCost": sf["mana_cost"],
                 "type": simplify_type(sf["type_line"]),
+                "set": exp_code,
+                "digitalReleaseSet": drs or "",
             }
             matched += 1
         else:
-            # Fall back: use what we have from the DB (no mana cost)
+            # Fall back to MTGA's own data: OldSchoolManaText is authoritative
+            # for what the client displays, and is populated even when Scryfall
+            # has not yet indexed a brand-new set.
             fallback_name = db_name or f"Unknown ({grp_id})"
             fallback_type = simplify_type(type_text) if type_text else ""
+            fallback_cost = mtga_mana_to_scryfall(old_school_mana or "")
             cards[key] = {
                 "name": fallback_name,
-                "manaCost": "",
+                "manaCost": fallback_cost,
                 "type": fallback_type,
+                "set": exp_code,
+                "digitalReleaseSet": drs or "",
             }
-            unmatched.append((grp_id, db_name))
+            db_fallback.append((grp_id, db_name, fallback_cost))
 
     cards_data["cards"] = cards
+
+    # Recompute the canonical main-set list every run so the renderer's
+    # browse dropdown stays in sync as new sets release.
+    print("Computing main draft sets index...")
+    cards_data["mainDraftSets"] = compute_main_draft_sets(db_path)
+    print(f"  {len(cards_data['mainDraftSets'])} main draftable sets indexed")
 
     print(f"Writing updated cards.json...")
     with open(cards_json_path, "w", encoding="utf-8") as f:
         json.dump(cards_data, f, indent=2, ensure_ascii=False)
 
     print(f"\nDone.")
-    print(f"  Matched/added:   {matched}")
-    print(f"  Tokens skipped:  {skipped_token}")
-    if unmatched:
-        print(f"  Unmatched (DB name used, no mana cost): {len(unmatched)}")
-        for grp_id, name in unmatched:
-            print(f"    GrpId {grp_id}: '{name}'")
+    print(f"  Rows by set:          {', '.join(f'{k}={v}' for k, v in sorted(by_set.items()))}")
+    print(f"  Matched via Scryfall: {matched}")
+    print(f"  Tokens skipped:       {skipped_token}")
+    if db_fallback:
+        no_cost = [r for r in db_fallback if not r[2]]
+        with_cost = [r for r in db_fallback if r[2]]
+        print(f"  DB fallback (no Scryfall match): {len(db_fallback)}")
+        if with_cost:
+            print(f"    With mana cost from MTGA DB:  {len(with_cost)}")
+            for grp_id, name, cost in with_cost:
+                print(f"      GrpId {grp_id}: '{name}' {cost}")
+        if no_cost:
+            print(f"    Without mana cost (likely lands/etc): {len(no_cost)}")
+            for grp_id, name, _ in no_cost:
+                print(f"      GrpId {grp_id}: '{name}'")
     print(f"  Total cards now: {len(cards)}")
 
 

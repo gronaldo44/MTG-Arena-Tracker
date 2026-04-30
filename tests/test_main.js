@@ -87,6 +87,19 @@ jest.mock('../logParserV5', () =>
   jest.fn(() => ({ parse: jest.fn(() => []) }))
 );
 
+// Shared fixture state for the mocked dataStore — exposed so individual tests
+// can assert against the same data the IPC handlers see.
+const MOCK_DRAFT_SETS = [
+  { code: 'SOS', primaryCount: 281, firstGrpId: 102460 },
+  { code: 'TMT', primaryCount: 205, firstGrpId: 100458 },
+];
+const MOCK_SET_CARDS = {
+  SOS: [
+    { grpId: '102471', name: 'Elite Interceptor',     manaCost: '{W}',     type: 'Creature', set: 'SOS', digitalReleaseSet: '' },
+    { grpId: '102832', name: 'Sylvan Library',        manaCost: '{1}{G}',  type: 'Enchantment', set: 'SPG', digitalReleaseSet: 'SPG-SOS' },
+  ],
+};
+
 jest.mock('../dataStore', () =>
   jest.fn(() => ({
     getMatches:    jest.fn(() => []),
@@ -112,6 +125,8 @@ jest.mock('../dataStore', () =>
     clearCardStats:         jest.fn(),
     deleteMatchesByFormat:  jest.fn(),
     updateMatchColors:      jest.fn(),
+    getMainDraftSets:       jest.fn(() => MOCK_DRAFT_SETS),
+    getCardsBySet:          jest.fn((code) => MOCK_SET_CARDS[code] || []),
   }))
 );
 
@@ -205,10 +220,61 @@ describe('main.js', () => {
         'get-settings',
         'save-settings',
         'get-draft-assistant-status',
+        'get-main-draft-sets',
+        'get-set-card-stats',
       ];
       for (const channel of expected) {
         expect(registeredHandlers).toHaveProperty(channel);
       }
+    });
+  });
+
+  // ── get-main-draft-sets ────────────────────────────────────────────────
+
+  describe('get-main-draft-sets handler', () => {
+    test('returns the precomputed list, sorted by recency', async () => {
+      const handler = registeredHandlers['get-main-draft-sets'];
+      const sets = await handler(null);
+      expect(Array.isArray(sets)).toBe(true);
+      expect(sets[0]).toEqual(expect.objectContaining({
+        code: 'SOS', primaryCount: 281, firstGrpId: 102460,
+      }));
+    });
+  });
+
+  // ── get-set-card-stats ─────────────────────────────────────────────────
+
+  describe('get-set-card-stats handler', () => {
+    test('returns one row per unique card name in the set + SPG pool', async () => {
+      const handler = registeredHandlers['get-set-card-stats'];
+      const rows = await handler(null, 'SOS');
+      expect(rows).toHaveLength(2);
+      const names = rows.map(r => r.name).sort();
+      expect(names).toEqual(['Elite Interceptor', 'Sylvan Library']);
+    });
+
+    test('zeroes out personal stats and 17L when nothing is loaded', async () => {
+      const handler = registeredHandlers['get-set-card-stats'];
+      const rows = await handler(null, 'SOS');
+      for (const r of rows) {
+        expect(r.gamesInDeck).toBe(0);
+        expect(r.gamesInHand).toBe(0);
+        expect(r.gihWrPersonal).toBeNull();
+        expect(r.gihWr17l).toBeNull();
+        expect(r.delta).toBeNull();
+      }
+    });
+
+    test('returns [] when the set is unknown', async () => {
+      const handler = registeredHandlers['get-set-card-stats'];
+      const rows = await handler(null, 'NOPE');
+      expect(rows).toEqual([]);
+    });
+
+    test('returns [] when no setCode is supplied', async () => {
+      const handler = registeredHandlers['get-set-card-stats'];
+      expect(await handler(null, '')).toEqual([]);
+      expect(await handler(null, null)).toEqual([]);
     });
   });
 

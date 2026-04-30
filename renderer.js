@@ -253,6 +253,10 @@ function toggleMatchCombo(format, combo) {
 
 let _cardStatsData     = [];
 let _cardStatsSortKey  = 'gamesInHand';
+// 'format' = personal-stats format keys (e.g., "Premier_Draft_SOS"); existing path.
+// 'set'    = MTGA set codes (e.g., "SOS"); used when the user has no draft history yet
+//           so the table can still surface 17Lands data for an upcoming draft.
+let _cardStatsMode     = 'format';
 let _cardStatsSortDir  = -1;           // -1 = desc, 1 = asc
 let _cardStatsFormats  = [];           // formats that have data
 let _cardStatsFormat   = null;         // currently selected format
@@ -284,23 +288,47 @@ async function loadStats() {
             </tr>`;
         }).join('');
 
-    // Personal card stats — load available formats, then data for selected format
+    // Personal card stats — load available formats, then data for selected format.
+    // Falls back to a set-code browse mode when there's no draft history yet.
     const allFormats = await ipcRenderer.invoke('get-card-stat-formats');
-    _cardStatsFormats = allFormats.filter(isDraftLimited);
+    const draftFormats = allFormats.filter(isDraftLimited);
 
-    // Auto-select when exactly one format exists; otherwise keep current selection
+    const previousMode = _cardStatsMode;
+    if (draftFormats.length > 0) {
+        _cardStatsMode    = 'format';
+        _cardStatsFormats = draftFormats;
+    } else {
+        _cardStatsMode    = 'set';
+        const sets = await ipcRenderer.invoke('get-main-draft-sets');
+        _cardStatsFormats = sets.map(s => s.code);
+    }
+
+    // First time entering browse mode, drop the Min GIH default to 0 so the
+    // table actually surfaces 17Lands rows for cards the user hasn't played.
+    if (_cardStatsMode === 'set' && previousMode !== 'set') {
+        const minInput = document.getElementById('card-stats-min-gih');
+        if (minInput) minInput.value = '0';
+    }
+
+    // Auto-select when exactly one option exists; otherwise keep current selection
     if (_cardStatsFormats.length === 1) {
         _cardStatsFormat = _cardStatsFormats[0];
     } else if (_cardStatsFormat && !_cardStatsFormats.includes(_cardStatsFormat)) {
         _cardStatsFormat = null; // stale selection
+    } else if (_cardStatsFormats.length > 0 && !_cardStatsFormat && _cardStatsMode === 'set') {
+        _cardStatsFormat = _cardStatsFormats[0]; // default to most-recent set
     }
 
-    _cardStatsData = _cardStatsFormat
-        ? await ipcRenderer.invoke('get-card-game-stats', _cardStatsFormat)
-        : [];
+    _cardStatsData = await fetchCardStats();
 
     renderCardStatsFormatSelector();
     renderCardStatsTable();
+}
+
+async function fetchCardStats() {
+    if (!_cardStatsFormat) return [];
+    const channel = _cardStatsMode === 'set' ? 'get-set-card-stats' : 'get-card-game-stats';
+    return ipcRenderer.invoke(channel, _cardStatsFormat);
 }
 
 function renderCardStatsFormatSelector() {
@@ -315,9 +343,11 @@ function renderCardStatsFormatSelector() {
         return;
     }
 
+    const labelText = _cardStatsMode === 'set' ? 'Browsing set' : 'Set';
+
     if (_cardStatsFormats.length === 1) {
-        // Single format — just show a label, no dropdown needed
-        el.innerHTML = `<span style="font-size:13px;color:var(--text-muted);">Set: <strong style="color:var(--text);">${_cardStatsFormat}</strong></span>`;
+        // Single option — just show a label, no dropdown needed
+        el.innerHTML = `<span style="font-size:13px;color:var(--text-muted);">${labelText}: <strong style="color:var(--text);">${_cardStatsFormat}</strong></span>`;
         if (filterRow) filterRow.style.display = 'flex';
         return;
     }
@@ -327,7 +357,7 @@ function renderCardStatsFormatSelector() {
         .join('');
 
     el.innerHTML = `
-        <label style="font-size:13px;color:var(--text-muted);">Set:
+        <label style="font-size:13px;color:var(--text-muted);">${labelText}:
             <select onchange="selectCardStatsFormat(this.value)"
                 style="margin-left:8px;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
                 <option value="">— Select a draft set —</option>
@@ -340,9 +370,7 @@ function renderCardStatsFormatSelector() {
 
 async function selectCardStatsFormat(format) {
     _cardStatsFormat = format || null;
-    _cardStatsData = _cardStatsFormat
-        ? await ipcRenderer.invoke('get-card-game-stats', _cardStatsFormat)
-        : [];
+    _cardStatsData = await fetchCardStats();
 
     const filterRow = document.getElementById('card-stats-filter-row');
     if (filterRow) filterRow.style.display = _cardStatsFormat ? 'flex' : 'none';
@@ -393,8 +421,10 @@ function renderCardStatsTable() {
     }
 
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);">
-            No card stats yet for <strong>${_cardStatsFormat}</strong> — play some games to start tracking.</td></tr>`;
+        const msg = _cardStatsMode === 'set'
+            ? `No cards visible for <strong>${_cardStatsFormat}</strong>. Lower the Min GIH filter to 0 to see 17Lands data for unplayed cards, or load a 17Lands CSV.`
+            : `No card stats yet for <strong>${_cardStatsFormat}</strong> — play some games to start tracking.`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);">${msg}</td></tr>`;
         return;
     }
 
@@ -404,7 +434,7 @@ function renderCardStatsTable() {
 
     tbody.innerHTML = rows.map(c => `
         <tr>
-            <td><strong>${c.name}</strong></td>
+            <td><strong>${c.name}</strong> ${cardEyeballHtml(c.grpId, c.name, c.set || _cardStatsFormat)}</td>
             <td>${c.gamesInDeck}</td>
             <td>${c.gamesInHand}</td>
             <td>${fmt(c.gihWrPersonal)}</td>
@@ -730,6 +760,7 @@ function renderCurrentPack(pack) {
                     <span title="${name}">${name}</span>
                     ${rarityGem(rarityStr)}
                     ${lowSample && gihWr !== null ? '<span class="low-sample-dot" title="Low sample size"></span>' : ''}
+                    ${cardEyeballHtml(card.arena_id, card.name, card.set)}
                 </div>
                 <div class="gih-wr ${tierClass}">${wrText}</div>
                 <div style="font-size:11px;font-weight:600;color:${rarityColor(rarityStr)};text-align:right;">${rarityStr || ''}</div>
@@ -929,17 +960,10 @@ ipcRenderer.on('inventory-updated', (event, data) => {
 });
 
 ipcRenderer.on('card-stats-updated', async () => {
+    // Refresh the whole card-stats panel so a brand-new draft format flips
+    // us out of browse mode and into the personal-stats view automatically.
     if (currentPage === 'stats') {
-        const allFormats = await ipcRenderer.invoke('get-card-stat-formats');
-        _cardStatsFormats = allFormats.filter(isDraftLimited);
-        if (_cardStatsFormats.length === 1 && !_cardStatsFormat) {
-            _cardStatsFormat = _cardStatsFormats[0];
-        }
-        _cardStatsData = _cardStatsFormat
-            ? await ipcRenderer.invoke('get-card-game-stats', _cardStatsFormat)
-            : [];
-        renderCardStatsFormatSelector();
-        renderCardStatsTable();
+        await loadStats();
     }
 });
 
@@ -973,6 +997,167 @@ function updateStatus(text) {
     document.getElementById('status-text').textContent = text;
 }
 
+// ─── Card image preview (hover-to-reveal Scryfall art) ───────────────────────
+//
+// The user wanted a way to glance at card art while learning a new set without
+// leaving the tracker. Strategy: a small "eyeball" badge next to each card
+// name; hovering it pops up a Scryfall image via the public arena_id endpoint.
+// Lookups are cached for the lifetime of the page (Promise-cached so concurrent
+// hovers don't double-fetch). Misses are cached as null so a card Scryfall
+// hasn't indexed yet doesn't keep retrying.
+
+const _cardImageCache = new Map(); // grpId (string) -> Promise<string|null>
+
+/**
+ * Pull the best image URL out of a Scryfall card JSON object. Handles
+ * single-faced cards (`image_uris`) and double-faced cards which keep their
+ * images on `card_faces[i].image_uris`. Prefers `large` to match what
+ * 17lands serves and what the user expects when learning a set.
+ * Returns null when Scryfall has the card but no usable image.
+ */
+function extractScryfallImageUrl(card) {
+    if (!card || typeof card !== 'object') return null;
+    const pick = imgs => imgs?.large || imgs?.normal || imgs?.small || null;
+    const direct = pick(card.image_uris);
+    if (direct) return direct;
+    const face = Array.isArray(card.card_faces) ? card.card_faces[0] : null;
+    return pick(face?.image_uris);
+}
+
+async function _scryfallFetch(url) {
+    try {
+        const r = await fetch(url);
+        if (!r.ok) return null;
+        return await r.json();
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Find a card's image URL with three fallbacks, in order of reliability:
+ *   1. /cards/arena/{grpId}      — direct, but Scryfall populates arena_id
+ *                                   manually so brand-new sets often miss.
+ *   2. /cards/named?exact=…&set= — pinpoints the exact printing when we
+ *                                   know the set code.
+ *   3. /cards/named?fuzzy=…      — last-ditch name match across all printings.
+ * Result (URL or null) is cached by grpId for the page lifetime.
+ */
+function fetchCardImageUrl(grpId, name, setCode) {
+    const key = String(grpId);
+    if (_cardImageCache.has(key)) return _cardImageCache.get(key);
+
+    const promise = (async () => {
+        // 1: arena_id
+        let card = await _scryfallFetch(`https://api.scryfall.com/cards/arena/${encodeURIComponent(key)}`);
+        let url = extractScryfallImageUrl(card);
+        if (url) return url;
+
+        if (name) {
+            // 2: exact name + set
+            if (setCode) {
+                const params = new URLSearchParams({ exact: name, set: setCode.toLowerCase() });
+                card = await _scryfallFetch(`https://api.scryfall.com/cards/named?${params.toString()}`);
+                url = extractScryfallImageUrl(card);
+                if (url) return url;
+            }
+            // 3: fuzzy name across all printings
+            const params = new URLSearchParams({ fuzzy: name });
+            card = await _scryfallFetch(`https://api.scryfall.com/cards/named?${params.toString()}`);
+            url = extractScryfallImageUrl(card);
+            if (url) return url;
+        }
+        return null;
+    })();
+
+    _cardImageCache.set(key, promise);
+    return promise;
+}
+
+/**
+ * Returns inline HTML for the hover-trigger eyeball badge. Renders an SVG
+ * eye and stamps the grpId, name, and (optional) set onto data attributes
+ * so a single delegated handler can drive every badge in every table or
+ * tile and also fall back to name-based Scryfall lookup when arena_id misses.
+ */
+function cardEyeballHtml(grpId, name, setCode) {
+    if (grpId === undefined || grpId === null || grpId === '') return '';
+    const dataName = name ? ` data-card-name="${encodeURIComponent(name)}"` : '';
+    const dataSet  = setCode ? ` data-card-set="${setCode}"` : '';
+    return `<span class="card-eyeball" data-grpid="${grpId}"${dataName}${dataSet} title="Hover to preview"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 5c-5 0-9.27 3.11-11 7.5C2.73 16.89 7 20 12 20s9.27-3.11 11-7.5C21.27 8.11 17 5 12 5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></span>`;
+}
+
+// Singleton preview element — built lazily so unit tests that don't touch the
+// DOM never need to provide a body element.
+let _previewEl = null;
+function ensurePreviewEl() {
+    if (_previewEl || typeof document === 'undefined' || !document.body) return _previewEl;
+    _previewEl = document.createElement('div');
+    _previewEl.id = 'card-image-preview';
+    _previewEl.style.display = 'none';
+    document.body.appendChild(_previewEl);
+    return _previewEl;
+}
+
+function positionPreview(anchor) {
+    if (!_previewEl || !anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const previewWidth = 260;   // matches CSS width
+    const margin = 8;
+    let left = rect.right + margin;
+    if (left + previewWidth > window.innerWidth) {
+        left = rect.left - previewWidth - margin;  // flip to the left side
+    }
+    if (left < margin) left = margin;
+    let top = rect.top - 20;
+    if (top < margin) top = margin;
+    _previewEl.style.left = `${left}px`;
+    _previewEl.style.top  = `${top}px`;
+}
+
+let _previewToken = 0;  // increments on every show; lets us drop stale fetch results
+async function showCardPreview(anchor, grpId, name, setCode) {
+    const el = ensurePreviewEl();
+    if (!el) return;
+    const myToken = ++_previewToken;
+    el.innerHTML = '<div class="card-image-preview-loading">Loading…</div>';
+    el.style.display = 'block';
+    positionPreview(anchor);
+    const url = await fetchCardImageUrl(grpId, name, setCode);
+    if (myToken !== _previewToken) return; // user moved off before fetch resolved
+    if (url) {
+        el.innerHTML = `<img src="${url}" alt="card preview" />`;
+    } else {
+        el.innerHTML = '<div class="card-image-preview-empty">No Scryfall image.</div>';
+    }
+}
+
+function hideCardPreview() {
+    _previewToken++;
+    if (_previewEl) _previewEl.style.display = 'none';
+}
+
+if (typeof document !== 'undefined') {
+    // Delegated handlers — works for any .card-eyeball anywhere on the page,
+    // including elements rendered by future re-renders.
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest && e.target.closest('.card-eyeball');
+        if (!target) return;
+        const grpId = target.dataset.grpid;
+        if (!grpId) return;
+        const name = target.dataset.cardName ? decodeURIComponent(target.dataset.cardName) : null;
+        const setCode = target.dataset.cardSet || null;
+        showCardPreview(target, grpId, name, setCode);
+    });
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest && e.target.closest('.card-eyeball');
+        if (!target) return;
+        // mouseout fires when leaving children too; only hide when leaving the badge itself
+        if (e.relatedTarget && target.contains(e.relatedTarget)) return;
+        hideCardPreview();
+    });
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
     await updateCsvStatusUI();
@@ -982,5 +1167,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Export pure helpers for unit testing.
 // Only active when running in Node.js (Jest); `window` is undefined there.
 if (typeof window === 'undefined') {
-    module.exports = { gihWrTierClass, colorPip, rarityGem, rarityLabel, rarityColor };
+    module.exports = {
+        gihWrTierClass, colorPip, rarityGem, rarityLabel, rarityColor,
+        extractScryfallImageUrl, cardEyeballHtml, _cardImageCache,
+    };
 }
