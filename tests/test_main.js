@@ -105,6 +105,13 @@ jest.mock('../dataStore', () =>
       const names = { '12345': 'Lightning Bolt', '67890': 'Forest' };
       return names[String(cardId)] || `Unknown (${cardId})`;
     }),
+    getMatchFormat:         jest.fn(() => null),
+    updateCardGameStats:    jest.fn(() => false),
+    getAllCardGameStats:     jest.fn(() => ({})),
+    getCardStatFormats:     jest.fn(() => []),
+    clearCardStats:         jest.fn(),
+    deleteMatchesByFormat:  jest.fn(),
+    updateMatchColors:      jest.fn(),
   }))
 );
 
@@ -119,12 +126,13 @@ jest.mock('../cardUpdater', () =>
 
 jest.mock('../draftAssistant', () =>
   jest.fn(() => ({
-    isLoaded:     jest.fn(() => false),
-    loadCSV:      jest.fn(() => ({ cardCount: 0, setName: 'mock' })),
-    getStatus:    jest.fn(() => ({ loaded: false, cardCount: 0, setName: null, csvPath: null })),
-    rankPack:     jest.fn(cards => cards.map(c => ({ ...c, gihWr: null, lowSample: true, tier: 'none', stats: null, gihCount: 0 }))),
-    getCardStats: jest.fn(() => null),
-    getCardTier:  jest.fn(() => 'none'),
+    isLoaded:       jest.fn(() => false),
+    loadCSV:        jest.fn(() => ({ cardCount: 0, setName: 'mock' })),
+    getStatus:      jest.fn(() => ({ loaded: false, cardCount: 0, setName: null, csvPath: null })),
+    rankPack:       jest.fn(cards => cards.map(c => ({ ...c, gihWr: null, lowSample: true, tier: 'none', stats: null, gihCount: 0 }))),
+    getCardStats:   jest.fn(() => null),
+    getCardTier:    jest.fn(() => 'none'),
+    getAllCardStats: jest.fn(() => []),
   }))
 );
 

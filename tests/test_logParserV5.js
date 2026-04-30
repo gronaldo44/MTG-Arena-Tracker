@@ -79,7 +79,7 @@ describe('LogParserV5', () => {
       ['Pioneer_League', 'Pioneer'],
       ['Timeless_Event', 'Timeless'],
       ['Brawl_FriendlyBrawl', 'Brawl'],
-      ['Draft_QuickDraft_SOS', 'Draft'],
+      ['Draft_QuickDraft_SOS', 'Secrets of Strixhaven Quick Draft'],
       ['Sealed_Event', 'Sealed'],
       ['Constructed_Event', 'Constructed'],
       ['historic_play', 'Historic'],
@@ -169,7 +169,7 @@ describe('LogParserV5', () => {
         `{"InternalEventName":"Draft_QuickDraft_SOS"}`,
       ].join('\n');
       const events = parser.parse(log);
-      expect(events[0].data.format).toBe('Draft');
+      expect(events[0].data.format).toBe('Secrets of Strixhaven Quick Draft');
     });
   });
 
