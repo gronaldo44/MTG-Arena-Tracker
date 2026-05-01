@@ -42,7 +42,7 @@ describe('draftPipeline.buildDraftUpdatePayload', () => {
     fs.rmSync(MOCK_USERDATA, { recursive: true, force: true });
   });
 
-  test('full synthetic draft: 90 events produce a complete record', () => {
+  test('full synthetic draft: every (pack, pick) ends with a non-null picked', () => {
     const { events, expectedFinalPickCount } = buildFullDraft();
     for (const ev of events) {
       buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
