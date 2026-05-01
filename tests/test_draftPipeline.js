@@ -10,7 +10,7 @@ jest.mock('electron', () => ({
 }));
 
 const DataStore = require('../dataStore');
-const { buildDraftUpdatePayload } = require('../draftPipeline');
+const { buildDraftUpdatePayload, _resetWarnedGaps } = require('../draftPipeline');
 const { buildFullDraft } = require('./fixtures/draft-synthetic');
 
 // A pass-through draftAssistant double that doesn't change array order.
@@ -33,6 +33,7 @@ describe('draftPipeline.buildDraftUpdatePayload', () => {
   let assistant;
 
   beforeEach(() => {
+    _resetWarnedGaps();
     MOCK_USERDATA = fs.mkdtempSync(path.join(os.tmpdir(), 'mtg-pipe-'));
     ds = new DataStore();
     assistant = fakeAssistant();
@@ -40,6 +41,7 @@ describe('draftPipeline.buildDraftUpdatePayload', () => {
 
   afterEach(() => {
     fs.rmSync(MOCK_USERDATA, { recursive: true, force: true });
+    jest.restoreAllMocks();
   });
 
   test('full synthetic draft: every (pack, pick) ends with a non-null picked', () => {
@@ -97,6 +99,7 @@ describe('draftPipeline.buildDraftUpdatePayload', () => {
   });
 
   test('missing pick injection: skip the event for pack 2 pick 4 → payload picks include missing: true placeholder', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
     const { events } = buildFullDraft();
     // Filter out both DRAFT_UPDATE events for (pack=2, pick=4) — both the Draft.Notify
     // and the EventPlayerDraftMakePick. To do this cleanly, we drop the event whose
@@ -143,6 +146,7 @@ describe('draftPipeline.buildDraftUpdatePayload', () => {
   });
 
   test('17Lands not loaded: currentPack and removedCards are returned unranked', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
     const unloadedAssistant = {
       isLoaded: () => false,
       rankPack: jest.fn(),  // should not be called
