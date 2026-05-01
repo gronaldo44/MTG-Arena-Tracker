@@ -838,7 +838,7 @@ function renderPickHistory(picks) {
             return `
                 <div class="draft-pick-item missing">
                     <div class="pick-num">P${pick.pack ?? '?'}p${pick.pick ?? '?'}</div>
-                    <div class="pick-name" title="Missing from log (likely auto-pick)">⚠ pick missing from log (likely auto-pick)</div>
+                    <div class="pick-name" title="Missing from log (likely auto-pick)">⚠️ pick missing from log (likely auto-pick)</div>
                     <div class="pick-wr">—</div>
                 </div>`;
         }
