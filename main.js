@@ -7,6 +7,7 @@ const GREParser = require('./greParser');
 const DataStore = require('./dataStore');
 const CardUpdater = require('./cardUpdater');
 const DraftAssistant = require('./draftAssistant');
+const draftPipeline = require('./draftPipeline');
 const { clear } = require('console');
 
 let mainWindow;
@@ -436,32 +437,14 @@ function handleGameEvent(event) {
     case 'DRAFT_UPDATE':
       if (mainWindow) {
         lastDraftEventData = event.data; // persist for re-enrichment when CSV is loaded later
-        const packData = event.data.currentPack;
-        const resolvedOptions = packData ? resolveCards(packData.options) : [];
-
-        // Rank the pack by GIH WR if a CSV is loaded; otherwise pass through unranked
-        const rankedOptions = draftAssistant.isLoaded()
-          ? draftAssistant.rankPack(resolvedOptions)
-          : resolvedOptions.map(c => ({ ...c, gihWr: null, lowSample: true, stats: null }));
-
-        mainWindow.webContents.send('draft-update', {
-          draftId: event.data.draftId,
-          currentPack: packData
-            ? { ...packData, options: rankedOptions }
-            : null,
-          picks: event.data.picks.map(p => {
-            const picked = resolveCard(p.picked);
-            if (draftAssistant.isLoaded() && picked.name) {
-              const s = draftAssistant.getCardStats(picked.name);
-              picked.gihWr     = s?.gihWr ?? null;
-              picked.lowSample = s ? s.lowSample : true;
-              picked.tier      = draftAssistant.getCardTier(picked.gihWr, picked.name, picked.lowSample);
-            }
-            return { ...p, picked, options: resolveCards(p.options) };
-          }),
-          assistantLoaded: draftAssistant.isLoaded(),
-          assistantStatus: draftAssistant.getStatus(),
-        });
+        const payload = draftPipeline.buildDraftUpdatePayload(
+          event.data,
+          dataStore,
+          draftAssistant,
+          resolveCards,
+          resolveCard
+        );
+        mainWindow.webContents.send('draft-update', payload);
       }
       break;
   }
