@@ -33,7 +33,10 @@ jest.mock('electron', () => ({
   },
 }));
 
-const { gihWrTierClass, colorPip, rarityGem, rarityLabel } = require('../renderer');
+const {
+  gihWrTierClass, colorPip, rarityGem, rarityLabel,
+  extractScryfallImageUrl, cardEyeballHtml,
+} = require('../renderer');
 
 // ─── gihWrTierClass ───────────────────────────────────────────────────────────
 
@@ -171,5 +174,91 @@ describe('rarityLabel', () => {
   test('unknown code → returns the code itself', () => {
     expect(rarityLabel('X')).toBe('X');
     expect(rarityLabel('')).toBe('');
+  });
+});
+
+// ─── extractScryfallImageUrl ────────────────────────────────────────────────
+
+describe('extractScryfallImageUrl', () => {
+  test('single-faced card prefers image_uris.large', () => {
+    const card = { image_uris: { normal: 'N', large: 'L', small: 'S' } };
+    expect(extractScryfallImageUrl(card)).toBe('L');
+  });
+
+  test('falls back to normal then small when large missing', () => {
+    expect(extractScryfallImageUrl({ image_uris: { normal: 'N', small: 'S' } })).toBe('N');
+    expect(extractScryfallImageUrl({ image_uris: { small: 'S' } })).toBe('S');
+  });
+
+  test('double-faced card uses first face image_uris', () => {
+    const card = {
+      card_faces: [
+        { image_uris: { normal: 'https://img/face0.jpg' } },
+        { image_uris: { normal: 'https://img/face1.jpg' } },
+      ],
+    };
+    expect(extractScryfallImageUrl(card)).toBe('https://img/face0.jpg');
+  });
+
+  test('returns null for null / undefined / non-object input', () => {
+    expect(extractScryfallImageUrl(null)).toBeNull();
+    expect(extractScryfallImageUrl(undefined)).toBeNull();
+    expect(extractScryfallImageUrl('nope')).toBeNull();
+  });
+
+  test('returns null when no image fields are present', () => {
+    expect(extractScryfallImageUrl({})).toBeNull();
+    expect(extractScryfallImageUrl({ image_uris: {} })).toBeNull();
+    expect(extractScryfallImageUrl({ card_faces: [{}] })).toBeNull();
+  });
+});
+
+// ─── cardEyeballHtml ────────────────────────────────────────────────────────
+
+describe('cardEyeballHtml', () => {
+  test('returns empty string when grpId is missing', () => {
+    expect(cardEyeballHtml(undefined)).toBe('');
+    expect(cardEyeballHtml(null)).toBe('');
+    expect(cardEyeballHtml('')).toBe('');
+  });
+
+  test('stamps grpId onto data-grpid for delegated event handling', () => {
+    const html = cardEyeballHtml('102471');
+    expect(html).toContain('class="card-eyeball"');
+    expect(html).toContain('data-grpid="102471"');
+    expect(html).toContain('<svg');
+  });
+
+  test('accepts numeric grpIds', () => {
+    expect(cardEyeballHtml(102471)).toContain('data-grpid="102471"');
+  });
+
+  test('encodes name into data-card-name (URI-encoded so quotes are safe)', () => {
+    const html = cardEyeballHtml('102471', "Jadzi, Steward of Fate");
+    expect(html).toContain('data-card-name="Jadzi%2C%20Steward%20of%20Fate"');
+  });
+
+  test('handles names with apostrophes (used as fallback when arena_id misses)', () => {
+    const html = cardEyeballHtml('1', "Force of Will");
+    // Apostrophe-free names still work; the encoding test below covers the dangerous case.
+    expect(html).toContain('data-card-name="Force%20of%20Will"');
+  });
+
+  test('apostrophes get safely percent-encoded', () => {
+    const html = cardEyeballHtml('1', "Akroma's Will");
+    expect(html).toContain("data-card-name=\"Akroma's%20Will\"");
+    // Critical: apostrophe is NOT a raw " in the output, so the attribute can't break
+    expect(html.match(/data-card-name="[^"]*"/)).toBeTruthy();
+  });
+
+  test('stamps the set code on data-card-set when provided', () => {
+    const html = cardEyeballHtml('102471', 'Elite Interceptor', 'SOS');
+    expect(html).toContain('data-card-set="SOS"');
+  });
+
+  test('omits name/set attributes when not provided', () => {
+    const html = cardEyeballHtml('1');
+    expect(html).not.toContain('data-card-name');
+    expect(html).not.toContain('data-card-set');
   });
 });

@@ -614,6 +614,84 @@ ipcMain.handle('delete-format', async (event, format) => {
   return true;
 });
 
+// Main draftable sets (≥100 primary cards, no DigitalReleaseSet) for the
+// Personal Card Stats browse-by-set dropdown. The list is precomputed by
+// import_sos.py and read from cards.json so the renderer never needs the
+// MTGA SQLite DB at runtime.
+ipcMain.handle('get-main-draft-sets', async () => {
+  if (!dataStore) return [];
+  return dataStore.getMainDraftSets();
+});
+
+// Browse-mode card stats for a given set code. Aggregates personal stats by
+// card name across every draft format that mentions the set (so a user who's
+// played Premier_Draft_SOS and Quick_Draft_SOS sees combined numbers), pulls
+// in Special Guests for the same parent (SPG-<set>), and falls back to a
+// pure 17Lands view when there are no personal records yet.
+ipcMain.handle('get-set-card-stats', async (event, setCode) => {
+  if (!dataStore || !setCode) return [];
+  const setCards = dataStore.getCardsBySet(setCode);
+  if (setCards.length === 0) return [];
+
+  const assistantLoaded = draftAssistant.isLoaded();
+
+  // Build name -> aggregated personal stats across all draft formats that
+  // mention this set. Aggregating by name (not GrpId) handles alt-art GrpId
+  // siblings the same way get-card-stats-by-grpid already does.
+  const formats = dataStore.getCardStatFormats().filter(f => f.includes(setCode));
+  const personalByName = {};
+  for (const fmt of formats) {
+    const raw = dataStore.getAllCardGameStats(fmt);
+    for (const [grpId, s] of Object.entries(raw)) {
+      const name = dataStore.getCardName(grpId);
+      const acc = personalByName[name] ||
+        { gamesInDeck: 0, gamesInHand: 0, gamesWonInHand: 0,
+          gamesOpenHand: 0, gamesWonOpenHand: 0 };
+      acc.gamesInDeck      += s.gamesInDeck;
+      acc.gamesInHand      += s.gamesInHand;
+      acc.gamesWonInHand   += s.gamesWonInHand;
+      acc.gamesOpenHand    += s.gamesOpenHand;
+      acc.gamesWonOpenHand += s.gamesWonOpenHand;
+      personalByName[name] = acc;
+    }
+  }
+
+  // Dedupe by name — alt-art GrpIds in cards.json would otherwise produce
+  // duplicate rows in the table.
+  const seenNames = new Set();
+  const results = [];
+  for (const c of setCards) {
+    if (!c.name || seenNames.has(c.name)) continue;
+    seenNames.add(c.name);
+
+    const p = personalByName[c.name];
+    const gihWrPersonal = p && p.gamesInHand > 0
+      ? p.gamesWonInHand / p.gamesInHand : null;
+    const ohWrPersonal = p && p.gamesOpenHand > 0
+      ? p.gamesWonOpenHand / p.gamesOpenHand : null;
+    const stats17l = assistantLoaded ? draftAssistant.getCardStats(c.name) : null;
+    const gihWr17l = stats17l?.gihWr ?? null;
+    const ohWr17l  = stats17l?.ohWr  ?? null;
+    const delta = (gihWrPersonal !== null && gihWr17l !== null)
+      ? gihWrPersonal - gihWr17l : null;
+
+    results.push({
+      grpId:           c.grpId,
+      name:            c.name,
+      set:             c.set || '',
+      gamesInDeck:     p?.gamesInDeck      ?? 0,
+      gamesInHand:     p?.gamesInHand      ?? 0,
+      gamesWonInHand:  p?.gamesWonInHand   ?? 0,
+      gihWrPersonal,
+      gamesOpenHand:   p?.gamesOpenHand    ?? 0,
+      gamesWonOpenHand: p?.gamesWonOpenHand ?? 0,
+      ohWrPersonal,
+      gihWr17l, ohWr17l, delta,
+    });
+  }
+  return results;
+});
+
 ipcMain.handle('get-deck', async (event, deckId) => {
   if (!dataStore) return null;
   const deck = dataStore.getDeck(deckId);

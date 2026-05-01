@@ -49,6 +49,10 @@ tmp/
 temp/
 *.tmp
 
+# Python bytecode
+__pycache__/
+*.pyc
+
 # Downloaded files
 cards.json
 
