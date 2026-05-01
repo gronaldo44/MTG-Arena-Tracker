@@ -719,6 +719,7 @@ function renderDraftPage() {
     waitingEl.style.display = 'none';
 
     renderCurrentPack(currentDraftState.currentPack);
+    renderRemovedSection(currentDraftState.removedCards || []);
     renderPickHistory(currentDraftState.picks || []);
 }
 
@@ -769,6 +770,57 @@ function renderCurrentPack(pack) {
 }
 
 /**
+ * Render the "Removed since pick N" greyed-out card list under the live pack.
+ * Sorted by GIH WR descending (already done by main.js via rankPack).
+ * Hidden when empty.
+ */
+function renderRemovedSection(removedCards) {
+    const sectionEl = document.getElementById('draft-removed-section');
+    const listEl    = document.getElementById('draft-removed-list');
+    const headerEl  = document.getElementById('draft-removed-header');
+
+    if (!removedCards || removedCards.length === 0) {
+        sectionEl.style.display = 'none';
+        return;
+    }
+
+    sectionEl.style.display = 'block';
+
+    // Header text references the prior view: pick N - 8.
+    const currentPick = currentDraftState?.currentPack?.pick;
+    const priorPick = (typeof currentPick === 'number' && currentPick > 8)
+        ? currentPick - 8
+        : 1;
+    headerEl.textContent = `Removed since pick ${priorPick}`;
+
+    listEl.innerHTML = removedCards.map((card, idx) => {
+        const rank = idx + 1;
+        const name = card.name || `Card ${card.arena_id}`;
+        const gihWr = card.gihWr;
+        const lowSample = card.lowSample;
+        const stats = card.stats;
+        const wrText = gihWr !== null && gihWr !== undefined ? `${(gihWr * 100).toFixed(1)}%` : '—';
+        const tierClass = gihWrTierClass(card.tier || 'none');
+        const colorStr = stats?.color || '';
+        const rarityStr = stats?.rarity || '';
+
+        return `
+            <div class="draft-card-row removed ${tierClass}">
+                <div class="draft-rank">${rank}</div>
+                <div class="draft-card-name">
+                    ${draftCardColorPips(colorStr, card.manaCost || '')}
+                    <span title="${name}">${name}</span>
+                    ${rarityGem(rarityStr)}
+                    ${lowSample && gihWr !== null && gihWr !== undefined ? '<span class="low-sample-dot" title="Low sample size"></span>' : ''}
+                    ${cardEyeballHtml(card.arena_id, card.name, card.set)}
+                </div>
+                <div class="gih-wr ${tierClass}">${wrText}</div>
+                <div style="font-size:11px;font-weight:600;color:${rarityColor(rarityStr)};text-align:right;">${rarityStr || ''}</div>
+            </div>`;
+    }).join('');
+}
+
+/**
  * Render the picks history sidebar.
  */
 function renderPickHistory(picks) {
@@ -782,7 +834,14 @@ function renderPickHistory(picks) {
 
     // Picks come in chronological order; display most recent first
     listEl.innerHTML = [...picks].reverse().map((pick, idx) => {
-        const overallPick = picks.length - idx;
+        if (pick.missing) {
+            return `
+                <div class="draft-pick-item missing">
+                    <div class="pick-num">P${pick.pack ?? '?'}p${pick.pick ?? '?'}</div>
+                    <div class="pick-name" title="Missing from log (likely auto-pick)">⚠ pick missing from log (likely auto-pick)</div>
+                    <div class="pick-wr">—</div>
+                </div>`;
+        }
         const card = pick.picked;
         const name = card?.name || `Card ${card?.arena_id ?? '?'}`;
         const gihWr = card?.gihWr ?? null;
