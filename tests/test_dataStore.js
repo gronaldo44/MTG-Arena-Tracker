@@ -165,6 +165,37 @@ describe('DataStore — drafts', () => {
     expect(fs.existsSync(draftsFile + '.tmp')).toBe(false);
   });
 
+  test('atomic write: stranded drafts.json.tmp from a prior crash is cleaned up on next write', () => {
+    const dataDir = path.join(MOCK_USERDATA, 'data');
+    const draftsFile = path.join(dataDir, 'drafts.json');
+    const tmpFile = draftsFile + '.tmp';
+    // Simulate a crash that left a stale .tmp behind.
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(tmpFile, 'garbage from a prior crash');
+    expect(fs.existsSync(tmpFile)).toBe(true);
+
+    ds.upsertDraft({
+      draftId: 'd1',
+      picks: [{ pack: 1, pick: 1, options: [10], picked: 10 }],
+      currentPack: null,
+    });
+
+    expect(fs.existsSync(draftsFile)).toBe(true);
+    expect(fs.existsSync(tmpFile)).toBe(false);
+  });
+
+  test('loadDrafts: corrupt drafts.json is treated as empty (returns {} → getAllDrafts is [])', () => {
+    const dataDir = path.join(MOCK_USERDATA, 'data');
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, 'drafts.json'), '{not valid json');
+    // Suppress the expected error log so the test output stays clean.
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const ds2 = new DataStore();
+    expect(ds2.getAllDrafts()).toEqual([]);
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
+
   test('getAllDrafts returns array of all stored drafts', () => {
     ds.upsertDraft({ draftId: 'd1', picks: [{ pack: 1, pick: 1, options: [10], picked: 10 }], currentPack: null });
     ds.upsertDraft({ draftId: 'd2', picks: [{ pack: 1, pick: 1, options: [20], picked: 20 }], currentPack: null });

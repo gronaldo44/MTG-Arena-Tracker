@@ -664,6 +664,8 @@ class DataStore {
    */
   _atomicWrite(filePath, content) {
     const tmpPath = filePath + '.tmp';
+    // Clean up any orphaned .tmp from a prior crashed write before we begin.
+    try { fs.unlinkSync(tmpPath); } catch {}
     fs.writeFileSync(tmpPath, content);
     fs.renameSync(tmpPath, filePath);
   }
