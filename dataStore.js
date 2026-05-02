@@ -22,6 +22,7 @@ class DataStore {
     this.settingsFile = path.join(this.dataDir, 'settings.json');
     this.cardsFile    = path.join(__dirname, 'cards.json');
     this.cardStatsFile = path.join(this.dataDir, 'cardStats.json');
+    this.draftsFile   = path.join(this.dataDir, 'drafts.json');
 
     // Ensure data directory exists
     if (!fs.existsSync(this.dataDir)) {
@@ -33,6 +34,7 @@ class DataStore {
     this.settings   = this.loadSettings();
     this.cards      = this.loadCards();
     this.cardStats  = this.loadCardStats();
+    this.drafts     = this.loadDrafts();
   }
 
   /**
@@ -623,6 +625,118 @@ class DataStore {
   clearCardStats() {
     this.cardStats = { processedGames: new Set(), statsByFormat: {} };
     this.saveCardStats();
+  }
+
+  /**
+   * Load drafts from disk. Returns {} if file missing or unreadable.
+   * Shape on disk: { drafts: { [draftId]: DraftRecord } }
+   */
+  loadDrafts() {
+    try {
+      if (fs.existsSync(this.draftsFile)) {
+        const content = fs.readFileSync(this.draftsFile, 'utf8');
+        const parsed = JSON.parse(content);
+        return parsed.drafts || {};
+      }
+    } catch (e) {
+      console.error('[DataStore] Error loading drafts:', e);
+    }
+    return {};
+  }
+
+  /**
+   * Persist all drafts to disk via atomic-rename. Survives mid-write process kill.
+   */
+  saveDrafts() {
+    try {
+      this._atomicWrite(
+        this.draftsFile,
+        JSON.stringify({ drafts: this.drafts }, null, 2)
+      );
+    } catch (e) {
+      console.error('[DataStore] Error saving drafts:', e);
+    }
+  }
+
+  /**
+   * Atomic write: write to .tmp, then rename. fs.renameSync is atomic on
+   * POSIX and Windows for files on the same volume.
+   */
+  _atomicWrite(filePath, content) {
+    const tmpPath = filePath + '.tmp';
+    // Clean up any orphaned .tmp from a prior crashed write before we begin.
+    try { fs.unlinkSync(tmpPath); } catch {}
+    fs.writeFileSync(tmpPath, content);
+    fs.renameSync(tmpPath, filePath);
+  }
+
+  /**
+   * Idempotently merge a draft state into the persisted store.
+   *
+   * @param {object} state - Parser's DRAFT_UPDATE shape:
+   *   { draftId, picks: [{pack, pick, options, picked}], currentPack: {pack, pick, options} | null }
+   *
+   * Merge rules:
+   *  - If no record exists for draftId → create with startedAt = Date.now().
+   *  - For each picks[] entry, key by (pack, pick):
+   *      • absent → append
+   *      • present with picked: null and incoming picked set → patch picked
+   *      • present with non-null picked → no-op (never overwrite)
+   *  - If currentPack is set and (pack, pick) is not yet recorded → append as picked: null entry.
+   */
+  upsertDraft(state) {
+    if (!state || !state.draftId) return;
+    const { draftId, picks: incomingPicks = [], currentPack = null } = state;
+
+    if (!this.drafts[draftId]) {
+      this.drafts[draftId] = {
+        draftId,
+        startedAt: Date.now(),
+        picks: [],
+      };
+    }
+    const record = this.drafts[draftId];
+
+    const findIdx = (pack, pick) =>
+      record.picks.findIndex(p => p.pack === pack && p.pick === pick);
+
+    const mergeEntry = (pack, pick, options, picked) => {
+      const idx = findIdx(pack, pick);
+      if (idx === -1) {
+        record.picks.push({ pack, pick, options: [...options], picked: picked ?? null });
+        return;
+      }
+      const existing = record.picks[idx];
+      // Patch picked only if it's currently null and the incoming sets it.
+      if (existing.picked === null && picked != null) {
+        existing.picked = picked;
+      }
+      // options are stable for a given (pack, pick) — leave existing options as-is.
+    };
+
+    for (const p of incomingPicks) {
+      mergeEntry(p.pack, p.pick, p.options || [], p.picked ?? null);
+    }
+
+    if (currentPack && currentPack.pack != null && currentPack.pick != null) {
+      mergeEntry(currentPack.pack, currentPack.pick, currentPack.options || [], null);
+    }
+
+    this.saveDrafts();
+  }
+
+  /**
+   * Return the DraftRecord for draftId, or null.
+   */
+  getDraft(draftId) {
+    return this.drafts[draftId] || null;
+  }
+
+  /**
+   * Return all DraftRecords as an array.
+   */
+  getAllDrafts() {
+    return Object.values(this.drafts);
   }
 
   /**

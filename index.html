@@ -984,6 +984,40 @@
         .draft-card-row.tier-silver { border-left-color: rgba(208, 216, 224, 0.45); }
         .draft-card-row.tier-brown  { border-left-color: rgba(123, 80, 32, 0.45); }
 
+        /* Removed-since-last-view section (wheel correlation) */
+        .draft-removed-section {
+            margin-top: 18px;
+            padding-top: 12px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.08);
+        }
+        .draft-removed-header {
+            padding: 0 13px 6px 13px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+        }
+        .draft-card-row.removed {
+            opacity: 0.45;
+            border-left-color: transparent !important;
+            animation: none !important;
+            background: transparent !important;
+        }
+        .draft-card-row.removed .draft-card-name span {
+            text-decoration: line-through;
+            text-decoration-color: rgba(255, 255, 255, 0.35);
+        }
+
+        /* Missing-pick placeholder row in My Picks */
+        .draft-pick-item.missing {
+            opacity: 0.55;
+            font-style: italic;
+        }
+        .draft-pick-item.missing .pick-name {
+            color: var(--text-muted);
+        }
+
         /* Rank number */
         .draft-rank {
             font-size: 13px;
@@ -2033,6 +2067,12 @@
                                 </div>
                             </div>
                             <div class="draft-card-list" id="draft-card-list"></div>
+
+                            <!-- Wheel correlation: cards taken from this pack since the player last saw it -->
+                            <div class="draft-removed-section" id="draft-removed-section" style="display:none;">
+                                <div class="draft-removed-header" id="draft-removed-header">Removed since pick 1</div>
+                                <div class="draft-card-list draft-card-list-removed" id="draft-removed-list"></div>
+                            </div>
                         </div>
 
                         <!-- Picks so far -->
