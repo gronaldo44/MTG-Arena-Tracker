@@ -15,10 +15,16 @@ Usage:
 """
 
 import json
+import os
 import sqlite3
-import ijson
 import sys
 import re
+
+try:
+    import ijson
+    _HAVE_IJSON = True
+except ImportError:
+    _HAVE_IJSON = False
 
 
 def simplify_type(type_line):
@@ -117,8 +123,16 @@ def compute_main_draft_sets(db_path):
     return sets
 
 
+def _scryfall_available(scryfall_path):
+    """Return True only if the path is non-empty, the file exists, and ijson is installed."""
+    return bool(scryfall_path) and os.path.isfile(scryfall_path) and _HAVE_IJSON
+
+
 def load_scryfall_sos(scryfall_path):
-    """Returns dict of normalized_name -> {name, mana_cost, type_line} for SOS cards."""
+    """Returns dict of normalized_name -> {name, mana_cost, type_line} for SOS cards.
+    Returns an empty dict when the Scryfall JSON is unavailable."""
+    if not _scryfall_available(scryfall_path):
+        return {}
     result = {}
     with open(scryfall_path, "r", encoding="utf-8") as f:
         for card in ijson.items(f, "item"):
@@ -135,8 +149,11 @@ def load_scryfall_sos(scryfall_path):
 
 def load_scryfall_all_by_name(scryfall_path):
     """Returns dict of normalized_name -> {name, mana_cost, type_line} across all sets.
+    Returns an empty dict when the Scryfall JSON is unavailable.
     Later entries overwrite earlier ones (prefer non-promo, canonical prints).
     """
+    if not _scryfall_available(scryfall_path):
+        return {}
     result = {}
     with open(scryfall_path, "r", encoding="utf-8") as f:
         for card in ijson.items(f, "item"):
@@ -155,23 +172,30 @@ def load_scryfall_all_by_name(scryfall_path):
 
 
 def main():
-    if len(sys.argv) != 4:
-        print("Usage: python import_sos.py <mtga_db> <scryfall_json> <cards_json>")
+    if len(sys.argv) not in (3, 4):
+        print("Usage: python import_sos.py <mtga_db> <scryfall_json_or_empty> <cards_json>")
+        print("       The scryfall_json argument is optional; pass '' to skip Scryfall lookups.")
         sys.exit(1)
 
-    db_path, scryfall_path, cards_json_path = sys.argv[1], sys.argv[2], sys.argv[3]
+    db_path = sys.argv[1]
+    scryfall_path = sys.argv[2] if len(sys.argv) >= 3 else ""
+    cards_json_path = sys.argv[3] if len(sys.argv) == 4 else sys.argv[2]
 
     print("Loading MTGA SOS draft-pool cards from DB (SOS + SOA + SPG-SOS)...")
     mtga_rows = load_mtga_sos_cards(db_path)
     print(f"  {len(mtga_rows)} rows found")
 
-    print("Loading Scryfall SOS cards...")
-    scryfall = load_scryfall_sos(scryfall_path)
-    print(f"  {len(scryfall)} SOS-set cards found")
-
-    print("Loading Scryfall all-cards name index (for reprints)...")
-    scryfall_all = load_scryfall_all_by_name(scryfall_path)
-    print(f"  {len(scryfall_all)} unique card names indexed")
+    if _scryfall_available(scryfall_path):
+        print("Loading Scryfall SOS cards...")
+        scryfall = load_scryfall_sos(scryfall_path)
+        print(f"  {len(scryfall)} SOS-set cards found")
+        print("Loading Scryfall all-cards name index (for reprints)...")
+        scryfall_all = load_scryfall_all_by_name(scryfall_path)
+        print(f"  {len(scryfall_all)} unique card names indexed")
+    else:
+        print("No Scryfall JSON provided — using MTGA mana data for all cards")
+        scryfall = {}
+        scryfall_all = {}
 
     print("Loading existing cards.json...")
     with open(cards_json_path, "r", encoding="utf-8") as f:
