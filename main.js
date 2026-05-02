@@ -201,9 +201,17 @@ async function initialLogScan(logPath) {
 
     const events = parser.parse(fullData);
     let matchCount = 0;
+    const seenDraftIds = new Set();
     for (const event of events) {
-      if (event.type === 'MATCH_END') matchCount++;
-      handleGameEvent(event);
+      if (event.type === 'DRAFT_UPDATE') {
+        if (dataStore && event.data?.draftId) {
+          dataStore.upsertDraft(event.data);
+          seenDraftIds.add(event.data.draftId);
+        }
+      } else {
+        if (event.type === 'MATCH_END') matchCount++;
+        handleGameEvent(event);
+      }
     }
 
     const greEvents = greParser.parse(fullData);
@@ -216,7 +224,8 @@ async function initialLogScan(logPath) {
       }
     }
 
-    console.log(`[Startup] Initial scan done: ${matchCount} matches, ${newGames} new game stat(s)`);
+    const draftsProcessed = seenDraftIds.size;
+    console.log(`[Startup] Initial scan done: ${matchCount} matches, ${draftsProcessed} draft(s), ${newGames} new game stat(s)`);
   } catch (e) {
     console.error('[Startup] Initial scan error:', e);
   }
@@ -808,15 +817,23 @@ ipcMain.handle('refresh-log', async () => {
 
       let matchCount = 0;
       let inventoryUpdated = false;
+      const seenDraftIds = new Set();
       for (const event of events) {
-        handleGameEvent(event);
-        if (event.type === 'MATCH_END') {
-          matchCount++;
-        } else if (event.type === 'INVENTORY_UPDATE') {
-          inventoryUpdated = true;
+        if (event.type === 'DRAFT_UPDATE') {
+          // Store draft data without enriching or notifying the renderer —
+          // historical events shouldn't clobber the live Draft tab view.
+          if (dataStore && event.data?.draftId) {
+            dataStore.upsertDraft(event.data);
+            seenDraftIds.add(event.data.draftId);
+          }
+        } else {
+          handleGameEvent(event);
+          if (event.type === 'MATCH_END') matchCount++;
+          else if (event.type === 'INVENTORY_UPDATE') inventoryUpdated = true;
         }
       }
-      console.log(`[Manual Refresh] Processed ${matchCount} matches, inventory updated: ${inventoryUpdated}`);
+      const draftsProcessed = seenDraftIds.size;
+      console.log(`[Manual Refresh] Processed ${matchCount} matches, ${draftsProcessed} draft(s), inventory updated: ${inventoryUpdated}`);
 
       // GRE parser: process card stats on manual refresh too
       if (dataStore) {
@@ -832,7 +849,7 @@ ipcMain.handle('refresh-log', async () => {
         console.log(`[Manual Refresh] Recorded stats for ${newGames} new game(s)`);
       }
 
-      return { success: true, eventsFound: events.length, matchesProcessed: matchCount, bytesRead: data.length };
+      return { success: true, eventsFound: events.length, matchesProcessed: matchCount, draftsProcessed, bytesRead: data.length };
     } catch (e) {
       console.error('[Manual Refresh] Error:', e);
       return { success: false, error: e.message };

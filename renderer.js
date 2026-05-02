@@ -1142,7 +1142,8 @@ async function runSetEnrichment() {
 async function scanLogNow() {
     const result = await ipcRenderer.invoke('refresh-log');
     if (result.success) {
-        alert(`Scan complete!\nFound ${result.eventsFound} events\nProcessed ${result.matchesProcessed || 0} matches\nRead ${result.bytesRead} bytes\n\nCheck the Matches tab to see results.`);
+        const draftMsg = result.draftsProcessed ? `\nStored ${result.draftsProcessed} draft${result.draftsProcessed !== 1 ? 's' : ''}` : '';
+        alert(`Scan complete!\nProcessed ${result.matchesProcessed || 0} matches${draftMsg}\n\nCheck the Matches tab to see results.`);
         loadDashboard();
     } else {
         alert(`Error: ${result.error}`);
