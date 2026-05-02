@@ -158,6 +158,11 @@ const MOCK_CARDS = {
     '12345': { name: 'Lightning Bolt', manaCost: '{R}',    type: 'Instant'  },
     '67890': { name: 'Forest',         manaCost: '',        type: 'Basic Land' },
   },
+  // Satisfy needsEnrichment() so setEnricher.enrich() is never called at startup.
+  // Without these fields, enrich() calls findMtgaDb() → fs.readdirSync() on real
+  // MTGA paths that don't exist in the test environment, crashing the process.
+  mainDraftSets: [{ code: 'SOS', primaryCount: 281, firstGrpId: 102460 }],
+  enrichedSets:  ['SOS', 'SOA'],
 };
 
 const fs = require('fs');
