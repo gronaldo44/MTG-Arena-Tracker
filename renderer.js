@@ -16,13 +16,9 @@ let _currentPackOptions = [];   // cached options for detail drawer lookups
 function showPage(page) {
     currentPage = page;
 
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    // Match nav item by inner text content
-    document.querySelectorAll('.nav-item').forEach(item => {
-        if (item.textContent.trim().toLowerCase().includes(page)) {
-            item.classList.add('active');
-        }
-    });
+    document.querySelectorAll('.nav-item').forEach(item =>
+        item.classList.toggle('active', item.dataset.page === page)
+    );
 
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(`page-${page}`).classList.add('active');
@@ -32,6 +28,7 @@ function showPage(page) {
     if (page === 'matches') loadMatches();
     if (page === 'stats') loadStats();
     if (page === 'settings') loadSettings();
+    if (page === 'deckbuilder') { initHypGeoFromDraft(); renderHypGeoTable(); }
 }
 
 // ─── Window controls ──────────────────────────────────────────────────────────
@@ -104,8 +101,22 @@ let _matchesSelectedCombos  = new Set();
 const _dotColor = { W: '#f5f0e0', U: '#1e6daf', B: '#555', R: '#c1160e', G: '#1a6b3a' };
 const _dotBorder = { B: 'border:1px solid #888;' };
 
-function getColorCombo(colors) {
-    return ['W', 'U', 'B', 'R', 'G'].filter(c => (colors || []).includes(c)).join('');
+// Colors with this many or fewer copies are considered a splash and excluded from
+// the combo key used for Format-card grouping and filtering.
+const SPLASH_THRESHOLD = 4;
+
+function isSplashColor(count) {
+    return count > 0 && count <= SPLASH_THRESHOLD;
+}
+
+// Returns the canonical color-combo key (e.g. "UR") for a match, excluding any
+// colors the deck only splashes.  Pass deckColorCounts so splash detection works;
+// omitting it (legacy path) includes all colors as before.
+function getColorCombo(colors, colorCounts) {
+    const counts = colorCounts || {};
+    return ['W', 'U', 'B', 'R', 'G']
+        .filter(c => (colors || []).includes(c) && !isSplashColor(counts[c] || 0))
+        .join('');
 }
 
 function comboDotsHtml(combo) {
@@ -128,7 +139,7 @@ function renderMatchColorPips(match) {
 
     const pips = ordered.map(c => {
         const count = counts[c] || 0;
-        const isSplash = count > 0 && count <= 5;
+        const isSplash = isSplashColor(count);
         const title = count > 0
             ? `${colorLabel(c)}: ${count} card${count !== 1 ? 's' : ''}`
             : colorLabel(c);
@@ -161,7 +172,7 @@ function renderMatchFormatCards() {
     const fmtMap = {};
     for (const m of _matchesAllMatches) {
         const fmt   = m.format || 'Unknown';
-        const combo = getColorCombo(m.deckColors);
+        const combo = getColorCombo(m.deckColors, m.deckColorCounts);
         if (!fmtMap[fmt]) fmtMap[fmt] = { total: 0, wins: 0, losses: 0, combos: {} };
         fmtMap[fmt].total++;
         if (m.result === 'win')  fmtMap[fmt].wins++;
@@ -214,7 +225,7 @@ function renderMatchList() {
     let visible = _matchesAllMatches;
     if (_matchesFormat) visible = visible.filter(m => m.format === _matchesFormat);
     if (_matchesSelectedCombos.size > 0) {
-        visible = visible.filter(m => _matchesSelectedCombos.has(getColorCombo(m.deckColors)));
+        visible = visible.filter(m => _matchesSelectedCombos.has(getColorCombo(m.deckColors, m.deckColorCounts)));
     }
     container.innerHTML = visible.length === 0
         ? `<div class="empty-state"><div class="icon">📝</div><p>${
@@ -252,7 +263,7 @@ function toggleMatchCombo(format, combo) {
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 let _cardStatsData     = [];
-let _cardStatsSortKey  = 'gamesInHand';
+let _cardStatsSortKey  = 'gihWr17l';
 // 'format' = personal-stats format keys (e.g., "Premier_Draft_SOS"); existing path.
 // 'set'    = MTGA set codes (e.g., "SOS"); used when the user has no draft history yet
 //           so the table can still surface 17Lands data for an upcoming draft.
@@ -423,7 +434,7 @@ function renderCardStatsTable() {
     if (rows.length === 0) {
         const msg = _cardStatsMode === 'set'
             ? `No cards visible for <strong>${_cardStatsFormat}</strong>. Lower the Min GIH filter to 0 to see 17Lands data for unplayed cards, or load a 17Lands CSV.`
-            : `No card stats yet for <strong>${_cardStatsFormat}</strong> — play some games to start tracking.`;
+            : `No card stats yet for <strong>${_cardStatsFormat}</strong>. Play some games to start tracking.`;
         tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);">${msg}</td></tr>`;
         return;
     }
@@ -461,12 +472,576 @@ async function clearCardStats() {
     renderCardStatsTable();
 }
 
+// ─── Deck Builder ─────────────────────────────────────────────────────────────
+
+const HYPGEO_DECK_SIZE = 40;
+const HYPGEO_MAX_TURN  = 10;
+
+// Sources per color — hardcoded for now; 0 means the deck doesn't play that color.
+const _hypGeoSources = { W: 0, U: 8, B: 0, R: 0, G: 9 };
+
+let _hypGeoGoingFirst = true;
+let _hypGeoConverge   = false;
+let _hypGeoPipRows    = []; // unique pip combos from draft; each is {W,U,B,R,G} count obj
+let _hypGeoLands      = 17;
+const _customLands    = {}; // colorKey (e.g. 'GU') → count of that land type
+let _selectedCustomColors = new Set(); // colors toggled in the add-land UI
+
+// Precomputed binomial coefficients C(n,k) for n,k < 61.
+const _binom = (() => {
+    const MAX = 61;
+    const t = Array.from({ length: MAX }, () => Array(MAX).fill(0));
+    for (let n = 0; n < MAX; n++) {
+        t[n][0] = 1;
+        for (let k = 1; k <= n; k++) t[n][k] = t[n-1][k-1] + t[n-1][k];
+    }
+    return (n, k) => (n < 0 || k < 0 || k > n) ? 0 : t[n][k];
+})();
+
+// P(drawing at least 1 of K successes in n draws from a deck of N cards).
+// Uses the exact hypergeometric formula P(X≥1) = 1 − ∏(N−K−i)/(N−i).
+function hypGeoAtLeastOne(N, K, n) {
+    if (K <= 0 || n <= 0) return 0;
+    if (N - K < n) return 1; // not enough non-hits to fill the draw
+    let p = 1;
+    for (let i = 0; i < n; i++) p *= (N - K - i) / (N - i);
+    return 1 - p;
+}
+
+// Parse Scryfall-style mana cost into per-color pip counts, e.g. "{G}{G}{U}" → {G:2, U:1}.
+// Hybrid pips like {2/G} are skipped since they're not a hard pip requirement.
+function parsePips(manaCost) {
+    const pips = {};
+    for (const [, c] of (manaCost || '').matchAll(/\{([WUBRG])\}/g)) {
+        pips[c] = (pips[c] || 0) + 1;
+    }
+    return pips;
+}
+
+// Canonical string key for a pip object, e.g. {G:2, U:1} → "GGU".
+function pipKey(pips) {
+    return ['W', 'U', 'B', 'R', 'G']
+        .filter(c => (pips[c] || 0) > 0)
+        .map(c => c.repeat(pips[c]))
+        .join('');
+}
+
+// P(drawing at least pipReq[c] copies of each required color c in n draws from N-card deck).
+// Exact multivariate hypergeometric via recursive enumeration.
+function multiHypGeoProb(N, colorSources, n, pipReq) {
+    const colors = ['W', 'U', 'B', 'R', 'G'].filter(c => (pipReq[c] || 0) > 0);
+    if (colors.length === 0) return 1;
+    const K    = colors.map(c => colorSources[c] || 0);
+    const kMin = colors.map(c => pipReq[c]);
+    for (let i = 0; i < colors.length; i++) if (K[i] < kMin[i]) return 0;
+    const K_other = N - K.reduce((s, v) => s + v, 0);
+    if (K_other < 0) return 0;
+    const total = _binom(N, n);
+    if (total === 0) return 0;
+    let num = 0;
+    (function enumerate(idx, drawn, term) {
+        if (idx === colors.length) {
+            const g_other = n - drawn;
+            if (g_other >= 0 && g_other <= K_other) num += term * _binom(K_other, g_other);
+            return;
+        }
+        for (let g = kMin[idx]; g <= Math.min(K[idx], n - drawn); g++)
+            enumerate(idx + 1, drawn + g, term * _binom(K[idx], g));
+    })(0, 0, 1);
+    return Math.min(1, num / total);
+}
+
+// Exact multivariate hypergeometric that correctly models dual lands.
+// customLands: { colorKey → count }, e.g. { 'GU': 3, 'WUR': 1 }.
+// Unspecified source cards are treated as mono-color basics (conservative fallback).
+// Groups the deck into disjoint piles by which *required* colors each card produces,
+// then enumerates draws over those piles — so a GU dual drawn satisfies both G and U.
+function multiHypGeoExact(N, colorSources, n, pipReq, customLands, totalLands) {
+    const reqColors = ['W', 'U', 'B', 'R', 'G'].filter(c => (pipReq[c] || 0) > 0);
+    if (reqColors.length === 0) return 1;
+    const m = reqColors.length;
+
+    // How much of each color is covered by specified custom lands
+    const customContrib = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+    for (const [key, cnt] of Object.entries(customLands)) {
+        for (const c of key) customContrib[c] += cnt;
+    }
+
+    // Remaining sources per color: treated as mono-color basics
+    const mono = {};
+    for (const c of ['W', 'U', 'B', 'R', 'G'])
+        mono[c] = Math.max(0, (colorSources[c] || 0) - customContrib[c]);
+
+    // Build disjoint groups keyed by required-color bitmask.
+    // Bit i set → this group produces reqColors[i].
+    const groupK = new Array(1 << m).fill(0);
+
+    for (const [key, cnt] of Object.entries(customLands)) {
+        let mask = 0;
+        for (let i = 0; i < m; i++) if (key.includes(reqColors[i])) mask |= 1 << i;
+        groupK[mask] += cnt;
+    }
+    for (let i = 0; i < m; i++) groupK[1 << i] += mono[reqColors[i]];
+
+    // K_other = everything not in a required-color group (non-land cards + non-required basics)
+    const relevantTotal = groupK.reduce((s, v) => s + v, 0);
+    const K_other = N - relevantTotal + groupK[0]; // mask=0 custom lands fold into other
+    groupK[0] = 0;
+
+    // Quick infeasibility check
+    for (let i = 0; i < m; i++) {
+        let avail = 0;
+        for (let mask = 1; mask < (1 << m); mask++) if ((mask >> i) & 1) avail += groupK[mask];
+        if (avail < (pipReq[reqColors[i]] || 0)) return 0;
+    }
+
+    const denom = _binom(N, n);
+    if (denom === 0) return 0;
+
+    const groups = [];
+    for (let mask = 1; mask < (1 << m); mask++) if (groupK[mask] > 0) groups.push({ mask, K: groupK[mask] });
+    const req = reqColors.map(c => pipReq[c] || 0);
+    let num = 0;
+
+    (function enumerate(gi, drawn, term, colorDrawn) {
+        if (gi === groups.length) {
+            for (let i = 0; i < m; i++) if (colorDrawn[i] < req[i]) return;
+            const g_other = n - drawn;
+            if (g_other >= 0 && g_other <= K_other) num += term * _binom(K_other, g_other);
+            return;
+        }
+        const { mask, K } = groups[gi];
+        for (let g = 0; g <= Math.min(K, n - drawn); g++) {
+            const cd = colorDrawn.slice();
+            for (let i = 0; i < m; i++) if ((mask >> i) & 1) cd[i] += g;
+            enumerate(gi + 1, drawn + g, term * _binom(K, g), cd);
+        }
+    })(0, 0, 1, new Array(m).fill(0));
+
+    return Math.min(1, num / denom);
+}
+
+function setHypGeoGoingFirst(goFirst) {
+    _hypGeoGoingFirst = goFirst;
+    document.getElementById('hypgeo-first-btn').classList.toggle('active', goFirst);
+    document.getElementById('hypgeo-second-btn').classList.toggle('active', !goFirst);
+    const thumb = document.getElementById('go-toggle-thumb');
+    if (thumb) thumb.classList.toggle('at-second', !goFirst);
+    renderHypGeoTable();
+}
+
+function initHypGeoFromDraft() {
+    const picks = currentDraftState?.picks || [];
+
+    for (const c of ['W', 'U', 'B', 'R', 'G']) _hypGeoSources[c] = 0;
+    _hypGeoPipRows = [];
+    if (picks.length === 0) return;
+
+    // Count how many drafted cards include each color (per-card, not per-pip).
+    const colorCounts = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+    const pipRowMap = new Map(); // key → { pips, maxGihWr }
+    for (const pick of picks) {
+        const pips   = parsePips(pick.picked?.manaCost);
+        const key    = pipKey(pips);
+        const gihWr  = pick.picked?.gihWr ?? null;
+        if (key) {
+            for (const c of Object.keys(pips)) colorCounts[c]++;
+            if (!pipRowMap.has(key)) {
+                pipRowMap.set(key, { pips, maxGihWr: gihWr });
+            } else {
+                const entry = pipRowMap.get(key);
+                if (gihWr !== null && (entry.maxGihWr === null || gihWr > entry.maxGihWr))
+                    entry.maxGihWr = gihWr;
+            }
+        }
+    }
+
+    // Top color gets 9 sources, second gets 8, rest stay 0.
+    const ranked = ['W', 'U', 'B', 'R', 'G']
+        .filter(c => colorCounts[c] > 0)
+        .sort((a, b) => colorCounts[b] - colorCounts[a]);
+
+    if (ranked.length >= 1) _hypGeoSources[ranked[0]] = 9;
+    if (ranked.length >= 2) _hypGeoSources[ranked[1]] = 8;
+
+    _hypGeoPipRows = [...pipRowMap.values()];
+}
+
+function adjustHypGeoSource(color, delta) {
+    _hypGeoSources[color] = Math.max(0, Math.min(HYPGEO_DECK_SIZE, (_hypGeoSources[color] || 0) + delta));
+    renderHypGeoTable();
+}
+
+function adjustHypGeoLands(delta) {
+    _hypGeoLands = Math.max(1, Math.min(HYPGEO_DECK_SIZE, _hypGeoLands + delta));
+    renderHypGeoTable();
+}
+
+function adjustCustomLand(key, delta) {
+    const val = (_customLands[key] || 0) + delta;
+    if (val <= 0) delete _customLands[key];
+    else _customLands[key] = val;
+    // Mirror each color pip: adding a land decrements that source, removing restores it.
+    for (const c of key) {
+        _hypGeoSources[c] = Math.max(0, (_hypGeoSources[c] || 0) - delta);
+    }
+    renderCustomLandsModal();
+    renderHypGeoTable();
+}
+
+function toggleCustomLandColor(c) {
+    if (_selectedCustomColors.has(c)) _selectedCustomColors.delete(c);
+    else _selectedCustomColors.add(c);
+    const btn = document.querySelector(`.custom-land-toggle[data-clr="${c}"]`);
+    if (btn) btn.classList.toggle('active', _selectedCustomColors.has(c));
+    const addBtn = document.getElementById('custom-land-add-btn');
+    if (addBtn) addBtn.disabled = _selectedCustomColors.size < 1;
+}
+
+function commitCustomLand() {
+    if (_selectedCustomColors.size < 1) return;
+    const key = ['W', 'U', 'B', 'R', 'G'].filter(c => _selectedCustomColors.has(c)).join('');
+    _customLands[key] = (_customLands[key] || 0) + 1;
+    for (const c of key) {
+        _hypGeoSources[c] = Math.max(0, (_hypGeoSources[c] || 0) - 1);
+    }
+    _selectedCustomColors = new Set();
+    renderCustomLandsModal();
+    renderHypGeoTable();
+}
+
+function openCustomLandsModal() {
+    document.getElementById('custom-lands-modal').style.display = 'flex';
+    renderCustomLandsModal();
+}
+
+function closeCustomLandsModal() {
+    document.getElementById('custom-lands-modal').style.display = 'none';
+}
+
+function renderCustomLandsModal() {
+    const body = document.getElementById('custom-lands-body');
+    if (!body) return;
+
+    const colorNames = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
+
+    // Effective sources = mono basics (steppers, post-decrement) + custom land contributions.
+    const contribPerColor = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+    for (const [key, cnt] of Object.entries(_customLands))
+        for (const c of key) contribPerColor[c] += cnt;
+    const totalSources   = ['W', 'U', 'B', 'R', 'G']
+        .reduce((s, c) => s + (_hypGeoSources[c] || 0) + contribPerColor[c], 0);
+
+    const dualSlots      = Math.max(0, totalSources - _hypGeoLands);
+    const specifiedDuals = Object.entries(_customLands)
+        .filter(([k]) => k.length >= 2).reduce((s, [k, v]) => s + (k.length - 1) * v, 0);
+    const unaccounted    = Math.max(0, dualSlots - specifiedDuals);
+    // Over-accounted only when there IS a dual requirement and we've exceeded it.
+    // When dualSlots = 0 (sources and lands in sync), there is no requirement to exceed.
+    const isOverAccounted = dualSlots > 0 && specifiedDuals > dualSlots;
+    const pct            = dualSlots > 0
+        ? Math.min(100, Math.round(specifiedDuals / dualSlots * 100))
+        : 100;
+
+    const landList = Object.entries(_customLands).map(([key, count]) => {
+        const dots = [...key].map(c =>
+            `<span class="hypgeo-pip-dot" style="background:${_dotColor[c]};${_dotBorder[c] || ''}" title="${colorNames[c]}"></span>`
+        ).join('');
+        return `<div class="custom-land-item">
+            <div class="hypgeo-pip-cell">${dots}</div>
+            <div class="src-stepper">
+                <button onclick="adjustCustomLand('${key}', -1)">−</button>
+                <span>${count}</span>
+                <button onclick="adjustCustomLand('${key}', +1)">+</button>
+            </div>
+        </div>`;
+    }).join('');
+
+    const toggles = ['W', 'U', 'B', 'R', 'G'].map(c => {
+        const active = _selectedCustomColors.has(c);
+        return `<button class="custom-land-toggle${active ? ' active' : ''}" data-clr="${c}"
+            onclick="toggleCustomLandColor('${c}')"
+            style="background:${_dotColor[c]};${_dotBorder[c] || ''}"
+            title="${colorNames[c]}"></button>`;
+    }).join('');
+
+    const progressLabel = dualSlots === 0
+        ? 'No multi-color lands needed'
+        : `${specifiedDuals} / ${dualSlots} extra color source${dualSlots !== 1 ? 's' : ''} accounted for`;
+    const progressBadge = isOverAccounted
+        ? `<span class="cl-over-badge">Over-specified. Reduce multi-color lands or lower source counts.</span>`
+        : (unaccounted === 0 ? `<span class="cl-exact-badge">Exact</span>` : '');
+
+    body.innerHTML = `
+        <div class="cl-progress">
+            <div class="cl-progress-track">
+                <div class="cl-progress-fill${isOverAccounted ? ' cl-progress-over' : ''}" style="width:${pct}%"></div>
+            </div>
+            <span class="cl-progress-text">${progressLabel} ${progressBadge}</span>
+        </div>
+        ${landList
+            ? `<div class="custom-lands-list">${landList}</div>`
+            : `<p class="cl-empty">No custom lands added yet.</p>`}
+        <div class="cl-add-row">
+            <span class="cl-add-row-label">Add a land: select colors it taps for</span>
+            <div class="cl-toggles">${toggles}</div>
+            <button class="cl-add-btn" id="custom-land-add-btn"
+                onclick="commitCustomLand()"
+                ${_selectedCustomColors.size < 1 ? 'disabled' : ''}>Add Land</button>
+        </div>
+        <p class="cl-hint">Each color a land taps for beyond its first covers one extra source (dual: 1, tri-land: 2, 5-color: 4).</p>
+    `;
+}
+
+function toggleHypGeoConverge() {
+    _hypGeoConverge = !_hypGeoConverge;
+    document.getElementById('hypgeo-converge-btn').classList.toggle('active', _hypGeoConverge);
+    renderHypGeoTable();
+}
+
+// P(at least X distinct colors each have ≥1 source drawn in n cards from deck of N).
+// Uses inclusion-exclusion over subsets of active colors. Assumes non-overlapping sources.
+function convergeProb(N, colorSources, n, X) {
+    const active = ['W', 'U', 'B', 'R', 'G'].filter(c => (colorSources[c] || 0) > 0);
+    const m = active.length;
+    if (X <= 0) return 1;
+    if (X > m)  return 0;
+
+    const src = active.map(c => colorSources[c]);
+
+    function bits(x) { let c = 0; while (x) { c += x & 1; x >>= 1; } return c; }
+
+    // P(all colors in bitmask are missed in n draws)
+    function qMiss(mask) {
+        let K = 0;
+        for (let i = 0; i < m; i++) if (mask >> i & 1) K += src[i];
+        if (N - K < n) return 0;
+        let p = 1;
+        for (let i = 0; i < n; i++) p *= (N - K - i) / (N - i);
+        return p;
+    }
+
+    // P(exactly the colors in `covered` bitmask are covered, all others missed)
+    function pExact(covered) {
+        const notCov = ((1 << m) - 1) ^ covered;
+        let sum = 0;
+        for (let S = covered; ; S = (S - 1) & covered) {
+            sum += (bits(S) % 2 === 0 ? 1 : -1) * qMiss(notCov | S);
+            if (S === 0) break;
+        }
+        return sum;
+    }
+
+    let total = 0;
+    for (let mask = 0; mask < (1 << m); mask++) {
+        if (bits(mask) >= X) total += pExact(mask);
+    }
+    return Math.max(0, Math.min(1, total));
+}
+
+function renderHypGeoTable() {
+    const sourcesPanel = document.getElementById('hypgeo-sources-panel');
+    const headerRow    = document.getElementById('hypgeo-header-row');
+    const tbody        = document.getElementById('hypgeo-tbody');
+    if (!sourcesPanel || !headerRow || !tbody) return;
+
+    const colorNames = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
+
+    // ── Sources panel (left) ──────────────────────────────────────────────────
+    // With auto-decrement, _hypGeoSources holds mono-only counts.
+    // Effective sources = mono + custom contributions, keeping dualSlots stable as lands are added.
+    const _customContrib = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+    for (const [key, cnt] of Object.entries(_customLands))
+        for (const c of key) _customContrib[c] += cnt;
+    const _effectiveSrc = {};
+    for (const c of ['W', 'U', 'B', 'R', 'G'])
+        _effectiveSrc[c] = (_hypGeoSources[c] || 0) + _customContrib[c];
+
+    const totalSources = ['W', 'U', 'B', 'R', 'G'].reduce((s, c) => s + _effectiveSrc[c], 0);
+    const dualSlots    = Math.max(0, totalSources - _hypGeoLands);
+
+    // Remaining unspecified dual slots drive the residual bias.
+    // Only multi-color custom lands (2+ colors) fill dual slots; mono-color don't.
+    const specifiedDuals  = Object.entries(_customLands)
+        .filter(([k]) => k.length >= 2).reduce((s, [k, v]) => s + (k.length - 1) * v, 0);
+    const remainingDuals  = Math.max(0, dualSlots - specifiedDuals);
+
+    // If all color sources are fully specified (accountedFor >= totalSources), every land
+    // is explicitly typed and multiHypGeoExact has no approximation left to make.
+    const accountedFor    = Object.entries(_customLands).reduce((s, [k, v]) => s + k.length * v, 0);
+    const isExact         = remainingDuals === 0 || accountedFor >= totalSources;
+
+    let biasEstimate = 0;
+    if (!isExact) {
+        const active = ['W', 'U', 'B', 'R', 'G']
+            .filter(c => _effectiveSrc[c] > 0)
+            .sort((a, b) => _effectiveSrc[b] - _effectiveSrc[a]);
+        if (active.length >= 2) {
+            const K_A       = _effectiveSrc[active[0]];
+            const K_B       = _effectiveSrc[active[1]];
+            const n_hand    = _hypGeoGoingFirst ? 7 : 8;
+            const poolModel = HYPGEO_DECK_SIZE - K_A - K_B + specifiedDuals;
+            const poolCorr  = poolModel + remainingDuals;
+            if (poolModel >= 0 && poolCorr <= HYPGEO_DECK_SIZE) {
+                biasEstimate = (_binom(poolCorr, n_hand) - _binom(poolModel, n_hand))
+                             / _binom(HYPGEO_DECK_SIZE, n_hand);
+            }
+        }
+    }
+
+    // ── Custom land rows interleaved into sources panel ───────────────────────
+    // Group custom lands by their "primary" color (first char), with 5-pip at top.
+    const customByGroup = {};
+    for (const [key, cnt] of Object.entries(_customLands)) {
+        const group = key.length === 5 ? 'WUBRG' : key[0];
+        if (!customByGroup[group]) customByGroup[group] = [];
+        customByGroup[group].push([key, cnt]);
+    }
+    // Within each group sort by pip count, then canonical key order (already WUBRG-sorted).
+    for (const entries of Object.values(customByGroup)) {
+        entries.sort(([a], [b]) => a.length !== b.length ? a.length - b.length : (a < b ? -1 : 1));
+    }
+
+    function customLandRowHtml(key, count) {
+        const dots = [...key].map(c =>
+            `<span class="hypgeo-pip-dot" style="background:${_dotColor[c]};${_dotBorder[c] || ''}" title="${colorNames[c]}"></span>`
+        ).join('');
+        return `<div class="src-row src-custom-land-row">
+            <div class="hypgeo-pip-cell">${dots}</div>
+            <div class="src-stepper">
+                <button onclick="adjustCustomLand('${key}', -1)">−</button>
+                <span>${count}</span>
+                <button onclick="adjustCustomLand('${key}', +1)">+</button>
+            </div>
+        </div>`;
+    }
+
+    // ── Disclaimer + Add Lands button ─────────────────────────────────────────
+    const disclaimerHtml = dualSlots > 0 ? (() => {
+        const biasPct = Math.round(biasEstimate * 100);
+        const label   = isExact
+            ? `Multi-color lands<br><span class="src-disclaimer-sub">All extra sources covered · Exact</span>`
+            : `Multi-color lands<br><span class="src-disclaimer-sub">~+${biasPct}% on multicolor pips</span>`;
+        const tooltip = isExact
+            ? 'All multi-color lands specified. Probabilities are exact.'
+            : `${remainingDuals} of ${dualSlots} extra color sources unspecified. Add your multi-color lands for exact odds.`;
+        return `<span class="src-dual-disclaimer" data-tooltip="${tooltip}">${label}</span>`;
+    })() : '';
+
+    sourcesPanel.innerHTML =
+        `<div class="src-panel-label">Sources</div>` +
+        (customByGroup['WUBRG'] || []).map(([k, v]) => customLandRowHtml(k, v)).join('') +
+        ['W', 'U', 'B', 'R', 'G'].map(color => {
+            const K        = _hypGeoSources[color] || 0;
+            const dotStyle = `background:${_dotColor[color]};${_dotBorder[color] || ''}`;
+            const colorRow = `<div class="src-row">
+                <span class="hypgeo-pip-dot" style="${dotStyle}" title="${colorNames[color]}"></span>
+                <div class="src-stepper">
+                    <button onclick="adjustHypGeoSource('${color}', -1)">−</button>
+                    <span>${K}</span>
+                    <button onclick="adjustHypGeoSource('${color}', +1)">+</button>
+                </div>
+            </div>`;
+            const subRows = (customByGroup[color] || []).map(([k, v]) => customLandRowHtml(k, v)).join('');
+            return colorRow + subRows;
+        }).join('') +
+        `<div class="src-row src-row-lands">
+            <span class="src-lands-label">Lands</span>
+            <div class="src-stepper">
+                <button onclick="adjustHypGeoLands(-1)">−</button>
+                ${(() => {
+                    const diff = totalSources - _hypGeoLands;
+                    if (diff === 0) return `<span>${_hypGeoLands}</span>`;
+                    const tip = diff > 0
+                        ? `${diff} more source${diff !== 1 ? 's' : ''} than lands. Some lands must cover multiple colors.`
+                        : `${-diff} more land${-diff !== 1 ? 's' : ''} than sources. Some lands contribute no color.`;
+                    return `<span style="color:var(--warning);cursor:default;" title="${tip}">${_hypGeoLands}</span>`;
+                })()}
+                <button onclick="adjustHypGeoLands(+1)">+</button>
+            </div>
+        </div>` +
+        disclaimerHtml +
+        `<button class="src-add-lands-btn" onclick="openCustomLandsModal()">+ Add / Edit Lands</button>`;
+
+    // ── Probability table (right) ─────────────────────────────────────────────
+    const turnHeaders = Array.from({ length: HYPGEO_MAX_TURN }, (_, i) =>
+        `<th>T${i + 1}</th>`
+    ).join('');
+
+    const dashCell = `<td class="hypgeo-pct-zero">—</td>`;
+
+    function pctCell(prob) {
+        if (prob === 0) return dashCell;
+        const pct = (prob * 100).toFixed(1);
+        const cls = prob < 0.33 ? 'hypgeo-pct-low'
+                  : prob < 0.66 ? 'hypgeo-pct-mid'
+                  : prob < 0.80 ? ''
+                  : 'hypgeo-pct-high';
+        return `<td class="${cls}">${pct}%</td>`;
+    }
+
+    headerRow.innerHTML = `<th>Pips</th>${turnHeaders}`;
+
+    const rows = [];
+
+    if (_hypGeoConverge) {
+        for (const X of [2, 3, 4, 5]) {
+            // Sort by the first turn where the spell is castable (TX).
+            const n_sort  = _hypGeoGoingFirst ? (6 + X) : (7 + X);
+            const sortKey = convergeProb(HYPGEO_DECK_SIZE, _effectiveSrc, n_sort, X);
+            const cells   = Array.from({ length: HYPGEO_MAX_TURN }, (_, i) => {
+                if ((i + 1) < X) return dashCell;
+                const n = _hypGeoGoingFirst ? (6 + i + 1) : (7 + i + 1);
+                return pctCell(convergeProb(HYPGEO_DECK_SIZE, _effectiveSrc, n, X));
+            }).join('');
+            rows.push({ sortKey, html: `<tr><td><span class="hypgeo-converge-label">C${X}</span></td>${cells}</tr>` });
+        }
+    }
+
+    // One row per unique pip combination found in the draft.
+    for (const { pips, maxGihWr } of _hypGeoPipRows) {
+        const totalPips = Object.values(pips).reduce((s, v) => s + v, 0);
+        // Sort by the first turn where the spell is castable (T<totalPips>).
+        const n_sort  = _hypGeoGoingFirst ? (6 + totalPips) : (7 + totalPips);
+        const sortKey = multiHypGeoExact(HYPGEO_DECK_SIZE, _effectiveSrc, n_sort, pips, _customLands, _hypGeoLands);
+        const dots = ['W', 'U', 'B', 'R', 'G'].flatMap(c => {
+            const cnt = pips[c] || 0;
+            if (!cnt) return [];
+            const dotStyle = `background:${_dotColor[c]};${_dotBorder[c] || ''}`;
+            return Array.from({ length: cnt }, () =>
+                `<span class="hypgeo-pip-dot" style="${dotStyle}" title="${colorNames[c]}"></span>`
+            );
+        }).join('');
+        const cells = Array.from({ length: HYPGEO_MAX_TURN }, (_, i) => {
+            if ((i + 1) < totalPips) return dashCell;
+            const n = _hypGeoGoingFirst ? (6 + i + 1) : (7 + i + 1);
+            return pctCell(multiHypGeoExact(HYPGEO_DECK_SIZE, _effectiveSrc, n, pips, _customLands, _hypGeoLands));
+        }).join('');
+        rows.push({ sortKey, maxGihWr, html: `<tr><td><div class="hypgeo-pip-cell">${dots}</div></td>${cells}</tr>` });
+    }
+
+    // Non-zero rows: sort by T1 probability descending.
+    // Zero rows: sort by max GIH WR descending (cards with no WR data fall to the bottom).
+    const nonZero = rows.filter(r => r.sortKey > 0).sort((a, b) => b.sortKey - a.sortKey);
+    const zero    = rows.filter(r => r.sortKey === 0).sort((a, b) => {
+        const aw = a.maxGihWr ?? -Infinity;
+        const bw = b.maxGihWr ?? -Infinity;
+        return bw - aw;
+    });
+    tbody.innerHTML = [...nonZero, ...zero].map(r => r.html).join('');
+
+    // Keep modal in sync if it's open while sources/lands change
+    const modal = document.getElementById('custom-lands-modal');
+    if (modal && modal.style.display !== 'none') renderCustomLandsModal();
+}
+
 // ─── Settings ─────────────────────────────────────────────────────────────────
 async function loadSettings() {
     const settings = await ipcRenderer.invoke('get-settings');
     const logPath = await ipcRenderer.invoke('get-log-path');
 
     document.getElementById('log-path-input').value = settings.logPath || logPath;
+    document.getElementById('mtga-db-path-input').value = settings.mtgaDbPath || '';
     document.getElementById('setting-minimize').checked = settings.minimizeToTray !== false;
     document.getElementById('setting-notifications').checked = settings.showNotifications !== false;
 
@@ -533,6 +1108,7 @@ async function updateCardDatabase() {
 async function saveSettings() {
     const settings = {
         logPath: document.getElementById('log-path-input').value,
+        mtgaDbPath: document.getElementById('mtga-db-path-input').value,
         minimizeToTray: document.getElementById('setting-minimize').checked,
         showNotifications: document.getElementById('setting-notifications').checked
     };
@@ -542,6 +1118,25 @@ async function saveSettings() {
 
 async function browseLogPath() {
     alert('Please manually enter the log path in the text field.\n\nDefault: %USERPROFILE%\\AppData\\LocalLow\\Wizards Of The Coast\\MTGA\\Player.log');
+}
+
+async function browseMtgaDb() {
+    const filePath = await ipcRenderer.invoke('browse-mtga-db');
+    if (filePath) document.getElementById('mtga-db-path-input').value = filePath;
+}
+
+async function runSetEnrichment() {
+    const statusEl = document.getElementById('mtga-enrich-status');
+    statusEl.textContent = 'Running import...';
+    statusEl.style.color = 'var(--text-muted)';
+    const result = await ipcRenderer.invoke('run-set-enrichment');
+    if (result.success) {
+        statusEl.textContent = result.enriched ? 'Import complete.' : 'Already up to date.';
+        statusEl.style.color = 'var(--success)';
+    } else {
+        statusEl.textContent = `Import failed: ${result.error}`;
+        statusEl.style.color = 'var(--danger)';
+    }
 }
 
 async function scanLogNow() {
@@ -683,11 +1278,11 @@ async function updateCsvStatusUI() {
     if (status.loaded) {
         banner.className = 'csv-status-banner loaded';
         iconEl.textContent = '✅';
-        textEl.textContent = `${status.setName} — ${status.cardCount.toLocaleString()} cards loaded`;
+        textEl.textContent = `${status.setName} (${status.cardCount.toLocaleString()} cards loaded)`;
     } else {
         banner.className = 'csv-status-banner not-loaded';
         iconEl.textContent = '⚠️';
-        textEl.textContent = 'No 17Lands data loaded — ratings unavailable';
+        textEl.textContent = 'No 17Lands data loaded. Ratings unavailable.';
     }
 
     // Settings page row

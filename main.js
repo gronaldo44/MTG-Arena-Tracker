@@ -6,6 +6,7 @@ const LogParser = require('./logParserV5');
 const GREParser = require('./greParser');
 const DataStore = require('./dataStore');
 const CardUpdater = require('./cardUpdater');
+const setEnricher = require('./setEnricher');
 const DraftAssistant = require('./draftAssistant');
 const { clear } = require('console');
 
@@ -471,6 +472,28 @@ function handleGameEvent(event) {
 ipcMain.handle('get-inventory', async () => {
   if (!dataStore) return null;
   return dataStore.getInventory();
+});
+
+ipcMain.handle('run-set-enrichment', async () => {
+  if (!dataStore) return { success: false, error: 'App not ready' };
+  const { mtgaDbPath } = dataStore.getSettings();
+  try {
+    const enriched = await setEnricher.enrich({ mtgaDbPath, force: true });
+    if (enriched) loadCards();
+    return { success: true, enriched };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('browse-mtga-db', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select MTGA Card Database',
+    filters: [{ name: 'MTGA Database', extensions: ['mtga'] }],
+    properties: ['openFile'],
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
 });
 
 // Let the user pick a 17Lands CSV via file dialog
@@ -968,9 +991,10 @@ app.whenReady().then(async () => {
   console.log('[App] Checking for card database updates...');
   cardUpdater = new CardUpdater();
 
+  let scryfallUpdated = false;
   try {
-    const updated = await cardUpdater.update();
-    if (updated) {
+    scryfallUpdated = await cardUpdater.update();
+    if (scryfallUpdated) {
       console.log('[App] Card database was updated');
     } else {
       console.log('[App] Card database is up to date');
@@ -979,7 +1003,15 @@ app.whenReady().then(async () => {
     console.error('[App] Failed to update card database:', error.message);
   }
 
+  // DataStore must be ready before enrichment so we can read the configured MTGA DB path.
   dataStore = new DataStore();
+
+  // Enrich cards.json with MTGA-sourced data for sets not yet mapped on Scryfall.
+  // Runs when Scryfall just refreshed or when enrichment hasn't been done yet.
+  if (scryfallUpdated || setEnricher.needsEnrichment()) {
+    const { mtgaDbPath } = dataStore.getSettings();
+    await setEnricher.enrich({ mtgaDbPath });
+  }
 
   // Auto-load last 17Lands CSV from previous session
   const savedCsvPath = dataStore.getSettings().lastCsvPath;
