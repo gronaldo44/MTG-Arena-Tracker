@@ -606,6 +606,24 @@ ipcMain.handle('get-main-draft-sets', async () => {
   return dataStore.getMainDraftSets();
 });
 
+// Draft replay viewer: dropdown metadata and on-demand bundle for past records.
+ipcMain.handle('list-drafts', async () => {
+  if (!dataStore) return [];
+  return dataStore.getDraftSummaries();
+});
+
+ipcMain.handle('view-draft-record', async (event, draftId) => {
+  if (!dataStore || !draftId) return null;
+  const record = dataStore.getDraft(draftId);
+  if (!record) return null;
+  return draftPipeline.buildViewerBundle(
+    record,
+    draftAssistant,
+    resolveCards,
+    resolveCard,
+  );
+});
+
 // Browse-mode card stats for a given set code. Aggregates personal stats by
 // card name across every draft format that mentions the set (so a user who's
 // played Premier_Draft_SOS and Quick_Draft_SOS sees combined numbers), pulls
