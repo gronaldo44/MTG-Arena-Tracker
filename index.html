@@ -894,6 +894,30 @@
            DRAFT PAGE STYLES
            ============================================================ */
 
+        .draft-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .draft-selector select {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 5px 9px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .draft-selector select:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
         .draft-layout {
             display: grid;
             grid-template-columns: 1fr 320px;
@@ -1513,6 +1537,10 @@
 
                 <!-- Content: shown when draft is active -->
                 <div id="draft-active" style="display:none;">
+                    <div class="draft-selector">
+                        <label for="draft-select">Viewing:</label>
+                        <select id="draft-select" onchange="onDraftSelectChange(this.value)"></select>
+                    </div>
                     <div class="draft-layout">
                         <!-- Current pack -->
                         <div class="draft-pack-panel">
