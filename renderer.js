@@ -945,7 +945,7 @@ function renderRemovedSection(removedCards, currentPick) {
  * accepted but currently unused — Task 7 wires .viewing / .future state on
  * top of this skeleton.
  */
-function renderPickHistory(picks, _viewingCoord) {
+function renderPickHistory(picks, viewingCoord) {
     // Filter out the pending pack-view (picked: null && !missing) — it's the
     // current live coord, not a completed pick.
     const completed = picks.filter(p => p.missing === true || p.picked !== null);
@@ -958,9 +958,18 @@ function renderPickHistory(picks, _viewingCoord) {
     }
 
     listEl.innerHTML = [...completed].reverse().map((pick) => {
+        const isViewing = !!viewingCoord
+            && pick.pack === viewingCoord.pack
+            && pick.pick === viewingCoord.pick;
+        const isFuture = !isViewing && !!viewingCoord && (
+            pick.pack > viewingCoord.pack ||
+            (pick.pack === viewingCoord.pack && pick.pick > viewingCoord.pick)
+        );
+        const stateClass = isViewing ? 'viewing' : isFuture ? 'future' : '';
+
         if (pick.missing) {
             return `
-                <div class="draft-pick-item missing">
+                <div class="draft-pick-item missing ${stateClass}">
                     <div class="pick-num">P${pick.pack ?? '?'}p${pick.pick ?? '?'}</div>
                     <div class="pick-name" title="${MISSING_PICK_MSG}">⚠️ ${MISSING_PICK_MSG}</div>
                     <div class="pick-wr">—</div>
@@ -973,7 +982,7 @@ function renderPickHistory(picks, _viewingCoord) {
         const wrClass = gihWrTierClass(card?.tier || 'none');
 
         return `
-            <div class="draft-pick-item">
+            <div class="draft-pick-item ${stateClass}">
                 <div class="pick-num">P${pick.pack ?? '?'}p${pick.pick ?? '?'}</div>
                 <div class="pick-name" title="${name}">${name}</div>
                 <div class="pick-wr ${wrClass}">${wrText}</div>
@@ -1377,6 +1386,32 @@ async function initDraftView() {
     } else if (bundle && currentPage === 'draft') {
         renderDraftPage();
     }
+}
+
+// ─── Draft — keyboard stepping ────────────────────────────────────────────────
+//
+// Single delegated keydown handler bound at module load. Only fires when the
+// draft page is the active page and no input/textarea/select has focus, so
+// dropdown keyboard navigation still works. Silent no-op at boundaries.
+
+if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', (e) => {
+        if (currentPage !== 'draft') return;
+        if (!bundle || !viewingCoord) return;
+        const tag = (e.target && e.target.tagName) || '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+
+        const target = e.key === 'ArrowLeft'
+            ? prevCoord(bundle.picks, viewingCoord)
+            : nextCoord(bundle.picks, viewingCoord);
+
+        if (target.pack === viewingCoord.pack && target.pick === viewingCoord.pick) {
+            return; // boundary — silent no-op
+        }
+        viewingCoord = target;
+        renderDraftPage();
+    });
 }
 
 // Export pure helpers for unit testing.

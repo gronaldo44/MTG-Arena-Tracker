@@ -1037,6 +1037,23 @@
             color: var(--text-muted);
         }
 
+        /* Pick-history visual states for the stepper (Q2C hybrid) */
+        .draft-pick-item.viewing {
+            background: rgba(93, 95, 239, 0.18);
+            border-left: 3px solid var(--accent, #5d5fef);
+            padding-left: 11px;
+        }
+
+        .draft-pick-item.future {
+            opacity: 0.42;
+        }
+
+        .draft-pick-item.viewing.future {
+            /* Defensive: the renderer never tags an item with both classes,
+               but if it ever does, .viewing wins visually. */
+            opacity: 1;
+        }
+
         /* Rank number */
         .draft-rank {
             font-size: 13px;
