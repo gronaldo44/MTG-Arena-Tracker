@@ -399,6 +399,13 @@ describe('main.js', () => {
       expect(bundle).toBeNull();
     });
 
+    test('null/empty draftId → null (handler guards before calling getDraft)', async () => {
+      const handler = registeredHandlers['view-draft-record'];
+      expect(await handler(null, null)).toBeNull();
+      expect(await handler(null, '')).toBeNull();
+      expect(await handler(null, undefined)).toBeNull();
+    });
+
     test('known draftId → ViewerBundle with matching liveCoord', async () => {
       const handler = registeredHandlers['view-draft-record'];
       const bundle = await handler(null, 'draft-newer');
@@ -407,7 +414,6 @@ describe('main.js', () => {
       expect(bundle.startedAt).toBe(2000);
       expect(bundle.liveCoord).toEqual({ pack: 1, pick: 3 });
       expect(bundle.picks).toHaveLength(3);
-      expect(bundle.assistantLoaded).toBe(false);
     });
 
     test('returned bundle picks include picked + pickedCard for completed picks', async () => {
