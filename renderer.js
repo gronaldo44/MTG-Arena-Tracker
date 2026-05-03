@@ -958,6 +958,10 @@ function renderPickHistory(picks, viewingCoord) {
     }
 
     listEl.innerHTML = [...completed].reverse().map((pick) => {
+        // When viewingCoord is the live coord (pending pack-view), it is
+        // excluded by the `completed` filter above — so no row matches and
+        // none of the rows get the .viewing class. That's the desired state
+        // at live; the highlight only appears when stepping into history.
         const isViewing = !!viewingCoord
             && pick.pack === viewingCoord.pack
             && pick.pick === viewingCoord.pick;
@@ -1401,6 +1405,7 @@ if (typeof document !== 'undefined') {
         const tag = (e.target && e.target.tagName) || '';
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
 
         const target = e.key === 'ArrowLeft'
             ? prevCoord(bundle.picks, viewingCoord)
