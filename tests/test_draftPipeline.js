@@ -313,8 +313,8 @@ describe('draftPipeline.buildViewerBundle', () => {
 
     expect(unloadedAssistant.rankPack).not.toHaveBeenCalled();
     for (const pick of bundle.picks) {
-      for (const c of pick.options)      expect(c.gihWr).toBeNull();
-      for (const c of pick.removedCards) expect(c.gihWr).toBeNull();
+      for (const c of pick.options)      { expect(c.gihWr).toBeNull(); expect(c.lowSample).toBe(true); }
+      for (const c of pick.removedCards) { expect(c.gihWr).toBeNull(); expect(c.lowSample).toBe(true); }
     }
     expect(bundle.assistantLoaded).toBe(false);
   });
