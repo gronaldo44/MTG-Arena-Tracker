@@ -20,6 +20,8 @@ const { missingCardsForPick } = require('./draftCorrelation');
 
 const DEFAULT_PACK_SIZE = 14;
 
+// One-shot per-process dedup for "missing pick" warnings.
+// Keyed by `${draftId}:${pack}:${pick}`.
 const _warnedGaps = new Set();
 
 function fillMissingPickPlaceholders(record) {
@@ -76,7 +78,7 @@ function _rankOrFallback(resolved, draftAssistant, assistantLoaded) {
  * Build the enriched per-pick entry for the bundle. Pure aside from the
  * draftAssistant calls (which are pure if the assistant has loaded data).
  */
-function enrichPick(rawPick, record, draftAssistant, resolveCards, resolveCard) {
+function enrichPick(rawPick, record, draftAssistant, resolveCards, resolveCard, assistantLoaded) {
   if (rawPick.missing) {
     return {
       pack: rawPick.pack,
@@ -87,8 +89,6 @@ function enrichPick(rawPick, record, draftAssistant, resolveCards, resolveCard) 
       removedCards: [],
     };
   }
-
-  const assistantLoaded = !!draftAssistant.isLoaded && draftAssistant.isLoaded();
 
   const resolvedOptions = resolveCards(rawPick.options);
   const rankedOptions = _rankOrFallback(resolvedOptions, draftAssistant, assistantLoaded);
@@ -139,12 +139,14 @@ function buildViewerBundle(record, draftAssistant, resolveCards, resolveCard) {
   }
 
   const filled = fillMissingPickPlaceholders(record);
+  // Defensive sort: fillMissingPickPlaceholders already emits in (pack, pick)
+  // order, but a future caller could pass a record with out-of-order picks.
   const sorted = filled.slice().sort((a, b) =>
     a.pack !== b.pack ? a.pack - b.pack : a.pick - b.pick
   );
 
   const enrichedPicks = sorted.map(p =>
-    enrichPick(p, record, draftAssistant, resolveCards, resolveCard)
+    enrichPick(p, record, draftAssistant, resolveCards, resolveCard, assistantLoaded)
   );
 
   const last = sorted[sorted.length - 1];
@@ -168,6 +170,7 @@ function buildDraftUpdatePayload(eventData, dataStore, draftAssistant, resolveCa
   return buildViewerBundle(persisted, draftAssistant, resolveCards, resolveCard);
 }
 
+// Exposed for unit tests; not part of the public API.
 function _resetWarnedGaps() {
   _warnedGaps.clear();
 }
