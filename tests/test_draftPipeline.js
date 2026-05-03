@@ -10,7 +10,7 @@ jest.mock('electron', () => ({
 }));
 
 const DataStore = require('../dataStore');
-const { buildDraftUpdatePayload, _resetWarnedGaps } = require('../draftPipeline');
+const { buildDraftUpdatePayload, buildViewerBundle, _resetWarnedGaps } = require('../draftPipeline');
 const { buildFullDraft } = require('./fixtures/draft-synthetic');
 
 // A pass-through draftAssistant double that doesn't change array order.
@@ -218,5 +218,116 @@ describe('draftPipeline.buildDraftUpdatePayload', () => {
     expect(bundle.assistantStatus).toEqual(expect.objectContaining({ loaded: true, setName: 'mock' }));
     expect(bundle.draftId).toBe('p3');
     expect(typeof bundle.startedAt).toBe('number');
+  });
+});
+
+describe('draftPipeline.buildViewerBundle', () => {
+  let ds;
+  let assistant;
+
+  beforeEach(() => {
+    _resetWarnedGaps();
+    MOCK_USERDATA = fs.mkdtempSync(path.join(os.tmpdir(), 'mtg-bundle-'));
+    ds = new DataStore();
+    assistant = fakeAssistant();
+  });
+
+  afterEach(() => {
+    fs.rmSync(MOCK_USERDATA, { recursive: true, force: true });
+    jest.restoreAllMocks();
+  });
+
+  test('null record → empty bundle with liveCoord: null', () => {
+    const bundle = buildViewerBundle(null, assistant, resolveCards, resolveCard);
+    expect(bundle).toEqual(expect.objectContaining({
+      draftId: null,
+      startedAt: null,
+      liveCoord: null,
+      picks: [],
+    }));
+    expect(bundle.assistantLoaded).toBe(true);
+  });
+
+  test('empty-picks record → empty bundle with liveCoord: null', () => {
+    const record = { draftId: 'd1', startedAt: 1700000000000, picks: [] };
+    const bundle = buildViewerBundle(record, assistant, resolveCards, resolveCard);
+    expect(bundle.draftId).toBe('d1');
+    expect(bundle.startedAt).toBe(1700000000000);
+    expect(bundle.liveCoord).toBeNull();
+    expect(bundle.picks).toEqual([]);
+  });
+
+  test('full synthetic record: picks > 8 in each pack carry non-empty removedCards', () => {
+    const { events } = buildFullDraft();
+    for (const ev of events) {
+      buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
+    }
+    const record = ds.getDraft('synthetic-1');
+    const bundle = buildViewerBundle(record, assistant, resolveCards, resolveCard);
+
+    expect(bundle.liveCoord).toEqual({ pack: 3, pick: 14 });
+    for (const pick of bundle.picks) {
+      expect(pick.options.length).toBeGreaterThan(0);
+      if (pick.pick > 8) {
+        expect(pick.removedCards.length).toBeGreaterThan(0);
+      } else {
+        expect(pick.removedCards).toEqual([]);
+      }
+    }
+  });
+
+  test('record with a missing-pick gap: bundle includes the missing placeholder', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const record = {
+      draftId: 'g1',
+      startedAt: 1700000000000,
+      picks: [
+        { pack: 1, pick: 1, options: [10, 11, 12], picked: 10 },
+        { pack: 1, pick: 3, options: [12], picked: 12 },
+      ],
+    };
+    const bundle = buildViewerBundle(record, assistant, resolveCards, resolveCard);
+    const missing = bundle.picks.find(p => p.pack === 1 && p.pick === 2);
+    expect(missing).toBeDefined();
+    expect(missing.missing).toBe(true);
+    expect(missing.options).toEqual([]);
+    expect(missing.removedCards).toEqual([]);
+    expect(bundle.liveCoord).toEqual({ pack: 1, pick: 3 });
+  });
+
+  test('17Lands not loaded: every options/removedCards entry has gihWr: null', () => {
+    const unloadedAssistant = {
+      isLoaded: () => false,
+      rankPack: jest.fn(),
+      getCardStats: () => null,
+      getCardTier: () => 'none',
+      getStatus: () => ({ loaded: false, cardCount: 0, setName: null, csvPath: null }),
+    };
+    const { events } = buildFullDraft();
+    for (const ev of events) {
+      buildDraftUpdatePayload(ev.data, ds, unloadedAssistant, resolveCards, resolveCard);
+    }
+    unloadedAssistant.rankPack.mockClear();
+    const record = ds.getDraft('synthetic-1');
+    const bundle = buildViewerBundle(record, unloadedAssistant, resolveCards, resolveCard);
+
+    expect(unloadedAssistant.rankPack).not.toHaveBeenCalled();
+    for (const pick of bundle.picks) {
+      for (const c of pick.options)      expect(c.gihWr).toBeNull();
+      for (const c of pick.removedCards) expect(c.gihWr).toBeNull();
+    }
+    expect(bundle.assistantLoaded).toBe(false);
+  });
+
+  test('bundle is identical to live-path output after replaying the event stream', () => {
+    const { events } = buildFullDraft();
+    let livePath = null;
+    for (const ev of events) {
+      livePath = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
+    }
+    const record = ds.getDraft('synthetic-1');
+    const pastPath = buildViewerBundle(record, assistant, resolveCards, resolveCard);
+
+    expect(JSON.stringify(pastPath)).toBe(JSON.stringify(livePath));
   });
 });
