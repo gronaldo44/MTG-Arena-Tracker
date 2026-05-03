@@ -13,6 +13,7 @@ let draftList = [];             // [{draftId, startedAt, pickCount}] for the dro
 let viewingCoord = null;        // {pack, pick} the user is currently viewing
 let csvLoaded = false;          // whether 17Lands CSV is loaded in main process
 let _currentPackOptions = [];   // cached options for detail drawer lookups
+let _loadingDraftId = null;
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 function showPage(page) {
@@ -732,6 +733,7 @@ function nextCoord(picks, coord) {
 }
 
 // ─── Draft — rendering ────────────────────────────────────────────────────────
+const MISSING_PICK_MSG = 'Pick missing from log (likely auto-pick during disconnect)';
 
 function getViewingPick() {
     if (!bundle || !viewingCoord) return null;
@@ -765,7 +767,7 @@ function renderDraftPage() {
     waitingEl.style.display = 'none';
 
     ensureValidViewingCoord();
-    renderDraftDropdown();
+    syncDropdownSelection();
 
     const viewingPick = getViewingPick();
     if (!viewingPick) return;
@@ -780,10 +782,10 @@ function renderDraftPage() {
 }
 
 /**
- * Render the dropdown showing all known drafts. The selection follows the
- * currently loaded bundle's draftId. Disabled when there are no drafts.
+ * Rebuild the dropdown option list from the current draftList. Only call
+ * when draftList actually changes (new draft starts or at boot).
  */
-function renderDraftDropdown() {
+function rebuildDraftDropdown() {
     const sel = document.getElementById('draft-select');
     if (!sel) return;
     if (!Array.isArray(draftList) || draftList.length === 0) {
@@ -802,9 +804,21 @@ function renderDraftDropdown() {
     if (bundle?.draftId) sel.value = bundle.draftId;
 }
 
+/**
+ * Sync the dropdown's selected value to the currently loaded bundle without
+ * rebuilding the option list.
+ */
+function syncDropdownSelection() {
+    const sel = document.getElementById('draft-select');
+    if (!sel || !bundle?.draftId) return;
+    if (sel.value !== bundle.draftId) sel.value = bundle.draftId;
+}
+
 async function onDraftSelectChange(draftId) {
     if (!draftId) return;
+    _loadingDraftId = draftId;
     const newBundle = await ipcRenderer.invoke('view-draft-record', draftId);
+    if (_loadingDraftId !== draftId) return;   // superseded by a later change
     if (!newBundle) {
         console.warn('[Draft] view-draft-record returned null for', draftId);
         return;
@@ -827,7 +841,7 @@ function renderMissingPickPanel(pick) {
     const listEl = document.getElementById('draft-card-list');
     listEl.innerHTML = `
         <div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;">
-            ⚠️ Pick missing from log (likely auto-pick during disconnect)
+            ⚠️ ${MISSING_PICK_MSG}
         </div>`;
 }
 
@@ -948,7 +962,7 @@ function renderPickHistory(picks, _viewingCoord) {
             return `
                 <div class="draft-pick-item missing">
                     <div class="pick-num">P${pick.pack ?? '?'}p${pick.pick ?? '?'}</div>
-                    <div class="pick-name" title="Missing from log (likely auto-pick)">⚠️ pick missing from log (likely auto-pick)</div>
+                    <div class="pick-name" title="${MISSING_PICK_MSG}">⚠️ ${MISSING_PICK_MSG}</div>
                     <div class="pick-wr">—</div>
                 </div>`;
         }
@@ -1146,10 +1160,10 @@ ipcRenderer.on('draft-update', (event, data) => {
     if (!draftList.some(d => d.draftId === bundle?.draftId)) {
         ipcRenderer.invoke('list-drafts').then(list => {
             draftList = list;
-            renderDraftDropdown();
+            rebuildDraftDropdown();
         });
     } else {
-        renderDraftDropdown();
+        rebuildDraftDropdown();
     }
 
     // Flash the Draft nav item if user is on a different page
@@ -1357,7 +1371,7 @@ async function initDraftView() {
         console.warn('[Draft] list-drafts failed:', e);
         draftList = [];
     }
-    renderDraftDropdown();
+    rebuildDraftDropdown();
     if (!bundle && draftList.length > 0) {
         await onDraftSelectChange(draftList[0].draftId);
     } else if (bundle && currentPage === 'draft') {
