@@ -19,6 +19,7 @@ import os
 import sqlite3
 import sys
 import re
+import gzip
 
 try:
     import ijson
@@ -127,49 +128,51 @@ def _scryfall_available(scryfall_path):
     """Return True only if the path is non-empty, the file exists, and ijson is installed."""
     return bool(scryfall_path) and os.path.isfile(scryfall_path) and _HAVE_IJSON
 
-
-def load_scryfall_sos(scryfall_path):
-    """Returns dict of normalized_name -> {name, mana_cost, type_line} for SOS cards.
-    Returns an empty dict when the Scryfall JSON is unavailable."""
-    if not _scryfall_available(scryfall_path):
-        return {}
-    result = {}
-    with open(scryfall_path, "r", encoding="utf-8") as f:
-        for card in ijson.items(f, "item"):
-            if card.get("set", "").upper() != "SOS":
-                continue
-            name = card.get("name", "")
-            result[normalize_name(name)] = {
-                "name": name,
-                "mana_cost": card.get("mana_cost", ""),
-                "type_line": card.get("type_line", ""),
-            }
-    return result
-
-
-def load_scryfall_all_by_name(scryfall_path):
-    """Returns dict of normalized_name -> {name, mana_cost, type_line} across all sets.
-    Returns an empty dict when the Scryfall JSON is unavailable.
-    Later entries overwrite earlier ones (prefer non-promo, canonical prints).
+def load_scryfall_maps(scryfall_path):
+    """
+    Single-pass loader:
+    - Handles .json AND .gz automatically
+    - sos_map: only SOS cards
+    - all_map: best version of every card name
     """
     if not _scryfall_available(scryfall_path):
-        return {}
-    result = {}
-    with open(scryfall_path, "r", encoding="utf-8") as f:
-        for card in ijson.items(f, "item"):
-            name = card.get("name", "")
-            if not name:
-                continue
-            key = normalize_name(name)
-            # Prefer non-digital, non-promo cards for canonical data
-            if key not in result or card.get("booster", False):
-                result[key] = {
+        return {}, {}
+
+    sos_map = {}
+    all_map = {}
+
+    # --- Auto-detect gzip
+    open_fn = gzip.open if scryfall_path.endswith(".gz") else open
+
+    try:
+        with open_fn(scryfall_path, "rb") as f:
+            for card in ijson.items(f, "item"):
+                name = card.get("name", "")
+                if not name:
+                    continue
+
+                key = normalize_name(name)
+
+                entry = {
                     "name": name,
                     "mana_cost": card.get("mana_cost", ""),
                     "type_line": card.get("type_line", ""),
                 }
-    return result
 
+                # Prefer booster cards
+                if key not in all_map or card.get("booster", False):
+                    all_map[key] = entry
+
+                if card.get("set", "").upper() == "SOS":
+                    sos_map[key] = entry
+
+    except Exception as e:
+        print(f"\n❌ Failed to parse Scryfall JSON: {e}")
+        print("👉 Your file is likely corrupted or not actually JSON.")
+        print("👉 Re-download from https://scryfall.com/docs/api/bulk-data")
+        sys.exit(1)
+
+    return sos_map, all_map
 
 def main():
     if len(sys.argv) not in (3, 4):
@@ -186,11 +189,9 @@ def main():
     print(f"  {len(mtga_rows)} rows found")
 
     if _scryfall_available(scryfall_path):
-        print("Loading Scryfall SOS cards...")
-        scryfall = load_scryfall_sos(scryfall_path)
+        print("Loading Scryfall data (single pass)...")
+        scryfall, scryfall_all = load_scryfall_maps(scryfall_path)
         print(f"  {len(scryfall)} SOS-set cards found")
-        print("Loading Scryfall all-cards name index (for reprints)...")
-        scryfall_all = load_scryfall_all_by_name(scryfall_path)
         print(f"  {len(scryfall_all)} unique card names indexed")
     else:
         print("No Scryfall JSON provided — using MTGA mana data for all cards")
