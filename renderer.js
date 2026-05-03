@@ -703,6 +703,28 @@ async function updateCsvStatusUI() {
     }
 }
 
+// ─── Draft — coord stepping ───────────────────────────────────────────────────
+//
+// Pure helpers that walk a sorted picks[] array (as delivered by the bundle).
+// They return the same coord when there's nowhere to go (start, end, or coord
+// not in the array) so the caller can render a silent no-op without branching.
+
+function prevCoord(picks, coord) {
+    if (!Array.isArray(picks) || picks.length === 0 || !coord) return coord;
+    const idx = picks.findIndex(p => p.pack === coord.pack && p.pick === coord.pick);
+    if (idx <= 0) return coord;
+    const prev = picks[idx - 1];
+    return { pack: prev.pack, pick: prev.pick };
+}
+
+function nextCoord(picks, coord) {
+    if (!Array.isArray(picks) || picks.length === 0 || !coord) return coord;
+    const idx = picks.findIndex(p => p.pack === coord.pack && p.pick === coord.pick);
+    if (idx === -1 || idx >= picks.length - 1) return coord;
+    const next = picks[idx + 1];
+    return { pack: next.pack, pick: next.pick };
+}
+
 // ─── Draft — rendering ────────────────────────────────────────────────────────
 
 function renderDraftPage() {
@@ -1229,5 +1251,6 @@ if (typeof window === 'undefined') {
     module.exports = {
         gihWrTierClass, colorPip, rarityGem, rarityLabel, rarityColor,
         extractScryfallImageUrl, cardEyeballHtml, _cardImageCache,
+        prevCoord, nextCoord,
     };
 }
