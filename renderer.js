@@ -708,6 +708,10 @@ async function updateCsvStatusUI() {
 // Pure helpers that walk a sorted picks[] array (as delivered by the bundle).
 // They return the same coord when there's nowhere to go (start, end, or coord
 // not in the array) so the caller can render a silent no-op without branching.
+//
+// Precondition: `coord` is a non-null {pack, pick} object. The "not in array"
+// no-op is intentionally indistinguishable from the boundary no-op — callers
+// are responsible for ensuring the coord is valid before calling.
 
 function prevCoord(picks, coord) {
     if (!Array.isArray(picks) || picks.length === 0 || !coord) return coord;
