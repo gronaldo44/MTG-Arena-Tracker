@@ -22,14 +22,17 @@ const CURRENT_ENRICHMENT = {
 
 const CARDS_FILE = path.join(__dirname, 'cards.json');
 
-// Standard MTGA install locations on Windows.
-// Each entry is [directory, filename-prefix] — sorted descending so the most
-// recent version is picked when multiple files match.
+// Standard MTGA install locations on Windows, plus the bundled fallback DB
+// shipped with the tracker in sos-card-import/. Each entry is
+// [directory, filename-prefix] — sorted so the most recent file is picked
+// when multiple files match (readdirSync + sort + pop).
 const MTGA_DB_CANDIDATES = [
   ['C:\\Program Files\\Wizards of the Coast\\MTGA\\MTGA_Data\\Downloads\\Data',    'data_cards_'],
   ['C:\\Program Files (x86)\\Wizards of the Coast\\MTGA\\MTGA_Data\\Downloads\\Data', 'data_cards_'],
   ['C:\\Program Files\\Wizards of the Coast\\MTGA\\MTGA_Data\\Downloads\\Raw',     'Raw_CardDatabase_'],
   ['C:\\Program Files (x86)\\Wizards of the Coast\\MTGA\\MTGA_Data\\Downloads\\Raw',  'Raw_CardDatabase_'],
+  // Bundled fallback — used when MTGA is not installed at a standard path
+  [path.join(__dirname, 'sos-card-import'), 'Raw_CardDatabase_'],
 ];
 
 function findMtgaDb() {

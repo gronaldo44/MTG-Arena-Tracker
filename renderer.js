@@ -953,11 +953,9 @@ function renderHypGeoTable() {
             <div class="src-stepper">
                 <button onclick="adjustHypGeoLands(-1)">−</button>
                 ${(() => {
+                    if (isExact) return `<span>${_hypGeoLands}</span>`;
                     const diff = totalSources - _hypGeoLands;
-                    if (diff === 0) return `<span>${_hypGeoLands}</span>`;
-                    const tip = diff > 0
-                        ? `${diff} more source${diff !== 1 ? 's' : ''} than lands. Some lands must cover multiple colors.`
-                        : `${-diff} more land${-diff !== 1 ? 's' : ''} than sources. Some lands contribute no color.`;
+                    const tip = `${diff} more source${diff !== 1 ? 's' : ''} than lands. Some lands must cover multiple colors. Add your multi-color lands for exact odds.`;
                     return `<span style="color:var(--warning);cursor:default;" title="${tip}">${_hypGeoLands}</span>`;
                 })()}
                 <button onclick="adjustHypGeoLands(+1)">+</button>
@@ -1322,13 +1320,13 @@ function renderDraftPage() {
     renderPickHistory(currentDraftState.picks || []);
 }
 
-function wheelIndicatorHtml(alsa, currentPick) {
-    if (alsa == null || !currentPick) return '';
-    if (alsa >= currentPick + 8) {
-        return `<span class="wheel-icon" title="Likely to wheel (ALSA ${alsa.toFixed(1)})">↻</span>`;
+function wheelIndicatorHtml(ata, currentPick) {
+    if (ata == null || !currentPick) return '';
+    if (ata >= currentPick + 8) {
+        return `<span class="wheel-icon" title="Likely to wheel (ATA ${ata.toFixed(1)})">↻</span>`;
     }
-    if (currentPick > alsa) {
-        return `<span class="wheel-late" title="Past average last seen at (${alsa.toFixed(1)})">${alsa.toFixed(1)}</span>`;
+    if (currentPick > ata) {
+        return `<span class="wheel-late" title="Past average taken at (${ata.toFixed(1)})">${ata.toFixed(1)}</span>`;
     }
     return '';
 }
@@ -1361,7 +1359,7 @@ function renderCurrentPack(pack) {
         const tierClass = gihWrTierClass(card.tier || 'none');
 
         const colorStr = stats?.color || '';
-        const alsa = stats?.alsa ?? null;
+        const ata = stats?.ata ?? null;
 
         return `
             <div class="draft-card-row ${tierClass}" data-idx="${idx}" onclick="toggleCardDetail(${idx})">
@@ -1373,7 +1371,7 @@ function renderCurrentPack(pack) {
                     ${cardEyeballHtml(card.arena_id, card.name, card.set)}
                 </div>
                 <div class="gih-wr ${tierClass}">${wrText}</div>
-                <div class="wheel-indicator">${wheelIndicatorHtml(alsa, pack.pick)}</div>
+                <div class="wheel-indicator">${wheelIndicatorHtml(ata, pack.pick)}</div>
             </div>`;
     }).join('');
 }
@@ -1411,7 +1409,7 @@ function renderRemovedSection(removedCards) {
         const wrText = gihWr !== null && gihWr !== undefined ? `${(gihWr * 100).toFixed(1)}%` : '—';
         const tierClass = gihWrTierClass(card.tier || 'none');
         const colorStr = stats?.color || '';
-        const rarityStr = stats?.rarity || '';
+        const ata = stats?.ata ?? null;
 
         return `
             <div class="draft-card-row removed ${tierClass}">
@@ -1423,6 +1421,7 @@ function renderRemovedSection(removedCards) {
                     ${cardEyeballHtml(card.arena_id, card.name, card.set)}
                 </div>
                 <div class="gih-wr ${tierClass}">${wrText}</div>
+                <div class="wheel-indicator">${ata !== null ? `<span class="wheel-ata" title="Avg taken at pick ${ata.toFixed(1)}">${ata.toFixed(1)}</span>` : ''}</div>
             </div>`;
     }).join('');
 }
