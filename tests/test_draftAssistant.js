@@ -285,24 +285,24 @@ describe('DraftAssistant', () => {
       expect(assistant.getCardTier(0.61, 'Other Card', false)).toBe('gold');
     });
 
-    test('z between 0.25 and 0.75 → silver', () => {
-      // WR = 0.595 → z = (0.595-0.58)/0.03 = 0.5 (between 0.25 and 0.75)
+    test('z between 0.06 and 0.75 → silver', () => {
+      // WR = 0.595 → z = (0.595-0.58)/0.03 = 0.5 (between 0.06 and 0.75)
       expect(assistant.getCardTier(0.595, 'Other Card', false)).toBe('silver');
     });
 
-    test('z between -0.5 and 0.25 → black', () => {
-      // WR = 0.575 → z = (0.575-0.58)/0.03 = -0.167 (between -0.5 and 0.25)
+    test('z between -1.16 and 0.06 → black', () => {
+      // WR = 0.575 → z = (0.575-0.58)/0.03 = -0.167 (between -1.16 and 0.06)
       expect(assistant.getCardTier(0.575, 'Other Card', false)).toBe('black');
     });
 
-    test('z <= -0.5 → brown', () => {
-      // WR = 0.56 → z = (0.56-0.58)/0.03 = -0.667 (<= -0.5)
-      expect(assistant.getCardTier(0.56, 'Other Card', false)).toBe('brown');
+    test('z <= -1.16 → brown', () => {
+      // WR = 0.545 → z = (0.545-0.58)/0.03 = -1.167 (<= -1.16)
+      expect(assistant.getCardTier(0.545, 'Other Card', false)).toBe('brown');
     });
 
     test('exactly at gold threshold (z = 0.75) → silver (not exclusive)', () => {
       const wr = 0.58 + 0.75 * 0.03; // exactly 0.75 SD above mean
-      // z = 0.75 is NOT > 0.75, so falls through to silver check (z > 0.25)
+      // z = 0.75 is NOT > 0.75, so falls through to silver check (z > 0.06)
       expect(assistant.getCardTier(wr, 'Other Card', false)).toBe('silver');
     });
 

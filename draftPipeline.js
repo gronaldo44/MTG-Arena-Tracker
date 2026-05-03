@@ -128,6 +128,7 @@ function buildDraftUpdatePayload(eventData, dataStore, draftAssistant, resolveCa
         picked.gihWr     = s?.gihWr ?? null;
         picked.lowSample = s ? s.lowSample : true;
         picked.tier      = draftAssistant.getCardTier(picked.gihWr, picked.name, picked.lowSample);
+        picked.color     = s?.color ?? '';
       }
       return {
         pack: p.pack,

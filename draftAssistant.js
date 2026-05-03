@@ -107,10 +107,10 @@ class DraftAssistant {
    *
    * Tiers (best to worst):
    *   'mythic' — one of the top 20 cards in the set by GIH WR
-   *   'gold'   — z-score > +0.75 (significantly above average)
-   *   'silver' — z-score > +0.25 (slightly above average)
-   *   'black'  — z-score > -0.50 (roughly average)
-   *   'brown'  — z-score ≤ -0.50 (below average)
+   *   'gold'   — z-score > +0.75 (~23% of set)
+   *   'silver' — z-score > +0.06 (~25% of set)
+   *   'black'  — z-score > -1.16 (~40% of set)
+   *   'brown'  — z-score ≤ -1.16 (~12% of set)
    *   'none'   — no reliable data (null WR or low sample)
    *
    * @param {number|null} gihWr
@@ -128,8 +128,8 @@ class DraftAssistant {
       : 0;
 
     if (z > 0.75) return 'gold';
-    if (z > 0.25) return 'silver';
-    if (z > -0.50) return 'black';
+    if (z > 0.06) return 'silver';
+    if (z > -1.16) return 'black';
     return 'brown';
   }
 

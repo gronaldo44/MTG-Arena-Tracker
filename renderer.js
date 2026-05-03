@@ -11,6 +11,9 @@ let currentPage = 'dashboard';
 let currentDraftState = null;   // latest DRAFT_UPDATE payload
 let csvLoaded = false;          // whether 17Lands CSV is loaded in main process
 let _currentPackOptions = [];   // cached options for detail drawer lookups
+let _picksData = [];            // raw picks array for re-render on sort/search
+let _picksSortField = 'pick';   // 'pick' | 'gihWr' | 'color'
+let _picksSearchQuery = '';     // current picks search string
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 function showPage(page) {
@@ -1319,6 +1322,17 @@ function renderDraftPage() {
     renderPickHistory(currentDraftState.picks || []);
 }
 
+function wheelIndicatorHtml(alsa, currentPick) {
+    if (alsa == null || !currentPick) return '';
+    if (alsa >= currentPick + 8) {
+        return `<span class="wheel-icon" title="Likely to wheel (ALSA ${alsa.toFixed(1)})">↻</span>`;
+    }
+    if (currentPick > alsa) {
+        return `<span class="wheel-late" title="Past average last seen at (${alsa.toFixed(1)})">${alsa.toFixed(1)}</span>`;
+    }
+    return '';
+}
+
 /**
  * Render the current pack's ranked card list.
  * Each card in options may carry .gihWr, .lowSample, .stats from main.js.
@@ -1347,7 +1361,7 @@ function renderCurrentPack(pack) {
         const tierClass = gihWrTierClass(card.tier || 'none');
 
         const colorStr = stats?.color || '';
-        const rarityStr = stats?.rarity || '';
+        const alsa = stats?.alsa ?? null;
 
         return `
             <div class="draft-card-row ${tierClass}" data-idx="${idx}" onclick="toggleCardDetail(${idx})">
@@ -1355,12 +1369,11 @@ function renderCurrentPack(pack) {
                 <div class="draft-card-name">
                     ${draftCardColorPips(colorStr, card.manaCost || '')}
                     <span title="${name}">${name}</span>
-                    ${rarityGem(rarityStr)}
                     ${lowSample && gihWr !== null ? '<span class="low-sample-dot" title="Low sample size"></span>' : ''}
                     ${cardEyeballHtml(card.arena_id, card.name, card.set)}
                 </div>
                 <div class="gih-wr ${tierClass}">${wrText}</div>
-                <div style="font-size:11px;font-weight:600;color:${rarityColor(rarityStr)};text-align:right;">${rarityStr || ''}</div>
+                <div class="wheel-indicator">${wheelIndicatorHtml(alsa, pack.pick)}</div>
             </div>`;
     }).join('');
 }
@@ -1406,35 +1419,124 @@ function renderRemovedSection(removedCards) {
                 <div class="draft-card-name">
                     ${draftCardColorPips(colorStr, card.manaCost || '')}
                     <span title="${name}">${name}</span>
-                    ${rarityGem(rarityStr)}
                     ${lowSample && gihWr !== null && gihWr !== undefined ? '<span class="low-sample-dot" title="Low sample size"></span>' : ''}
                     ${cardEyeballHtml(card.arena_id, card.name, card.set)}
                 </div>
                 <div class="gih-wr ${tierClass}">${wrText}</div>
-                <div style="font-size:11px;font-weight:600;color:${rarityColor(rarityStr)};text-align:right;">${rarityStr || ''}</div>
             </div>`;
     }).join('');
 }
 
 /**
- * Render the picks history sidebar.
+ * Store raw picks and re-render with current sort/search state.
  */
 function renderPickHistory(picks) {
     document.getElementById('picks-count').textContent = picks.length;
+    _picksData = picks;
+    _renderFilteredPicks();
+}
+
+/**
+ * Return a numeric section key for color-sort grouping.
+ *
+ * Encoding:
+ *   Mono W/U/B/R/G   → 0–4          (WUBRG canonical order)
+ *   2-color pairs     → 200–228
+ *   3-color           → 300–328
+ *   4-color           → 400–428
+ *   5-color           → 500
+ *   Colorless / land  → 9999
+ *
+ * Within each color-count tier the bitmask (W=16 U=8 B=4 R=2 G=1),
+ * inverted, preserves the canonical MTG ordering of color combinations
+ * (WU before UB before RG, etc.).  Crucially, identical color sets
+ * always map to the same key, so they end up adjacent after sorting.
+ */
+function _picksColorSection(colorStr, manaCost) {
+    const WUBRG  = ['W', 'U', 'B', 'R', 'G'];
+    const weights = { W: 16, U: 8, B: 4, R: 2, G: 1 };
+    const source = colorStr || manaCost || '';
+    const colors = WUBRG.filter(c => source.includes(c));
+
+    if (colors.length === 0) return 9999;
+    if (colors.length === 1) return WUBRG.indexOf(colors[0]); // 0–4
+
+    const bitmask = colors.reduce((acc, c) => acc + weights[c], 0);
+    return colors.length * 100 + (31 - bitmask);
+}
+
+/** Update active sort button and re-render. */
+function setPicksSort(field) {
+    _picksSortField = field;
+    document.querySelectorAll('.picks-sort-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`picks-sort-${field}`);
+    if (btn) btn.classList.add('active');
+    _renderFilteredPicks();
+}
+
+/** Update search filter and re-render. */
+function setPicksSearch(query) {
+    _picksSearchQuery = query;
+    _renderFilteredPicks();
+}
+
+/** Apply current search + sort state and paint the picks list. */
+function _renderFilteredPicks() {
     const listEl = document.getElementById('draft-picks-list');
 
-    if (picks.length === 0) {
+    if (_picksData.length === 0) {
         listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">No picks yet</div>';
         return;
     }
 
-    // Picks come in chronological order; display most recent first
-    listEl.innerHTML = [...picks].reverse().map((pick, idx) => {
+    const q = _picksSearchQuery.trim().toLowerCase();
+    let picks = q
+        ? _picksData.filter(p => !p.missing && (p.picked?.name || '').toLowerCase().includes(q))
+        : [..._picksData];
+
+    if (picks.length === 0) {
+        listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">No matches</div>';
+        return;
+    }
+
+    if (_picksSortField === 'gihWr') {
+        picks.sort((a, b) => {
+            if (a.missing) return 1;
+            if (b.missing) return -1;
+            const aw = a.picked?.gihWr ?? null;
+            const bw = b.picked?.gihWr ?? null;
+            if (aw === null && bw === null) return 0;
+            if (aw === null) return 1;
+            if (bw === null) return -1;
+            return bw - aw;
+        });
+    } else if (_picksSortField === 'color') {
+        picks.sort((a, b) => {
+            if (a.missing) return 1;
+            if (b.missing) return -1;
+            const sectionDiff = _picksColorSection(a.picked?.color, a.picked?.manaCost)
+                              - _picksColorSection(b.picked?.color, b.picked?.manaCost);
+            if (sectionDiff !== 0) return sectionDiff;
+            // Same section: GIH WR descending
+            const aw = a.picked?.gihWr ?? null;
+            const bw = b.picked?.gihWr ?? null;
+            if (aw === null && bw === null) return 0;
+            if (aw === null) return 1;
+            if (bw === null) return -1;
+            return bw - aw;
+        });
+    } else {
+        // Pick order: most recent first (picks arrive chronologically)
+        picks.reverse();
+    }
+
+    listEl.innerHTML = picks.map(pick => {
         if (pick.missing) {
             return `
                 <div class="draft-pick-item missing">
                     <div class="pick-num">P${pick.pack ?? '?'}p${pick.pick ?? '?'}</div>
-                    <div class="pick-name" title="Missing from log (likely auto-pick)">⚠️ pick missing from log (likely auto-pick)</div>
+                    <div class="pick-colors"></div>
+                    <div class="pick-name"><span title="Missing from log (likely auto-pick)">⚠️ pick missing from log</span></div>
                     <div class="pick-wr">—</div>
                 </div>`;
         }
@@ -1443,11 +1545,16 @@ function renderPickHistory(picks) {
         const gihWr = card?.gihWr ?? null;
         const wrText = gihWr !== null ? `${(gihWr * 100).toFixed(1)}%` : '—';
         const wrClass = gihWrTierClass(card?.tier || 'none');
+        const colorStr = card?.color || '';
 
         return `
             <div class="draft-pick-item">
                 <div class="pick-num">P${pick.pack ?? '?'}p${pick.pick ?? '?'}</div>
-                <div class="pick-name" title="${name}">${name}</div>
+                <div class="pick-colors">${draftCardColorPips(colorStr, card?.manaCost || '')}</div>
+                <div class="pick-name">
+                    <span title="${name}">${name}</span>
+                    ${cardEyeballHtml(card?.arena_id, card?.name, null)}
+                </div>
                 <div class="pick-wr ${wrClass}">${wrText}</div>
             </div>`;
     }).join('');

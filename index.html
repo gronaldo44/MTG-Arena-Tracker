@@ -20,8 +20,8 @@
             /* Draft tier colours (MTG rarity inspired) */
             --tier-mythic: #e01010;
             --tier-gold:   #ffd700;
-            --tier-silver: #d0d8e0;
-            --tier-black:  #a0a0a0;
+            --tier-silver: #c4ccd6;
+            --tier-black:  #141a24;
             --tier-brown:  #7b5020;
         }
 
@@ -901,7 +901,7 @@
 
         .draft-layout {
             display: grid;
-            grid-template-columns: 1fr 320px;
+            grid-template-columns: minmax(0, 1fr) fit-content(440px);
             gap: 20px;
             align-items: start;
         }
@@ -932,7 +932,7 @@
             display: flex;
             gap: 12px;
             font-size: 12px;
-            color: var(--text-muted);
+            color: var(--text);
         }
 
         .draft-pack-info span {
@@ -948,7 +948,7 @@
 
         .draft-card-row {
             display: grid;
-            grid-template-columns: 28px 1fr 70px 50px;
+            grid-template-columns: 24px 1fr 70px 32px;
             align-items: center;
             gap: 10px;
             padding: 9px 13px 9px 13px;
@@ -981,7 +981,7 @@
             animation: flame-flicker 2.4s ease-in-out infinite;
         }
         .draft-card-row.tier-gold   { border-left-color: var(--tier-gold); }
-        .draft-card-row.tier-silver { border-left-color: rgba(208, 216, 224, 0.45); }
+        .draft-card-row.tier-silver { border-left-color: rgba(220, 228, 236, 0.8); }
         .draft-card-row.tier-brown  { border-left-color: rgba(123, 80, 32, 0.45); }
 
         /* Removed-since-last-view section (wheel correlation) */
@@ -1023,7 +1023,7 @@
             font-size: 13px;
             font-weight: 700;
             color: var(--text-muted);
-            text-align: center;
+            text-align: left;
         }
 
         .draft-card-row:nth-child(1) .draft-rank {
@@ -1126,6 +1126,25 @@
             background: #ff6b35;
         }
 
+        /* Wheel indicator column */
+        .wheel-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .wheel-icon {
+            font-size: 15px;
+            color: var(--text-muted);
+            cursor: default;
+            line-height: 1;
+        }
+        .wheel-late {
+            font-size: 11px;
+            font-weight: 700;
+            color: #4caf50;
+            cursor: default;
+        }
+
         /* GIH WR pill — shared base */
         .gih-wr {
             font-size: 13px;
@@ -1147,13 +1166,13 @@
         }
 
         .gih-wr.tier-silver, .pick-wr.tier-silver {
-            color: var(--tier-silver);
-            background: rgba(208, 216, 224, 0.10);
+            color: #c0c0c0;
+            background: linear-gradient(105deg, #404e5c 0%, #303c4a 45%, #3a4856 100%);
         }
 
         .gih-wr.tier-black, .pick-wr.tier-black {
-            color: var(--tier-black);
-            background: rgba(160, 160, 160, 0.08);
+            color: #c8d0d8;
+            background: var(--tier-black);
         }
 
         .gih-wr.tier-brown, .pick-wr.tier-brown {
@@ -1239,11 +1258,62 @@
         }
 
         .draft-picks-header {
-            padding: 14px 16px;
+            padding: 10px 16px 10px;
             border-bottom: 1px solid var(--border);
             font-size: 14px;
             font-weight: 600;
             background: rgba(93, 95, 239, 0.08);
+        }
+
+        .picks-header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .picks-sort-controls {
+            display: flex;
+            gap: 4px;
+        }
+
+        .picks-sort-btn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 10px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .picks-sort-btn.active {
+            background: rgba(93, 95, 239, 0.2);
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .picks-sort-btn:hover:not(.active) {
+            border-color: var(--text-muted);
+            color: var(--text);
+        }
+
+        .picks-search-input {
+            width: 100%;
+            margin-top: 8px;
+            padding: 5px 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 12px;
+            font-family: inherit;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .picks-search-input:focus {
+            border-color: var(--accent);
         }
 
         .draft-picks-list {
@@ -1254,12 +1324,18 @@
 
         .draft-pick-item {
             display: grid;
-            grid-template-columns: 32px 1fr 60px;
+            grid-template-columns: 32px 36px 1fr 60px;
             align-items: center;
             gap: 8px;
             padding: 8px 14px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.04);
             font-size: 12px;
+        }
+
+        .pick-colors {
+            display: flex;
+            align-items: center;
+            gap: 2px;
         }
 
         .draft-pick-item:last-child {
@@ -1268,7 +1344,7 @@
 
         .pick-num {
             font-size: 11px;
-            color: var(--text-muted);
+            color: var(--text);
             text-align: center;
             background: var(--bg);
             border-radius: 4px;
@@ -1276,10 +1352,14 @@
         }
 
         .pick-name {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 4px;
             font-weight: 500;
+        }
+
+        .pick-name > span {
+            white-space: nowrap;
         }
 
         .pick-wr {
@@ -2077,7 +2157,17 @@
 
                         <!-- Picks so far -->
                         <div class="draft-picks-panel">
-                            <div class="draft-picks-header">My Picks (<span id="picks-count">0</span>)</div>
+                            <div class="draft-picks-header">
+                                <div class="picks-header-top">
+                                    <span>My Picks (<span id="picks-count">0</span>)</span>
+                                    <div class="picks-sort-controls">
+                                        <button id="picks-sort-pick" class="picks-sort-btn active" onclick="setPicksSort('pick')">Order</button>
+                                        <button id="picks-sort-gihWr" class="picks-sort-btn" onclick="setPicksSort('gihWr')">GIH WR</button>
+                                        <button id="picks-sort-color" class="picks-sort-btn" onclick="setPicksSort('color')">Color</button>
+                                    </div>
+                                </div>
+                                <input type="text" id="picks-search" class="picks-search-input" placeholder="Search card name…" oninput="setPicksSearch(this.value)">
+                            </div>
                             <div class="draft-picks-list" id="draft-picks-list">
                                 <div
                                     style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">
