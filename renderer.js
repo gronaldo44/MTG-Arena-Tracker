@@ -1383,10 +1383,10 @@ function wheelIndicatorHtml(ata, currentPick) {
     if (ata >= currentPick + 8) {
         return `<span class="wheel-icon" title="Likely to wheel (ATA ${ata.toFixed(1)})">↻</span>`;
     }
-    if (currentPick > ata) {
-        return `<span class="wheel-late" title="Past average taken at (${ata.toFixed(1)})">${ata.toFixed(1)}</span>`;
+    if (currentPick > ata + 1) {
+        return `<span class="wheel-late" title="Avg taken at pick ${ata.toFixed(1)}">${ata.toFixed(1)}</span>`;
     }
-    return '';
+    return `<span class="wheel-ata" title="Avg taken at pick ${ata.toFixed(1)}">${ata.toFixed(1)}</span>`;
 }
 
 /**
@@ -1493,7 +1493,7 @@ function renderCurrentPack(pick) {
                     ${cardEyeballHtml(card.arena_id, card.name, card.set)}
                 </div>
                 <div class="gih-wr ${tierClass}">${wrText}</div>
-                <div class="wheel-indicator">${wheelIndicatorHtml(ata, pack.pick)}</div>
+                <div class="wheel-indicator">${wheelIndicatorHtml(ata, pick.pick)}</div>
             </div>`;
     }).join('');
 }

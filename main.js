@@ -1008,6 +1008,14 @@ ipcMain.handle('test-notification', async () => {
 });
 
 app.whenReady().then(async () => {
+  // Initialize dataStore and cards before creating the window so that IPC
+  // handlers (list-drafts, view-draft-record, etc.) have data available when
+  // the renderer fires DOMContentLoaded. Without this, the renderer's first
+  // list-drafts call races against the async cardUpdater.update() below and
+  // always wins — returning [] even though drafts.json has saved records.
+  dataStore = new DataStore();
+  loadCards();
+
   createWindow();
   createTray();
 
@@ -1026,9 +1034,6 @@ app.whenReady().then(async () => {
     console.error('[App] Failed to update card database:', error.message);
   }
 
-  // DataStore must be ready before enrichment so we can read the configured MTGA DB path.
-  dataStore = new DataStore();
-
   // Enrich cards.json with MTGA-sourced data for sets not yet mapped on Scryfall.
   // Runs when Scryfall just refreshed or when enrichment hasn't been done yet.
   if (scryfallUpdated || setEnricher.needsEnrichment()) {
@@ -1046,8 +1051,6 @@ app.whenReady().then(async () => {
       console.error('[App] Failed to auto-load saved CSV:', e.message);
     }
   }
-
-  loadCards();
 
   const logPath = getLogPath();
   console.log('Using log path:', logPath);
