@@ -262,3 +262,64 @@ describe('cardEyeballHtml', () => {
     expect(html).not.toContain('data-card-set');
   });
 });
+
+// ─── prevCoord / nextCoord ────────────────────────────────────────────────────
+
+const { prevCoord, nextCoord } = require('../renderer');
+
+describe('prevCoord / nextCoord', () => {
+  // Picks array as the bundle delivers it: sorted by (pack, pick), no gaps in
+  // a complete draft, but may include missing-pick placeholders.
+  const picks = [
+    { pack: 1, pick: 1 },
+    { pack: 1, pick: 2 },
+    { pack: 1, pick: 13 },
+    { pack: 1, pick: 14 },
+    { pack: 2, pick: 1 },
+    { pack: 2, pick: 2 },
+  ];
+
+  test('prevCoord at the absolute start returns the same coord (silent no-op signal)', () => {
+    expect(prevCoord(picks, { pack: 1, pick: 1 })).toEqual({ pack: 1, pick: 1 });
+  });
+
+  test('prevCoord walks one step backward within a pack', () => {
+    expect(prevCoord(picks, { pack: 1, pick: 2 })).toEqual({ pack: 1, pick: 1 });
+  });
+
+  test('prevCoord crosses a pack boundary (P2p1 → P1p14)', () => {
+    expect(prevCoord(picks, { pack: 2, pick: 1 })).toEqual({ pack: 1, pick: 14 });
+  });
+
+  test('nextCoord at the last entry returns the same coord (silent no-op signal)', () => {
+    expect(nextCoord(picks, { pack: 2, pick: 2 })).toEqual({ pack: 2, pick: 2 });
+  });
+
+  test('nextCoord walks one step forward within a pack', () => {
+    expect(nextCoord(picks, { pack: 1, pick: 1 })).toEqual({ pack: 1, pick: 2 });
+  });
+
+  test('nextCoord crosses a pack boundary (P1p14 → P2p1)', () => {
+    expect(nextCoord(picks, { pack: 1, pick: 14 })).toEqual({ pack: 2, pick: 1 });
+  });
+
+  test('prev/next traverse missing-pick placeholders, not skip them', () => {
+    const withMissing = [
+      { pack: 1, pick: 1 },
+      { pack: 1, pick: 2, missing: true },
+      { pack: 1, pick: 3 },
+    ];
+    expect(nextCoord(withMissing, { pack: 1, pick: 1 })).toEqual({ pack: 1, pick: 2 });
+    expect(prevCoord(withMissing, { pack: 1, pick: 3 })).toEqual({ pack: 1, pick: 2 });
+  });
+
+  test('coord not present in picks → return the same coord (defensive no-op)', () => {
+    expect(prevCoord(picks, { pack: 5, pick: 7 })).toEqual({ pack: 5, pick: 7 });
+    expect(nextCoord(picks, { pack: 5, pick: 7 })).toEqual({ pack: 5, pick: 7 });
+  });
+
+  test('empty picks array → return the same coord (defensive no-op)', () => {
+    expect(prevCoord([], { pack: 1, pick: 1 })).toEqual({ pack: 1, pick: 1 });
+    expect(nextCoord([], { pack: 1, pick: 1 })).toEqual({ pack: 1, pick: 1 });
+  });
+});

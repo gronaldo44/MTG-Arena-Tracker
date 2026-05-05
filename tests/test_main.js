@@ -100,6 +100,30 @@ const MOCK_SET_CARDS = {
   ],
 };
 
+const MOCK_DRAFT_SUMMARIES = [
+  { draftId: 'draft-newer', startedAt: 2000, pickCount: 3 },
+  { draftId: 'draft-older', startedAt: 1000, pickCount: 1 },
+];
+
+const MOCK_DRAFTS = {
+  'draft-newer': {
+    draftId: 'draft-newer',
+    startedAt: 2000,
+    picks: [
+      { pack: 1, pick: 1, options: [10, 11, 12], picked: 10 },
+      { pack: 1, pick: 2, options: [11, 12],     picked: 11 },
+      { pack: 1, pick: 3, options: [12],         picked: 12 },
+    ],
+  },
+  'draft-older': {
+    draftId: 'draft-older',
+    startedAt: 1000,
+    picks: [
+      { pack: 1, pick: 1, options: [20, 21], picked: 20 },
+    ],
+  },
+};
+
 jest.mock('../dataStore', () =>
   jest.fn(() => ({
     getMatches:    jest.fn(() => []),
@@ -127,6 +151,9 @@ jest.mock('../dataStore', () =>
     updateMatchColors:      jest.fn(),
     getMainDraftSets:       jest.fn(() => MOCK_DRAFT_SETS),
     getCardsBySet:          jest.fn((code) => MOCK_SET_CARDS[code] || []),
+    getDraftSummaries:      jest.fn(() => MOCK_DRAFT_SUMMARIES),
+    getDraft:               jest.fn((draftId) => MOCK_DRAFTS[draftId] ?? null),
+    upsertDraft:            jest.fn(),
   }))
 );
 
@@ -424,6 +451,56 @@ describe('main.js', () => {
       const result = await registeredHandlers['run-set-enrichment'](null);
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/Python not found/);
+    });
+  });
+
+  // ── list-drafts ─────────────────────────────────────────────────────────
+
+  describe('list-drafts handler', () => {
+    test('returns the draft summaries from dataStore', async () => {
+      const handler = registeredHandlers['list-drafts'];
+      expect(handler).toBeDefined();
+      const list = await handler(null);
+      expect(list).toEqual([
+        { draftId: 'draft-newer', startedAt: 2000, pickCount: 3 },
+        { draftId: 'draft-older', startedAt: 1000, pickCount: 1 },
+      ]);
+    });
+  });
+
+  // ── view-draft-record ───────────────────────────────────────────────────
+
+  describe('view-draft-record handler', () => {
+    test('unknown draftId → null', async () => {
+      const handler = registeredHandlers['view-draft-record'];
+      expect(handler).toBeDefined();
+      const bundle = await handler(null, 'no-such-draft');
+      expect(bundle).toBeNull();
+    });
+
+    test('null/empty draftId → null (handler guards before calling getDraft)', async () => {
+      const handler = registeredHandlers['view-draft-record'];
+      expect(await handler(null, null)).toBeNull();
+      expect(await handler(null, '')).toBeNull();
+      expect(await handler(null, undefined)).toBeNull();
+    });
+
+    test('known draftId → ViewerBundle with matching liveCoord', async () => {
+      const handler = registeredHandlers['view-draft-record'];
+      const bundle = await handler(null, 'draft-newer');
+      expect(bundle).not.toBeNull();
+      expect(bundle.draftId).toBe('draft-newer');
+      expect(bundle.startedAt).toBe(2000);
+      expect(bundle.liveCoord).toEqual({ pack: 1, pick: 3 });
+      expect(bundle.picks).toHaveLength(3);
+    });
+
+    test('returned bundle picks include picked + pickedCard for completed picks', async () => {
+      const handler = registeredHandlers['view-draft-record'];
+      const bundle = await handler(null, 'draft-newer');
+      const p11 = bundle.picks.find(p => p.pack === 1 && p.pick === 1);
+      expect(p11.picked).toBe(10);
+      expect(p11.pickedCard).toEqual(expect.objectContaining({ arena_id: 10 }));
     });
   });
 });

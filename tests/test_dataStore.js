@@ -221,4 +221,52 @@ describe('DataStore — drafts', () => {
       { pack: 1, pick: 1, options: [10, 11], picked: 10 },
     ]);
   });
+
+  // ── getDraftSummaries ──────────────────────────────────────────────────
+
+  test('getDraftSummaries: empty store → []', () => {
+    expect(ds.getDraftSummaries()).toEqual([]);
+  });
+
+  test('getDraftSummaries returns {draftId, startedAt, pickCount} per record', () => {
+    ds.upsertDraft({
+      draftId: 'd1',
+      picks: [
+        { pack: 1, pick: 1, options: [10, 11], picked: 10 },
+        { pack: 1, pick: 2, options: [11], picked: 11 },
+      ],
+      currentPack: null,
+    });
+    const all = ds.getDraftSummaries();
+    expect(all).toHaveLength(1);
+    expect(all[0]).toEqual(expect.objectContaining({
+      draftId: 'd1',
+      pickCount: 2,
+    }));
+    expect(typeof all[0].startedAt).toBe('number');
+  });
+
+  test('getDraftSummaries: pickCount is the raw record.picks.length (includes pending picked: null entries)', () => {
+    ds.upsertDraft({
+      draftId: 'd1',
+      picks: [{ pack: 1, pick: 1, options: [10, 11], picked: 10 }],
+      currentPack: { pack: 1, pick: 2, options: [20, 21] },
+    });
+    // Stored: 2 entries — the completed pick AND the pending pack-view.
+    expect(ds.getDraftSummaries()[0].pickCount).toBe(2);
+  });
+
+  test('getDraftSummaries: sorted by startedAt descending', () => {
+    // Insert d1 first, then d2 — d2 has a later startedAt.
+    ds.upsertDraft({ draftId: 'd1', picks: [{ pack: 1, pick: 1, options: [10], picked: 10 }], currentPack: null });
+    // Force a small delay so startedAt differs.
+    const r1 = ds.getDraft('d1');
+    r1.startedAt = 1000;
+    ds.upsertDraft({ draftId: 'd2', picks: [{ pack: 1, pick: 1, options: [20], picked: 20 }], currentPack: null });
+    const r2 = ds.getDraft('d2');
+    r2.startedAt = 2000;
+
+    const all = ds.getDraftSummaries();
+    expect(all.map(d => d.draftId)).toEqual(['d2', 'd1']);
+  });
 });

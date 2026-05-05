@@ -10,7 +10,7 @@ jest.mock('electron', () => ({
 }));
 
 const DataStore = require('../dataStore');
-const { buildDraftUpdatePayload, _resetWarnedGaps } = require('../draftPipeline');
+const { buildDraftUpdatePayload, buildViewerBundle, _resetWarnedGaps } = require('../draftPipeline');
 const { buildFullDraft } = require('./fixtures/draft-synthetic');
 
 // A pass-through draftAssistant double that doesn't change array order.
@@ -44,7 +44,7 @@ describe('draftPipeline.buildDraftUpdatePayload', () => {
     jest.restoreAllMocks();
   });
 
-  test('full synthetic draft: every (pack, pick) ends with a non-null picked', () => {
+  test('full synthetic draft: every (pack, pick) ends with a non-null picked in storage', () => {
     const { events, expectedFinalPickCount } = buildFullDraft();
     for (const ev of events) {
       buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
@@ -56,54 +56,48 @@ describe('draftPipeline.buildDraftUpdatePayload', () => {
     }
   });
 
-  test('payload at pack 1 pick 9 includes removedCards = expected wheel diff', () => {
+  test('bundle at pack 1 pick 9: picks[(1,9)].removedCards = expected wheel diff; liveCoord points there', () => {
     const { events, expectedRemovedAtP1Pick9 } = buildFullDraft();
-    let payloadAtP1P9 = null;
+    let bundleAtP1P9 = null;
     for (const ev of events) {
-      const payload = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
-      if (
-        payload.currentPack &&
-        payload.currentPack.pack === 1 &&
-        payload.currentPack.pick === 9
-      ) {
-        payloadAtP1P9 = payload;
+      const bundle = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
+      if (bundle.liveCoord && bundle.liveCoord.pack === 1 && bundle.liveCoord.pick === 9) {
+        bundleAtP1P9 = bundle;
       }
     }
-    expect(payloadAtP1P9).not.toBeNull();
-    const removedIds = payloadAtP1P9.removedCards.map(c => c.arena_id).sort((a, b) => a - b);
+    expect(bundleAtP1P9).not.toBeNull();
+    const p19 = bundleAtP1P9.picks.find(p => p.pack === 1 && p.pick === 9);
+    expect(p19).toBeDefined();
+    const removedIds = p19.removedCards.map(c => c.arena_id).sort((a, b) => a - b);
     expect(removedIds).toEqual(expectedRemovedAtP1Pick9);
   });
 
-  test('payload at pack 1 pick 1 has removedCards = []', () => {
+  test('bundle at pack 1 pick 1: picks[(1,1)].removedCards = []', () => {
     const { events } = buildFullDraft();
-    let firstPayload = null;
+    let firstBundle = null;
     for (const ev of events) {
-      const payload = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
-      if (firstPayload === null && payload.currentPack && payload.currentPack.pick === 1) {
-        firstPayload = payload;
+      const bundle = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
+      if (firstBundle === null && bundle.liveCoord && bundle.liveCoord.pick === 1) {
+        firstBundle = bundle;
         break;
       }
     }
-    expect(firstPayload.removedCards).toEqual([]);
+    const p11 = firstBundle.picks.find(p => p.pack === 1 && p.pick === 1);
+    expect(p11.removedCards).toEqual([]);
   });
 
   test('replaying the entire event stream produces an identical final record (idempotent end-to-end)', () => {
     const { events } = buildFullDraft();
-    // First pass
     for (const ev of events) buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
     const snapshot1 = JSON.stringify(ds.getDraft('synthetic-1'));
-    // Second pass (simulates parser re-scan of the same log)
     for (const ev of events) buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
     const snapshot2 = JSON.stringify(ds.getDraft('synthetic-1'));
     expect(snapshot2).toBe(snapshot1);
   });
 
-  test('missing pick injection: skip the event for pack 2 pick 4 → payload picks include missing: true placeholder', () => {
+  test('missing pick injection: picks[] includes a missing: true placeholder for the dropped coord', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     const { events } = buildFullDraft();
-    // Filter out both DRAFT_UPDATE events for (pack=2, pick=4) — both the Draft.Notify
-    // and the EventPlayerDraftMakePick. To do this cleanly, we drop the event whose
-    // currentPack is (2, 4), AND we strip pick (2, 4) from any subsequent picks[] array.
     const filtered = events
       .filter(ev => !(ev.data.currentPack && ev.data.currentPack.pack === 2 && ev.data.currentPack.pick === 4))
       .map(ev => ({
@@ -114,22 +108,22 @@ describe('draftPipeline.buildDraftUpdatePayload', () => {
         },
       }));
 
-    let payloadAtP2P5 = null;
+    let bundleAtP2P5 = null;
     for (const ev of filtered) {
-      const payload = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
-      if (payload.currentPack && payload.currentPack.pack === 2 && payload.currentPack.pick === 5) {
-        payloadAtP2P5 = payload;
+      const bundle = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
+      if (bundle.liveCoord && bundle.liveCoord.pack === 2 && bundle.liveCoord.pick === 5) {
+        bundleAtP2P5 = bundle;
       }
     }
-    expect(payloadAtP2P5).not.toBeNull();
-    // The picks array sent to the renderer should include a missing placeholder for (2, 4).
-    const missingEntry = payloadAtP2P5.picks.find(p => p.pack === 2 && p.pick === 4);
+    expect(bundleAtP2P5).not.toBeNull();
+    const missingEntry = bundleAtP2P5.picks.find(p => p.pack === 2 && p.pick === 4);
     expect(missingEntry).toBeDefined();
     expect(missingEntry.missing).toBe(true);
+    expect(missingEntry.options).toEqual([]);
+    expect(missingEntry.removedCards).toEqual([]);
   });
 
-  test('payload picks are filtered to only completed picks (excludes picked: null pending views, includes missing placeholders)', () => {
-    // Set up a draft with one completed pick at (1,1), one pending currentPack at (1,2).
+  test('bundle picks INCLUDE the pending pack-view as a {picked: null, !missing} entry', () => {
     const ev = {
       type: 'DRAFT_UPDATE',
       data: {
@@ -138,41 +132,202 @@ describe('draftPipeline.buildDraftUpdatePayload', () => {
         currentPack: { pack: 1, pick: 2, options: [20, 21] },
       },
     };
-    const payload = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
-    // Renderer payload picks should NOT include the (1,2) pending view as a pick.
-    const pickPicks = payload.picks.map(p => `${p.pack}.${p.pick}`);
-    expect(pickPicks).toContain('1.1');
-    expect(pickPicks).not.toContain('1.2');
+    const bundle = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
+    expect(bundle.liveCoord).toEqual({ pack: 1, pick: 2 });
+    const pending = bundle.picks.find(p => p.pack === 1 && p.pick === 2);
+    expect(pending).toBeDefined();
+    expect(pending.picked).toBeNull();
+    expect(pending.missing).toBeUndefined();
+    expect(pending.pickedCard).toBeUndefined();
+    expect(pending.options).toHaveLength(2);
+    const completed = bundle.picks.find(p => p.pack === 1 && p.pick === 1);
+    expect(completed.picked).toBe(10);
+    expect(completed.pickedCard).toEqual(expect.objectContaining({ arena_id: 10, name: 'Card 10' }));
   });
 
-  test('17Lands not loaded: currentPack and removedCards are returned unranked', () => {
+  test('completed picks carry picked (raw grpId) AND pickedCard (resolved object)', () => {
+    const ev = {
+      type: 'DRAFT_UPDATE',
+      data: {
+        draftId: 'p2',
+        picks: [{ pack: 1, pick: 1, options: [10, 11], picked: 11 }],
+        currentPack: null,
+      },
+    };
+    const bundle = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
+    const p11 = bundle.picks.find(p => p.pack === 1 && p.pick === 1);
+    expect(p11.picked).toBe(11);
+    expect(p11.pickedCard).toEqual(expect.objectContaining({ arena_id: 11, name: 'Card 11' }));
+  });
+
+  test('bundle.picks is sorted by (pack, pick)', () => {
+    const { events } = buildFullDraft();
+    let lastBundle = null;
+    for (const ev of events) {
+      lastBundle = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
+    }
+    for (let i = 1; i < lastBundle.picks.length; i++) {
+      const a = lastBundle.picks[i - 1];
+      const b = lastBundle.picks[i];
+      const aRank = a.pack * 100 + a.pick;
+      const bRank = b.pack * 100 + b.pick;
+      expect(bRank).toBeGreaterThan(aRank);
+    }
+  });
+
+  test('17Lands not loaded: every pick has options/removedCards with gihWr: null, lowSample: true', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     const unloadedAssistant = {
       isLoaded: () => false,
-      rankPack: jest.fn(),  // should not be called
+      rankPack: jest.fn(),
       getCardStats: () => null,
       getCardTier: () => 'none',
       getStatus: () => ({ loaded: false, cardCount: 0, setName: null, csvPath: null }),
     };
-    // Build a draft with a wheel scenario so removedCards is non-empty.
     const fullPack = Array.from({length: 14}, (_, i) => 700 + i);
-    const wheelView = fullPack.slice(8); // 6 cards remain at pick 9
+    const wheelView = fullPack.slice(8);
 
-    // Pick 1
     buildDraftUpdatePayload(
       { draftId: 'u1', picks: [{ pack: 1, pick: 1, options: fullPack, picked: 700 }], currentPack: null },
       ds, unloadedAssistant, resolveCards, resolveCard
     );
-    // Now the wheel — currentPack at (1, 9)
-    const wheelPayload = buildDraftUpdatePayload(
+    const bundle = buildDraftUpdatePayload(
       { draftId: 'u1', picks: [{ pack: 1, pick: 1, options: fullPack, picked: 700 }], currentPack: { pack: 1, pick: 9, options: wheelView } },
       ds, unloadedAssistant, resolveCards, resolveCard
     );
 
     expect(unloadedAssistant.rankPack).not.toHaveBeenCalled();
-    expect(wheelPayload.assistantLoaded).toBe(false);
-    expect(wheelPayload.currentPack.options.every(c => c.gihWr === null && c.lowSample === true)).toBe(true);
-    expect(wheelPayload.removedCards.length).toBeGreaterThan(0);
-    expect(wheelPayload.removedCards.every(c => c.gihWr === null && c.lowSample === true)).toBe(true);
+    expect(bundle.assistantLoaded).toBe(false);
+    const live = bundle.picks.find(p => p.pack === 1 && p.pick === 9);
+    expect(live.options.every(c => c.gihWr === null && c.lowSample === true)).toBe(true);
+    expect(live.removedCards.length).toBeGreaterThan(0);
+    expect(live.removedCards.every(c => c.gihWr === null && c.lowSample === true)).toBe(true);
+  });
+
+  test('bundle exposes assistantLoaded and assistantStatus', () => {
+    const ev = {
+      type: 'DRAFT_UPDATE',
+      data: {
+        draftId: 'p3',
+        picks: [{ pack: 1, pick: 1, options: [10], picked: 10 }],
+        currentPack: null,
+      },
+    };
+    const bundle = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
+    expect(bundle.assistantLoaded).toBe(true);
+    expect(bundle.assistantStatus).toEqual(expect.objectContaining({ loaded: true, setName: 'mock' }));
+    expect(bundle.draftId).toBe('p3');
+    expect(typeof bundle.startedAt).toBe('number');
+  });
+});
+
+describe('draftPipeline.buildViewerBundle', () => {
+  let ds;
+  let assistant;
+
+  beforeEach(() => {
+    _resetWarnedGaps();
+    MOCK_USERDATA = fs.mkdtempSync(path.join(os.tmpdir(), 'mtg-bundle-'));
+    ds = new DataStore();
+    assistant = fakeAssistant();
+  });
+
+  afterEach(() => {
+    fs.rmSync(MOCK_USERDATA, { recursive: true, force: true });
+    jest.restoreAllMocks();
+  });
+
+  test('null record → empty bundle with liveCoord: null', () => {
+    const bundle = buildViewerBundle(null, assistant, resolveCards, resolveCard);
+    expect(bundle).toEqual(expect.objectContaining({
+      draftId: null,
+      startedAt: null,
+      liveCoord: null,
+      picks: [],
+    }));
+    expect(bundle.assistantLoaded).toBe(true);
+  });
+
+  test('empty-picks record → empty bundle with liveCoord: null', () => {
+    const record = { draftId: 'd1', startedAt: 1700000000000, picks: [] };
+    const bundle = buildViewerBundle(record, assistant, resolveCards, resolveCard);
+    expect(bundle.draftId).toBe('d1');
+    expect(bundle.startedAt).toBe(1700000000000);
+    expect(bundle.liveCoord).toBeNull();
+    expect(bundle.picks).toEqual([]);
+  });
+
+  test('full synthetic record: picks > 8 in each pack carry non-empty removedCards', () => {
+    const { events } = buildFullDraft();
+    for (const ev of events) {
+      buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
+    }
+    const record = ds.getDraft('synthetic-1');
+    const bundle = buildViewerBundle(record, assistant, resolveCards, resolveCard);
+
+    expect(bundle.liveCoord).toEqual({ pack: 3, pick: 14 });
+    for (const pick of bundle.picks) {
+      expect(pick.options.length).toBeGreaterThan(0);
+      if (pick.pick > 8) {
+        expect(pick.removedCards.length).toBeGreaterThan(0);
+      } else {
+        expect(pick.removedCards).toEqual([]);
+      }
+    }
+  });
+
+  test('record with a missing-pick gap: bundle includes the missing placeholder', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const record = {
+      draftId: 'g1',
+      startedAt: 1700000000000,
+      picks: [
+        { pack: 1, pick: 1, options: [10, 11, 12], picked: 10 },
+        { pack: 1, pick: 3, options: [12], picked: 12 },
+      ],
+    };
+    const bundle = buildViewerBundle(record, assistant, resolveCards, resolveCard);
+    const missing = bundle.picks.find(p => p.pack === 1 && p.pick === 2);
+    expect(missing).toBeDefined();
+    expect(missing.missing).toBe(true);
+    expect(missing.options).toEqual([]);
+    expect(missing.removedCards).toEqual([]);
+    expect(bundle.liveCoord).toEqual({ pack: 1, pick: 3 });
+  });
+
+  test('17Lands not loaded: every options/removedCards entry has gihWr: null', () => {
+    const unloadedAssistant = {
+      isLoaded: () => false,
+      rankPack: jest.fn(),
+      getCardStats: () => null,
+      getCardTier: () => 'none',
+      getStatus: () => ({ loaded: false, cardCount: 0, setName: null, csvPath: null }),
+    };
+    const { events } = buildFullDraft();
+    for (const ev of events) {
+      buildDraftUpdatePayload(ev.data, ds, unloadedAssistant, resolveCards, resolveCard);
+    }
+    unloadedAssistant.rankPack.mockClear();
+    const record = ds.getDraft('synthetic-1');
+    const bundle = buildViewerBundle(record, unloadedAssistant, resolveCards, resolveCard);
+
+    expect(unloadedAssistant.rankPack).not.toHaveBeenCalled();
+    for (const pick of bundle.picks) {
+      for (const c of pick.options)      { expect(c.gihWr).toBeNull(); expect(c.lowSample).toBe(true); }
+      for (const c of pick.removedCards) { expect(c.gihWr).toBeNull(); expect(c.lowSample).toBe(true); }
+    }
+    expect(bundle.assistantLoaded).toBe(false);
+  });
+
+  test('bundle is identical to live-path output after replaying the event stream', () => {
+    const { events } = buildFullDraft();
+    let livePath = null;
+    for (const ev of events) {
+      livePath = buildDraftUpdatePayload(ev.data, ds, assistant, resolveCards, resolveCard);
+    }
+    const record = ds.getDraft('synthetic-1');
+    const pastPath = buildViewerBundle(record, assistant, resolveCards, resolveCard);
+
+    expect(JSON.stringify(pastPath)).toBe(JSON.stringify(livePath));
   });
 });

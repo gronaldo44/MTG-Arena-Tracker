@@ -899,6 +899,30 @@
            DRAFT PAGE STYLES
            ============================================================ */
 
+        .draft-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .draft-selector select {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 5px 9px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .draft-selector select:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
         .draft-layout {
             display: grid;
             grid-template-columns: minmax(0, 1fr) fit-content(440px);
@@ -1016,6 +1040,22 @@
         }
         .draft-pick-item.missing .pick-name {
             color: var(--text-muted);
+        }
+
+        /* Pick-history visual states for the stepper (Q2C hybrid) */
+        .draft-pick-item.viewing {
+            background: rgba(93, 95, 239, 0.18);
+            border-left-color: var(--accent, #5d5fef);
+        }
+
+        .draft-pick-item.future {
+            opacity: 0.42;
+        }
+
+        .draft-pick-item.viewing.future {
+            /* Defensive: the renderer never tags an item with both classes,
+               but if it ever does, .viewing wins visually. */
+            opacity: 1;
         }
 
         /* Rank number */
@@ -1333,7 +1373,8 @@
             grid-template-columns: 32px 36px 1fr 60px;
             align-items: center;
             gap: 8px;
-            padding: 8px 14px;
+            padding: 8px 14px 8px 11px;
+            border-left: 3px solid transparent;
             border-bottom: 1px solid rgba(255, 255, 255, 0.04);
             font-size: 12px;
         }
@@ -2141,6 +2182,10 @@
 
                 <!-- Content: shown when draft is active -->
                 <div id="draft-active" style="display:none;">
+                    <div class="draft-selector">
+                        <label for="draft-select">Viewing:</label>
+                        <select id="draft-select" onchange="onDraftSelectChange(this.value)"></select>
+                    </div>
                     <div class="draft-layout">
                         <!-- Current pack -->
                         <div class="draft-pack-panel">

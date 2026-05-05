@@ -8,12 +8,15 @@ const { isDraftLimited } = require('./sets');
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let currentPage = 'dashboard';
-let currentDraftState = null;   // latest DRAFT_UPDATE payload
+let bundle = null;              // ViewerBundle currently loaded; null until first draft seen
+let draftList = [];             // [{draftId, startedAt, pickCount}] for the dropdown
+let viewingCoord = null;        // {pack, pick} the user is currently viewing
 let csvLoaded = false;          // whether 17Lands CSV is loaded in main process
 let _currentPackOptions = [];   // cached options for detail drawer lookups
 let _picksData = [];            // raw picks array for re-render on sort/search
 let _picksSortField = 'pick';   // 'pick' | 'gihWr' | 'color'
 let _picksSearchQuery = '';     // current picks search string
+let _loadingDraftId = null;
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 function showPage(page) {
@@ -1300,13 +1303,58 @@ async function updateCsvStatusUI() {
     }
 }
 
+// ─── Draft — coord stepping ───────────────────────────────────────────────────
+//
+// Pure helpers that walk a sorted picks[] array (as delivered by the bundle).
+// They return the same coord when there's nowhere to go (start, end, or coord
+// not in the array) so the caller can render a silent no-op without branching.
+//
+// Precondition: `coord` is a non-null {pack, pick} object. The "not in array"
+// no-op is intentionally indistinguishable from the boundary no-op — callers
+// are responsible for ensuring the coord is valid before calling.
+
+function prevCoord(picks, coord) {
+    if (!Array.isArray(picks) || picks.length === 0 || !coord) return coord;
+    const idx = picks.findIndex(p => p.pack === coord.pack && p.pick === coord.pick);
+    if (idx <= 0) return coord;
+    const prev = picks[idx - 1];
+    return { pack: prev.pack, pick: prev.pick };
+}
+
+function nextCoord(picks, coord) {
+    if (!Array.isArray(picks) || picks.length === 0 || !coord) return coord;
+    const idx = picks.findIndex(p => p.pack === coord.pack && p.pick === coord.pick);
+    if (idx === -1 || idx >= picks.length - 1) return coord;
+    const next = picks[idx + 1];
+    return { pack: next.pack, pick: next.pick };
+}
+
 // ─── Draft — rendering ────────────────────────────────────────────────────────
+const MISSING_PICK_MSG = 'Pick missing from log (likely auto-pick during disconnect)';
+
+function getViewingPick() {
+    if (!bundle || !viewingCoord) return null;
+    return bundle.picks.find(p =>
+        p.pack === viewingCoord.pack && p.pick === viewingCoord.pick
+    ) || null;
+}
+
+function ensureValidViewingCoord() {
+    if (!bundle || !Array.isArray(bundle.picks) || bundle.picks.length === 0) {
+        viewingCoord = null;
+        return;
+    }
+    const exists = bundle.picks.some(p =>
+        p.pack === viewingCoord?.pack && p.pick === viewingCoord?.pick
+    );
+    if (!exists) viewingCoord = bundle.liveCoord;
+}
 
 function renderDraftPage() {
-    const activeEl = document.getElementById('draft-active');
+    const activeEl  = document.getElementById('draft-active');
     const waitingEl = document.getElementById('draft-waiting');
 
-    if (!currentDraftState || !currentDraftState.currentPack) {
+    if (!bundle || !Array.isArray(bundle.picks) || bundle.picks.length === 0) {
         activeEl.style.display = 'none';
         waitingEl.style.display = 'block';
         return;
@@ -1315,9 +1363,19 @@ function renderDraftPage() {
     activeEl.style.display = 'block';
     waitingEl.style.display = 'none';
 
-    renderCurrentPack(currentDraftState.currentPack);
-    renderRemovedSection(currentDraftState.removedCards || []);
-    renderPickHistory(currentDraftState.picks || []);
+    ensureValidViewingCoord();
+    syncDropdownSelection();
+
+    const viewingPick = getViewingPick();
+    if (!viewingPick) return;
+
+    if (viewingPick.missing) {
+        renderMissingPickPanel(viewingPick);
+    } else {
+        renderCurrentPack(viewingPick);
+    }
+    renderRemovedSection(viewingPick.removedCards || [], viewingPick.pick);
+    renderPickHistory(bundle.picks, viewingCoord);
 }
 
 function wheelIndicatorHtml(ata, currentPick) {
@@ -1332,23 +1390,87 @@ function wheelIndicatorHtml(ata, currentPick) {
 }
 
 /**
- * Render the current pack's ranked card list.
- * Each card in options may carry .gihWr, .lowSample, .stats from main.js.
+ * Rebuild the dropdown option list from the current draftList. Only call
+ * when draftList actually changes (new draft starts or at boot).
  */
-function renderCurrentPack(pack) {
-    document.getElementById('draft-pack-num').textContent = `Pack ${pack.pack ?? '?'}`;
-    document.getElementById('draft-pick-num').textContent = `Pick ${pack.pick ?? '?'}`;
-    document.getElementById('draft-cards-left').textContent = `${pack.options.length} cards`;
+function rebuildDraftDropdown() {
+    const sel = document.getElementById('draft-select');
+    if (!sel) return;
+    if (!Array.isArray(draftList) || draftList.length === 0) {
+        sel.innerHTML = '<option value="" disabled selected>No past drafts yet</option>';
+        sel.disabled = true;
+        return;
+    }
+    sel.disabled = false;
+    sel.innerHTML = draftList.map(d => {
+        const date = new Date(d.startedAt).toLocaleString(undefined, {
+            year: 'numeric', month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit',
+        });
+        return `<option value="${d.draftId}">${date} (${d.pickCount} picks)</option>`;
+    }).join('');
+    if (bundle?.draftId) sel.value = bundle.draftId;
+}
+
+/**
+ * Sync the dropdown's selected value to the currently loaded bundle without
+ * rebuilding the option list.
+ */
+function syncDropdownSelection() {
+    const sel = document.getElementById('draft-select');
+    if (!sel || !bundle?.draftId) return;
+    if (sel.value !== bundle.draftId) sel.value = bundle.draftId;
+}
+
+async function onDraftSelectChange(draftId) {
+    if (!draftId) return;
+    _loadingDraftId = draftId;
+    const newBundle = await ipcRenderer.invoke('view-draft-record', draftId);
+    if (_loadingDraftId !== draftId) return;   // superseded by a later change
+    if (!newBundle) {
+        console.warn('[Draft] view-draft-record returned null for', draftId);
+        return;
+    }
+    bundle = newBundle;
+    viewingCoord = bundle.liveCoord;
+    renderDraftPage();
+}
+
+/**
+ * Render the placeholder shown in the pack panel when the viewing coord is
+ * a missing-pick gap. Mirrors the My Picks missing-row styling so the user
+ * knows they're not looking at empty data.
+ */
+function renderMissingPickPanel(pick) {
+    document.getElementById('draft-pack-num').textContent  = `Pack ${pick.pack ?? '?'}`;
+    document.getElementById('draft-pick-num').textContent  = `Pick ${pick.pick ?? '?'}`;
+    document.getElementById('draft-cards-left').textContent = '—';
 
     const listEl = document.getElementById('draft-card-list');
-    if (!pack.options || pack.options.length === 0) {
+    listEl.innerHTML = `
+        <div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;">
+            ⚠️ ${MISSING_PICK_MSG}
+        </div>`;
+}
+
+/**
+ * Render the current pack's ranked card list. `pick` is a bundle pick entry
+ * (carries pack, pick, options[]). Each option may have .gihWr, .lowSample, .stats.
+ */
+function renderCurrentPack(pick) {
+    document.getElementById('draft-pack-num').textContent   = `Pack ${pick.pack ?? '?'}`;
+    document.getElementById('draft-pick-num').textContent   = `Pick ${pick.pick ?? '?'}`;
+    document.getElementById('draft-cards-left').textContent = `${pick.options.length} cards`;
+
+    const listEl = document.getElementById('draft-card-list');
+    if (!pick.options || pick.options.length === 0) {
         listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);">No cards in pack</div>';
         return;
     }
 
-    _currentPackOptions = pack.options;
+    _currentPackOptions = pick.options;
 
-    listEl.innerHTML = pack.options.map((card, idx) => {
+    listEl.innerHTML = pick.options.map((card, idx) => {
         const rank = idx + 1;
         const name = card.name || `Card ${card.arena_id}`;
         const gihWr = card.gihWr;
@@ -1377,11 +1499,11 @@ function renderCurrentPack(pack) {
 }
 
 /**
- * Render the "Removed since pick N" greyed-out card list under the live pack.
- * Sorted by GIH WR descending (already done by main.js via rankPack).
- * Hidden when empty.
+ * Render the "Removed since pick N" greyed-out card list under the pack panel.
+ * `currentPick` is the viewing coord's pick number.
+ * Hidden when removedCards is empty.
  */
-function renderRemovedSection(removedCards) {
+function renderRemovedSection(removedCards, currentPick) {
     const sectionEl = document.getElementById('draft-removed-section');
     const listEl    = document.getElementById('draft-removed-list');
     const headerEl  = document.getElementById('draft-removed-header');
@@ -1393,8 +1515,6 @@ function renderRemovedSection(removedCards) {
 
     sectionEl.style.display = 'block';
 
-    // Header text references the prior view: pick N - 8.
-    const currentPick = currentDraftState?.currentPack?.pick;
     const priorPick = (typeof currentPick === 'number' && currentPick > 8)
         ? currentPick - 8
         : 1;
@@ -1429,9 +1549,10 @@ function renderRemovedSection(removedCards) {
 /**
  * Store raw picks and re-render with current sort/search state.
  */
-function renderPickHistory(picks) {
-    document.getElementById('picks-count').textContent = picks.length;
-    _picksData = picks;
+function renderPickHistory(picks, _viewingCoord) {
+    const completed = picks.filter(p => p.missing === true || p.picked !== null);
+    document.getElementById('picks-count').textContent = completed.length;
+    _picksData = completed;
     _renderFilteredPicks();
 }
 
@@ -1490,7 +1611,7 @@ function _renderFilteredPicks() {
 
     const q = _picksSearchQuery.trim().toLowerCase();
     let picks = q
-        ? _picksData.filter(p => !p.missing && (p.picked?.name || '').toLowerCase().includes(q))
+        ? _picksData.filter(p => !p.missing && (p.pickedCard?.name || '').toLowerCase().includes(q))
         : [..._picksData];
 
     if (picks.length === 0) {
@@ -1502,8 +1623,8 @@ function _renderFilteredPicks() {
         picks.sort((a, b) => {
             if (a.missing) return 1;
             if (b.missing) return -1;
-            const aw = a.picked?.gihWr ?? null;
-            const bw = b.picked?.gihWr ?? null;
+            const aw = a.pickedCard?.gihWr ?? null;
+            const bw = b.pickedCard?.gihWr ?? null;
             if (aw === null && bw === null) return 0;
             if (aw === null) return 1;
             if (bw === null) return -1;
@@ -1513,12 +1634,12 @@ function _renderFilteredPicks() {
         picks.sort((a, b) => {
             if (a.missing) return 1;
             if (b.missing) return -1;
-            const sectionDiff = _picksColorSection(a.picked?.color, a.picked?.manaCost)
-                              - _picksColorSection(b.picked?.color, b.picked?.manaCost);
+            const sectionDiff = _picksColorSection(a.pickedCard?.color, a.pickedCard?.manaCost)
+                              - _picksColorSection(b.pickedCard?.color, b.pickedCard?.manaCost);
             if (sectionDiff !== 0) return sectionDiff;
             // Same section: GIH WR descending
-            const aw = a.picked?.gihWr ?? null;
-            const bw = b.picked?.gihWr ?? null;
+            const aw = a.pickedCard?.gihWr ?? null;
+            const bw = b.pickedCard?.gihWr ?? null;
             if (aw === null && bw === null) return 0;
             if (aw === null) return 1;
             if (bw === null) return -1;
@@ -1530,16 +1651,25 @@ function _renderFilteredPicks() {
     }
 
     listEl.innerHTML = picks.map(pick => {
+        const isViewing = !!viewingCoord
+            && pick.pack === viewingCoord.pack
+            && pick.pick === viewingCoord.pick;
+        const isFuture = !isViewing && !!viewingCoord && (
+            pick.pack > viewingCoord.pack ||
+            (pick.pack === viewingCoord.pack && pick.pick > viewingCoord.pick)
+        );
+        const stateClass = isViewing ? 'viewing' : isFuture ? 'future' : '';
+
         if (pick.missing) {
             return `
-                <div class="draft-pick-item missing">
+                <div class="draft-pick-item missing ${stateClass}">
                     <div class="pick-num">P${pick.pack ?? '?'}p${pick.pick ?? '?'}</div>
                     <div class="pick-colors"></div>
-                    <div class="pick-name"><span title="Missing from log (likely auto-pick)">⚠️ pick missing from log</span></div>
+                    <div class="pick-name" title="${MISSING_PICK_MSG}">⚠️ ${MISSING_PICK_MSG}</div>
                     <div class="pick-wr">—</div>
                 </div>`;
         }
-        const card = pick.picked;
+        const card = pick.pickedCard;
         const name = card?.name || `Card ${card?.arena_id ?? '?'}`;
         const gihWr = card?.gihWr ?? null;
         const wrText = gihWr !== null ? `${(gihWr * 100).toFixed(1)}%` : '—';
@@ -1547,7 +1677,7 @@ function _renderFilteredPicks() {
         const colorStr = card?.color || '';
 
         return `
-            <div class="draft-pick-item">
+            <div class="draft-pick-item ${stateClass}">
                 <div class="pick-num">P${pick.pack ?? '?'}p${pick.pick ?? '?'}</div>
                 <div class="pick-colors">${draftCardColorPips(colorStr, card?.manaCost || '')}</div>
                 <div class="pick-name">
@@ -1728,25 +1858,35 @@ ipcRenderer.on('card-stats-updated', async () => {
     }
 });
 
-/**
- * Main process sends this whenever a new pack arrives or a pick is made.
- * We store the latest state and re-render if the draft page is visible.
- */
 ipcRenderer.on('draft-update', (event, data) => {
     console.log('[Draft] Update received:', data);
-    currentDraftState = data;
+    bundle = data;
+    viewingCoord = bundle.liveCoord;
+
+    // Refresh the dropdown — if this is a new draft, refetch the list so it
+    // appears as an option; otherwise just re-sync the selection.
+    if (!draftList.some(d => d.draftId === bundle?.draftId)) {
+        ipcRenderer.invoke('list-drafts').then(list => {
+            draftList = list;
+            rebuildDraftDropdown();
+        });
+    } else {
+        rebuildDraftDropdown();
+    }
 
     // Flash the Draft nav item if user is on a different page
     const navDraft = document.getElementById('nav-draft');
     if (navDraft && currentPage !== 'draft') {
-        // Show/update a live badge
         let badge = navDraft.querySelector('.draft-badge');
         if (!badge) {
             badge = document.createElement('span');
             badge.className = 'draft-badge';
             navDraft.appendChild(badge);
         }
-        const count = data.currentPack?.options?.length ?? 0;
+        const liveEntry = bundle?.picks?.find(p =>
+            p.pack === bundle.liveCoord?.pack && p.pick === bundle.liveCoord?.pick
+        );
+        const count = liveEntry?.options?.length ?? 0;
         badge.textContent = `${count}`;
     }
 
@@ -1923,7 +2063,56 @@ if (typeof document !== 'undefined') {
 document.addEventListener('DOMContentLoaded', async () => {
     await updateCsvStatusUI();
     loadDashboard();
+    initDraftView();
 });
+
+/**
+ * Populate the draft dropdown and, if no live draft has arrived yet,
+ * auto-load the most recent past draft. The 'draft-update' handler may
+ * race ahead and replace the bundle; that's the desired behavior — live
+ * always wins.
+ */
+async function initDraftView() {
+    try {
+        draftList = await ipcRenderer.invoke('list-drafts');
+    } catch (e) {
+        console.warn('[Draft] list-drafts failed:', e);
+        draftList = [];
+    }
+    rebuildDraftDropdown();
+    if (!bundle && draftList.length > 0) {
+        await onDraftSelectChange(draftList[0].draftId);
+    } else if (bundle && currentPage === 'draft') {
+        renderDraftPage();
+    }
+}
+
+// ─── Draft — keyboard stepping ────────────────────────────────────────────────
+//
+// Single delegated keydown handler bound at module load. Only fires when the
+// draft page is the active page and no input/textarea/select has focus, so
+// dropdown keyboard navigation still works. Silent no-op at boundaries.
+
+if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', (e) => {
+        if (currentPage !== 'draft') return;
+        if (!bundle || !viewingCoord) return;
+        const tag = (e.target && e.target.tagName) || '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+
+        const target = e.key === 'ArrowLeft'
+            ? prevCoord(bundle.picks, viewingCoord)
+            : nextCoord(bundle.picks, viewingCoord);
+
+        if (target.pack === viewingCoord.pack && target.pick === viewingCoord.pick) {
+            return; // boundary — silent no-op
+        }
+        viewingCoord = target;
+        renderDraftPage();
+    });
+}
 
 // Export pure helpers for unit testing.
 // Only active when running in Node.js (Jest); `window` is undefined there.
@@ -1931,5 +2120,6 @@ if (typeof window === 'undefined') {
     module.exports = {
         gihWrTierClass, colorPip, rarityGem, rarityLabel, rarityColor,
         extractScryfallImageUrl, cardEyeballHtml, _cardImageCache,
+        prevCoord, nextCoord,
     };
 }

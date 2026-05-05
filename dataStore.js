@@ -740,6 +740,23 @@ class DataStore {
   }
 
   /**
+   * Return [{draftId, startedAt, pickCount}] for every persisted draft,
+   * sorted by startedAt descending. pickCount is the raw count of stored
+   * picks entries — includes any pending `picked: null` pack-view entry,
+   * but NOT gap-fill placeholders (those are computed in the pipeline,
+   * not persisted).
+   */
+  getDraftSummaries() {
+    return Object.values(this.drafts)
+      .map(r => ({
+        draftId:   r.draftId,
+        startedAt: r.startedAt,
+        pickCount: Array.isArray(r.picks) ? r.picks.length : 0,
+      }))
+      .sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0));
+  }
+
+  /**
    * Generate a unique ID
    */
   generateId() {
