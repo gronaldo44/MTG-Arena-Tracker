@@ -139,6 +139,11 @@ jest.mock('../cardUpdater', () =>
   }))
 );
 
+jest.mock('../setEnricher', () => ({
+  enrich:           jest.fn(() => Promise.resolve(false)),
+  needsEnrichment:  jest.fn(() => false),
+}));
+
 jest.mock('../draftAssistant', () =>
   jest.fn(() => ({
     isLoaded:       jest.fn(() => false),
@@ -350,6 +355,75 @@ describe('main.js', () => {
       const handler = registeredHandlers['get-settings'];
       const result = await handler(null);
       expect(typeof result).toBe('object');
+    });
+  });
+
+  // ── run-set-enrichment ──────────────────────────────────────────────────
+
+  describe('run-set-enrichment handler — dataStore reload and renderer notification', () => {
+    const setEnricher  = require('../setEnricher');
+    const DataStore    = require('../dataStore');
+    const { BrowserWindow } = require('electron');
+
+    // Factory mocks return values via mock.results[0].value (not mock.instances[0],
+    // which tracks the raw `this` before the factory return value overrides it).
+    let dsInstance;
+    let winInstance;
+
+    beforeAll(() => {
+      dsInstance  = DataStore.mock.results[0]?.value;
+      winInstance = BrowserWindow.mock.results[0]?.value;
+    });
+
+    beforeEach(() => {
+      // Clear only the specific mocks we assert on, avoiding a full clearAllMocks()
+      // which would also reset fs spies that the handler relies on.
+      setEnricher.enrich.mockClear();
+      dsInstance?.reloadCards?.mockClear?.();
+      winInstance?.webContents?.send?.mockClear?.();
+    });
+
+    test('calls dataStore.reloadCards() when enrichment succeeds', async () => {
+      setEnricher.enrich.mockResolvedValueOnce(true);
+      await registeredHandlers['run-set-enrichment'](null);
+      expect(dsInstance.reloadCards).toHaveBeenCalledTimes(1);
+    });
+
+    test('sends card-stats-updated to renderer when enrichment succeeds', async () => {
+      setEnricher.enrich.mockResolvedValueOnce(true);
+      await registeredHandlers['run-set-enrichment'](null);
+      expect(winInstance.webContents.send).toHaveBeenCalledWith('card-stats-updated');
+    });
+
+    test('does NOT call reloadCards when enrichment returns false (already up to date)', async () => {
+      setEnricher.enrich.mockResolvedValueOnce(false);
+      await registeredHandlers['run-set-enrichment'](null);
+      expect(dsInstance.reloadCards).not.toHaveBeenCalled();
+    });
+
+    test('does NOT send card-stats-updated when enrichment returns false', async () => {
+      setEnricher.enrich.mockResolvedValueOnce(false);
+      await registeredHandlers['run-set-enrichment'](null);
+      expect(winInstance.webContents.send).not.toHaveBeenCalledWith('card-stats-updated');
+    });
+
+    test('returns { success: true, enriched: true } when enrichment succeeds', async () => {
+      setEnricher.enrich.mockResolvedValueOnce(true);
+      const result = await registeredHandlers['run-set-enrichment'](null);
+      expect(result).toEqual({ success: true, enriched: true });
+    });
+
+    test('returns { success: true, enriched: false } when already up to date', async () => {
+      setEnricher.enrich.mockResolvedValueOnce(false);
+      const result = await registeredHandlers['run-set-enrichment'](null);
+      expect(result).toEqual({ success: true, enriched: false });
+    });
+
+    test('returns { success: false } when enrich throws', async () => {
+      setEnricher.enrich.mockRejectedValueOnce(new Error('Python not found'));
+      const result = await registeredHandlers['run-set-enrichment'](null);
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Python not found/);
     });
   });
 });

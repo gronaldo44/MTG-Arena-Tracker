@@ -9,6 +9,7 @@ const CardUpdater = require('./cardUpdater');
 const setEnricher = require('./setEnricher');
 const DraftAssistant = require('./draftAssistant');
 const draftPipeline = require('./draftPipeline');
+const { coalesceEvents } = require('./eventCoalescer');
 const { clear } = require('console');
 
 let mainWindow;
@@ -253,7 +254,7 @@ function startLogWatcher(logPath) {
             parser = new LogParser();
           }
 
-          const events = parser.parse(fullData);
+          const events = coalesceEvents(parser.parse(fullData));
 
           if (events.length > 0) {
             console.log(`[AutoScan] Parsed ${events.length} events from full log`);
@@ -333,7 +334,7 @@ function startLogWatcher(logPath) {
           parser = new LogParser();
         }
 
-        const events = parser.parse(fullData);
+        const events = coalesceEvents(parser.parse(fullData));
         for (const event of events) {
           handleGameEvent(event);
         }
@@ -471,7 +472,11 @@ ipcMain.handle('run-set-enrichment', async () => {
   const { mtgaDbPath } = dataStore.getSettings();
   try {
     const enriched = await setEnricher.enrich({ mtgaDbPath, force: true });
-    if (enriched) loadCards();
+    if (enriched) {
+      if (dataStore) dataStore.reloadCards();
+      loadCards();
+      if (mainWindow) mainWindow.webContents.send('card-stats-updated');
+    }
     return { success: true, enriched };
   } catch (err) {
     return { success: false, error: err.message };
