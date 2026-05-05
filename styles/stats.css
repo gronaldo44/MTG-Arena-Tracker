@@ -1,0 +1,45 @@
+/* Tables */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.data-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Active sort column header highlight */
+th.sort-active-col {
+    color: var(--primary) !important;
+    font-weight: 700 !important;
+    text-decoration: underline;
+    text-decoration-color: var(--primary);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+}
+
+/* Clickable draft format name in Format Breakdown */
+.format-name-link {
+    cursor: pointer;
+    text-decoration: underline dotted var(--text-muted);
+    text-underline-offset: 3px;
+}
+
+.format-name-link:hover {
+    color: var(--primary);
+    text-decoration-color: var(--primary);
+}

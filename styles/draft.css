@@ -1,0 +1,592 @@
+.draft-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.draft-selector select {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.draft-selector select:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.draft-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) fit-content(440px);
+    gap: 20px;
+    align-items: start;
+}
+
+/* Pack panel */
+.draft-pack-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.draft-pack-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(93, 95, 239, 0.08);
+}
+
+.draft-pack-header h3 {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.draft-pack-info {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text);
+}
+
+.draft-pack-info span {
+    background: var(--bg);
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+/* Card rows in the pack */
+.draft-card-list {
+    padding: 8px 0;
+}
+
+.draft-card-row {
+    display: grid;
+    grid-template-columns: 24px 1fr 70px 32px;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 13px 9px 13px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-left: 3px solid transparent;
+    transition: background 0.15s;
+    cursor: pointer;
+}
+
+.draft-card-row:last-child {
+    border-bottom: none;
+}
+
+.draft-card-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* Left-border accent by tier */
+@keyframes flame-flicker {
+    0%   { border-left-color: #e01010; box-shadow: inset 4px 0 10px rgba(224, 16, 16, 0.22); }
+    15%  { border-left-color: #ff5500; box-shadow: inset 4px 0 18px rgba(255, 85, 0, 0.42); }
+    30%  { border-left-color: #c50000; box-shadow: inset 4px 0  7px rgba(197, 0, 0, 0.18); }
+    50%  { border-left-color: #ff7820; box-shadow: inset 4px 0 22px rgba(255, 120, 32, 0.48); }
+    65%  { border-left-color: #e01010; box-shadow: inset 4px 0 12px rgba(224, 16, 16, 0.28); }
+    80%  { border-left-color: #ff3300; box-shadow: inset 4px 0 16px rgba(255, 51, 0, 0.38); }
+    100% { border-left-color: #e01010; box-shadow: inset 4px 0 10px rgba(224, 16, 16, 0.22); }
+}
+
+.draft-card-row.tier-mythic {
+    border-left-color: var(--tier-mythic);
+    animation: flame-flicker 2.4s ease-in-out infinite;
+}
+.draft-card-row.tier-gold   { border-left-color: var(--tier-gold); }
+.draft-card-row.tier-silver { border-left-color: rgba(220, 228, 236, 0.8); }
+.draft-card-row.tier-brown  { border-left-color: rgba(123, 80, 32, 0.45); }
+
+/* Removed-since-last-view section (wheel correlation) */
+.draft-removed-section {
+    margin-top: 18px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.draft-removed-header {
+    padding: 0 13px 6px 13px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+}
+
+.draft-card-row.removed {
+    opacity: 0.45;
+    border-left-color: transparent !important;
+    animation: none !important;
+    background: transparent !important;
+}
+
+.draft-card-row.removed .draft-card-name span {
+    text-decoration: line-through;
+    text-decoration-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Missing-pick placeholder row in My Picks */
+.draft-pick-item.missing {
+    opacity: 0.55;
+    font-style: italic;
+}
+
+.draft-pick-item.missing .pick-name {
+    color: var(--text-muted);
+}
+
+/* Pick-history visual states for the stepper (Q2C hybrid) */
+.draft-pick-item.viewing {
+    background: rgba(93, 95, 239, 0.18);
+    border-left-color: var(--accent, #5d5fef);
+}
+
+.draft-pick-item.future {
+    opacity: 0.42;
+}
+
+/* Rank number */
+.draft-rank {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-align: left;
+}
+
+.draft-card-row:nth-child(1) .draft-rank { color: #ffd700; }
+.draft-card-row:nth-child(2) .draft-rank { color: #c0c0c0; }
+.draft-card-row:nth-child(3) .draft-rank { color: #cd7f32; }
+
+/* Card name + color pip */
+.draft-card-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    overflow: hidden;
+}
+
+.draft-card-name span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.color-pip {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.color-W { background: #f5f0e0; color: #333; }
+.color-U { background: #1e6daf; color: #fff; }
+.color-B { background: #1a1a1a; color: #aaa; border: 1px solid #444; }
+.color-R { background: #c1160e; color: #fff; }
+.color-G { background: #1a6b3a; color: #fff; }
+.color-multi { background: linear-gradient(135deg, #ffd700, #c1160e); color: #fff; }
+.color-C { background: #888; color: #fff; }
+
+/* Rarity indicator */
+.rarity-gem {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.rarity-C { background: #aaa; }
+.rarity-U { background: #7ec8e3; }
+.rarity-R { background: #ffd700; }
+.rarity-M { background: #ff6b35; }
+
+/* Wheel indicator column */
+.wheel-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wheel-icon {
+    font-size: 15px;
+    color: #4caf50;
+    cursor: default;
+    line-height: 1;
+}
+
+.wheel-late {
+    font-size: 11px;
+    font-weight: 700;
+    color: #4caf50;
+    cursor: default;
+}
+
+.wheel-ata {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: default;
+}
+
+/* GIH WR pill — shared base */
+.gih-wr {
+    font-size: 13px;
+    font-weight: 700;
+    text-align: right;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+/* Tier colours applied to both the WR pill (.gih-wr) and the picks sidebar (.pick-wr) */
+.gih-wr.tier-mythic, .pick-wr.tier-mythic {
+    color: var(--tier-mythic);
+    background: rgba(224, 16, 16, 0.14);
+}
+
+.gih-wr.tier-gold, .pick-wr.tier-gold {
+    color: var(--tier-gold);
+    background: rgba(255, 215, 0, 0.14);
+}
+
+.gih-wr.tier-silver, .pick-wr.tier-silver {
+    color: #c0c0c0;
+    background: linear-gradient(105deg, #404e5c 0%, #303c4a 45%, #3a4856 100%);
+}
+
+.gih-wr.tier-black, .pick-wr.tier-black {
+    color: #c8d0d8;
+    background: var(--tier-black);
+}
+
+.gih-wr.tier-brown, .pick-wr.tier-brown {
+    color: var(--tier-brown);
+    background: rgba(123, 80, 32, 0.16);
+}
+
+.gih-wr.tier-none, .pick-wr.tier-none {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-style: italic;
+}
+
+/* Sample size warning */
+.low-sample-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--warning);
+    flex-shrink: 0;
+}
+
+/* Card detail drawer */
+.draft-card-row.detail-open {
+    background: rgba(93, 95, 239, 0.08);
+}
+
+.draft-card-detail {
+    background: rgba(20, 20, 50, 0.7);
+    border-left: 3px solid var(--primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 12px 16px 14px 44px;
+    animation: detailSlideIn 0.12s ease;
+}
+
+@keyframes detailSlideIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.detail-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.detail-section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--primary);
+    font-weight: 700;
+    margin-bottom: 6px;
+    opacity: 0.85;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    padding: 2px 0;
+    color: var(--text-muted);
+}
+
+.detail-val {
+    font-weight: 600;
+    color: var(--text);
+}
+
+/* Picks history panel */
+.draft-picks-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.draft-picks-header {
+    padding: 10px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(93, 95, 239, 0.08);
+}
+
+.picks-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.picks-sort-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.picks-sort-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 10px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.picks-sort-btn.active {
+    background: rgba(93, 95, 239, 0.2);
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.picks-sort-btn:hover:not(.active) {
+    border-color: var(--text-muted);
+    color: var(--text);
+}
+
+.picks-search-input {
+    width: 100%;
+    margin-top: 8px;
+    padding: 5px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
+    font-family: inherit;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.picks-search-input:focus {
+    border-color: var(--accent);
+}
+
+.draft-picks-list {
+    padding: 4px 0;
+    max-height: 520px;
+    overflow-y: auto;
+}
+
+.draft-pick-item {
+    display: grid;
+    grid-template-columns: 32px 36px 1fr 60px;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px 8px 11px;
+    border-left: 3px solid transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 12px;
+}
+
+.pick-colors {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.draft-pick-item:last-child {
+    border-bottom: none;
+}
+
+.pick-num {
+    font-size: 11px;
+    color: var(--text);
+    text-align: center;
+    background: var(--bg);
+    border-radius: 4px;
+    padding: 2px 4px;
+}
+
+.pick-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+}
+
+.pick-name > span {
+    white-space: nowrap;
+}
+
+.pick-wr {
+    text-align: right;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Draft status / no-draft state */
+.draft-waiting {
+    text-align: center;
+    padding: 80px 40px;
+    color: var(--text-muted);
+}
+
+.draft-waiting .icon {
+    font-size: 56px;
+    margin-bottom: 20px;
+}
+
+.draft-waiting h3 {
+    font-size: 20px;
+    color: var(--text);
+    margin-bottom: 10px;
+}
+
+.draft-waiting p {
+    margin-bottom: 6px;
+    line-height: 1.6;
+}
+
+/* 17Lands status banner */
+.csv-status-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    border: 1px solid;
+}
+
+.csv-status-banner.loaded {
+    background: rgba(34, 197, 94, 0.08);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: var(--success);
+}
+
+.csv-status-banner.not-loaded {
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: var(--warning);
+}
+
+.csv-status-banner .csv-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.csv-status-banner .btn {
+    padding: 6px 14px;
+    font-size: 12px;
+}
+
+/* Draft legend */
+.draft-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+/* Card image preview — hover an eyeball to see Scryfall art */
+.card-eyeball {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-left: 6px;
+    color: var(--text-muted);
+    cursor: help;
+    vertical-align: middle;
+    opacity: 0.55;
+    transition: opacity 120ms ease, color 120ms ease;
+}
+
+.card-eyeball:hover {
+    color: var(--accent, var(--text));
+    opacity: 1;
+}
+
+#card-image-preview {
+    position: fixed;
+    z-index: 9999;
+    width: 260px;
+    background: var(--bg-secondary, #222);
+    border: 1px solid var(--border, #333);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    padding: 6px;
+    pointer-events: none;
+}
+
+#card-image-preview img {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    display: block;
+}
+
+.card-image-preview-loading,
+.card-image-preview-empty {
+    padding: 24px 12px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+}

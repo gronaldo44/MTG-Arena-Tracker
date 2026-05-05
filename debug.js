@@ -3,12 +3,8 @@
  * Run this to see what's in your MTG Arena log
  */
 
-const fs = require('fs');
+const fs   = require('fs');
 const path = require('path');
-const LogParser = require('./logParser');
-const LogParserV2 = require('./logParserV2');
-const LogParserV3 = require('./logParserV3');
-const LogParserV4 = require('./logParserV4');
 const LogParserV5 = require('./logParserV5');
 
 // Default log path
@@ -58,7 +54,7 @@ if (!actualLogPath) {
 
 // Read the log file
 try {
-  const data = fs.readFileSync(actualLogPath, 'utf8');
+  const data  = fs.readFileSync(actualLogPath, 'utf8');
   const lines = data.split('\n');
 
   console.log(`\n✓ Read ${lines.length} lines from log`);
@@ -91,71 +87,20 @@ try {
     });
   }
 
-  // Now test parsers
+  // Test V5 parser
   console.log('\n========================================');
-  console.log('Testing Parsers');
+  console.log('Testing Parser');
   console.log('========================================\n');
 
-  // Test original parser
-  console.log('Testing LogParser (v1)...');
-  const parser1 = new LogParser();
-  const events1 = parser1.parse(data);
-  console.log(`  Found ${events1.length} events`);
+  const parser = new LogParserV5();
+  const events = parser.parse(data);
+  console.log(`  Found ${events.length} events`);
 
-  // Test v2 parser
-  console.log('\nTesting LogParserV2...');
-  const parser2 = new LogParserV2();
-  const events2 = parser2.parse(data);
-  console.log(`  Found ${events2.length} events`);
-
-  // Test v3 parser
-  console.log('\nTesting LogParserV3 (handles plain JSON)...');
-  const parser3 = new LogParserV3();
-  const events3 = parser3.parse(data);
-  console.log(`  Found ${events3.length} events`);
-
-  // Test v4 parser
-  console.log('\nTesting LogParserV4 (NodeStates-based)...');
-  const parser4 = new LogParserV4();
-  const events4 = parser4.parse(data);
-  console.log(`  Found ${events4.length} events`);
-
-  // Test v5 parser
-  console.log('\nTesting LogParserV5 (Unity format with timestamps)...');
-  const parser5 = new LogParserV5();
-  const events5 = parser5.parse(data);
-  console.log(`  Found ${events5.length} events`);
-
-  if (events5.length > 0) {
-    console.log('\n✅ V5 Parser found events! Sample:');
-    events5.slice(0, 3).forEach((e, i) => {
+  if (events.length > 0) {
+    console.log('\n✅ Parser found events! Sample:');
+    events.slice(0, 3).forEach((e, i) => {
       console.log(`  ${i + 1}. ${e.type}: ${JSON.stringify(e.data).slice(0, 100)}`);
     });
-  }
-
-  // Summary
-  console.log('\n========================================');
-  console.log('SUMMARY');
-  console.log('========================================');
-  console.log(`V1 Parser: ${events1.length} events`);
-  console.log(`V2 Parser: ${events2.length} events`);
-  console.log(`V3 Parser: ${events3.length} events`);
-  console.log(`V4 Parser: ${events4.length} events`);
-  console.log(`V5 Parser: ${events5.length} events`);
-
-  if (events5.length > 0) {
-    console.log('\n✅ Use V5 parser - it works with your log format!');
-    console.log('The app has been updated to use V5 by default.');
-  } else if (events4.length > 0) {
-    console.log('\n✅ Use V4 parser - it works with your log format!');
-    console.log('The app has been updated to use V4 by default.');
-  } else if (events3.length > 0) {
-    console.log('\n✅ Use V3 parser - it works with your log format!');
-    console.log('The app has been updated to use V3 by default.');
-  } else if (events2.length > 0) {
-    console.log('\n✅ Use V2 parser');
-  } else if (events1.length > 0) {
-    console.log('\n✅ Use V1 parser');
   } else {
     console.log('\n❌ No parser found events.');
     console.log('Your log format may be different than expected.');

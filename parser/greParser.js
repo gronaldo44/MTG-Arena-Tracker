@@ -7,10 +7,10 @@
  * that describe which cards the player held in each game and whether they won.
  *
  * Metrics tracked per game:
- *   deckGrpIds      – cards in the deck at game start (GP equivalent)
- *   handGrpIds      – cards ever seen in the player's hand (GIH equivalent)
+ *   deckGrpIds        – cards in the deck at game start (GP equivalent)
+ *   handGrpIds        – cards ever seen in the player's hand (GIH equivalent)
  *   openingHandGrpIds – cards in hand after all mulligan decisions (OH equivalent)
- *   result          – 'win' | 'loss'
+ *   result            – 'win' | 'loss'
  *
  * Opening hand accuracy with London mulligan:
  *   The log shows each candidate hand during mulligan phase (GameStage_Start).
@@ -76,7 +76,7 @@ class GREParser {
   // ─── Message dispatch ──────────────────────────────────────────────────────
 
   _processMessage(msg) {
-    if (msg.type === 'GREMessageType_ConnectResp') return this._handleConnectResp(msg);
+    if (msg.type === 'GREMessageType_ConnectResp')    return this._handleConnectResp(msg);
     if (msg.type === 'GREMessageType_GameStateMessage') return this._handleGameState(msg);
     return null;
   }
@@ -85,29 +85,24 @@ class GREParser {
 
   _handleConnectResp(msg) {
     const playerSeat = msg.systemSeatIds?.[0] ?? 1;
-    const deckCards = msg.connectResp?.deckMessage?.deckCards ?? [];
+    const deckCards  = msg.connectResp?.deckMessage?.deckCards ?? [];
 
     this.currentGame = {
       matchId: null,
       gameNumber: 1,
       playerSeat,
-      deckCardsRaw: deckCards.map(String),           // with duplicates — used for copy-count
-      deckGrpIds:   [...new Set(deckCards.map(String))], // unique — used for card stats
+      deckCardsRaw: deckCards.map(String),
+      deckGrpIds:   [...new Set(deckCards.map(String))],
 
-      // instanceId (number) → grpId (string)
       instanceMap: Object.create(null),
 
-      // zoneId for the player's hand (discovered from zone listings)
       playerHandZoneId: null,
-
-      // All grpIds ever seen in player's hand during this game
       handGrpIds: new Set(),
 
-      // Opening hand tracking (replaced on each mulligan reredraw)
-      inMulliganPhase: true,
-      openingHandLocked: false,
+      inMulliganPhase:       true,
+      openingHandLocked:     false,
       openingHandCandidates: new Set(),
-      openingHandGrpIds: new Set(),
+      openingHandGrpIds:     new Set(),
     };
 
     return null;
@@ -118,22 +113,18 @@ class GREParser {
   _handleGameState(msg) {
     if (!this.currentGame) return null;
     const game = this.currentGame;
-    const gsm = msg.gameStateMessage;
+    const gsm  = msg.gameStateMessage;
     if (!gsm) return null;
 
-    // Track matchId and game number
     if (gsm.gameInfo) {
       if (gsm.gameInfo.matchID)    game.matchId    = gsm.gameInfo.matchID;
       if (gsm.gameInfo.gameNumber) game.gameNumber = gsm.gameInfo.gameNumber;
     }
 
-    // Detect a new game within a bo3 match (new Full message with higher gameNumber)
     if (gsm.type === 'GameStateType_Full' && gsm.gameInfo?.gameNumber > 1) {
       this._resetHandTracking(game);
     }
 
-    // Step 1: Update instanceMap from gameObjects, and accumulate GIH.
-    // We process gameObjects BEFORE zones so the map is ready when we need it.
     if (gsm.gameObjects) {
       for (const obj of gsm.gameObjects) {
         if (obj.ownerSeatId !== game.playerSeat) continue;
@@ -141,22 +132,18 @@ class GREParser {
 
         game.instanceMap[obj.instanceId] = String(obj.grpId);
 
-        // Any card that appears in the hand zone → GIH
         if (game.playerHandZoneId && obj.zoneId === game.playerHandZoneId) {
           game.handGrpIds.add(String(obj.grpId));
         }
       }
     }
 
-    // Step 2: Process zone listings.
-    // ZoneType_Hand updates give us the definitive current hand contents.
     if (gsm.zones) {
       for (const zone of gsm.zones) {
         if (zone.type !== 'ZoneType_Hand' || zone.ownerSeatId !== game.playerSeat) continue;
 
         game.playerHandZoneId = zone.zoneId;
 
-        // GIH: also add from zone listing (catches cases where gameObjects is absent)
         if (zone.objectInstanceIds) {
           for (const iid of zone.objectInstanceIds) {
             const grpId = game.instanceMap[iid];
@@ -164,8 +151,6 @@ class GREParser {
           }
         }
 
-        // Opening hand: REPLACE candidates on each hand update during mulligan.
-        // This correctly handles mulligans and London-mulligan bottoming.
         if (game.inMulliganPhase && !game.openingHandLocked && zone.objectInstanceIds) {
           game.openingHandCandidates = new Set();
           for (const iid of zone.objectInstanceIds) {
@@ -178,7 +163,6 @@ class GREParser {
       }
     }
 
-    // Step 3: Detect end of mulligan phase.
     const stage = gsm.gameInfo?.stage;
     if (game.inMulliganPhase && stage && stage !== 'GameStage_Start') {
       game.openingHandGrpIds = new Set(game.openingHandCandidates);
@@ -186,9 +170,8 @@ class GREParser {
       game.inMulliganPhase   = false;
     }
 
-    // Step 4: Detect game over and emit GAME_STATS.
     if (stage === 'GameStage_GameOver') {
-      const results = gsm.gameInfo?.results ?? [];
+      const results   = gsm.gameInfo?.results ?? [];
       const gameResult = results.find(r => r.scope === 'MatchScope_Game');
       if (!gameResult || !game.matchId) return null;
 
@@ -204,12 +187,10 @@ class GREParser {
           deckCardsRaw:     game.deckCardsRaw,
           handGrpIds:       Array.from(game.handGrpIds),
           openingHandGrpIds: Array.from(game.openingHandGrpIds),
-        }
+        },
       };
 
-      // Prepare for the next game in a bo3 (hand tracking only; deck stays the same)
       this._resetHandTracking(game);
-
       return event;
     }
 
@@ -219,13 +200,13 @@ class GREParser {
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
   _resetHandTracking(game) {
-    game.instanceMap          = Object.create(null);
-    game.playerHandZoneId     = null;
-    game.handGrpIds           = new Set();
-    game.inMulliganPhase      = true;
-    game.openingHandLocked    = false;
+    game.instanceMap           = Object.create(null);
+    game.playerHandZoneId      = null;
+    game.handGrpIds            = new Set();
+    game.inMulliganPhase       = true;
+    game.openingHandLocked     = false;
     game.openingHandCandidates = new Set();
-    game.openingHandGrpIds    = new Set();
+    game.openingHandGrpIds     = new Set();
   }
 }
 

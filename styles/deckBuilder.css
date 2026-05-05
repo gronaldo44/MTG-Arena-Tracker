@@ -1,0 +1,533 @@
+.tool-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.tool-card h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.tool-subtitle {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-bottom: 20px;
+}
+
+.calc-modifiers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-end;
+    margin-bottom: 20px;
+}
+
+.calc-mod-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.calc-mod-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+}
+
+.go-toggle {
+    position: relative;
+    display: inline-flex;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.go-toggle-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    height: calc(100% - 6px);
+    width: calc(50% - 3px);
+    background: var(--primary);
+    border-radius: 17px;
+    transition: transform 0.22s ease;
+    pointer-events: none;
+}
+
+.go-toggle-thumb.at-second {
+    transform: translateX(100%);
+}
+
+.calc-toggle-btn {
+    padding: 5px 16px;
+    font-size: 13px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.calc-toggle-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    font-weight: 500;
+}
+
+.hypgeo-converge-label {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--primary);
+    letter-spacing: 0.03em;
+}
+
+.go-toggle-opt {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    padding: 5px 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    white-space: nowrap;
+    transition: color 0.22s;
+}
+
+.go-toggle-opt.active {
+    color: #fff;
+    font-weight: 500;
+}
+
+.hypgeo-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.hypgeo-table th {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.hypgeo-table th:first-child {
+    text-align: left;
+}
+
+.hypgeo-table td {
+    padding: 10px 12px;
+    text-align: center;
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+}
+
+.hypgeo-table td:first-child {
+    text-align: left;
+}
+
+.hypgeo-pip-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hypgeo-pip-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.hypgeo-pct-zero { color: var(--text-muted); }
+.hypgeo-pct-low  { color: var(--danger); }
+.hypgeo-pct-mid  { color: var(--warning); }
+.hypgeo-pct-high { color: var(--success); }
+
+.hypgeo-layout {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.hypgeo-table-scroll {
+    overflow-x: auto;
+    min-width: 0;
+    flex: 1;
+}
+
+.hypgeo-sources-panel {
+    flex-shrink: 0;
+    min-width: 110px;
+}
+
+.src-panel-label {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.src-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.src-row:last-child { border-bottom: none; }
+
+.src-row-lands {
+    margin-top: 4px;
+    border-top: 1px solid var(--border);
+    border-bottom: none !important;
+}
+
+.src-lands-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+/* Custom land sub-row inside the sources panel */
+.src-custom-land-row {
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.src-custom-land-row .hypgeo-pip-cell {
+    gap: 4px;
+}
+
+/* Bias disclaimer (non-clickable, with CSS tooltip) */
+.src-dual-disclaimer {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 3px 0;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.4;
+    cursor: help;
+    position: relative;
+}
+
+.src-dual-disclaimer::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text);
+    width: 220px;
+    white-space: normal;
+    line-height: 1.6;
+    z-index: 200;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+    text-align: left;
+}
+
+.src-dual-disclaimer:hover::after { opacity: 1; }
+
+.src-disclaimer-sub {
+    font-size: 10px;
+    opacity: 0.75;
+}
+
+/* Add/manage lands button in sources panel */
+.src-add-lands-btn {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.src-add-lands-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* ── Custom Lands Modal ─────────────────────────── */
+.cl-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8vw;
+    z-index: 1000;
+}
+
+.cl-modal-panel {
+    background: #1e2d4a;
+    border: 1px solid #3a5a8a;
+    border-radius: 12px;
+    width: 340px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+.cl-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: #162440;
+    border-bottom: 1px solid #3a5a8a;
+    flex-shrink: 0;
+}
+
+.cl-modal-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.cl-modal-close {
+    background: rgba(255,255,255,0.08);
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, color 0.12s;
+}
+
+.cl-modal-close:hover {
+    background: rgba(255,255,255,0.16);
+    color: var(--text);
+}
+
+.cl-modal-body {
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.cl-progress { display: flex; flex-direction: column; gap: 6px; }
+
+.cl-progress-track {
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.cl-progress-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 3px;
+    transition: width 0.25s ease, background 0.2s ease;
+}
+
+.cl-progress-fill.cl-progress-over {
+    background: var(--danger);
+}
+
+.cl-progress-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.cl-exact-badge {
+    background: var(--success);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.cl-over-badge {
+    color: var(--danger);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.custom-lands-list {
+    display: flex;
+    flex-direction: column;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.custom-land-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.custom-land-item:last-child { border-bottom: none; }
+
+.cl-empty {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    margin: 0;
+    padding: 8px 0;
+}
+
+/* ── Add-land section ── */
+.cl-add-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+}
+
+.cl-add-row-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+}
+
+.cl-toggles {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.custom-land-toggle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0.35;
+    transition: opacity 0.12s, border-color 0.12s, transform 0.1s;
+    flex-shrink: 0;
+    outline: none;
+}
+
+.custom-land-toggle:hover { opacity: 0.7; transform: scale(1.1); }
+
+.custom-land-toggle.active {
+    opacity: 1;
+    border-color: #fff;
+    transform: scale(1.15);
+}
+
+.cl-add-btn {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.12s, background 0.12s;
+}
+
+.cl-add-btn:not(:disabled):hover { background: #7779f3; }
+
+.cl-add-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.cl-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.src-stepper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.src-stepper button {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.12s, border-color 0.12s;
+}
+
+.src-stepper button:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.src-stepper span {
+    min-width: 20px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+}

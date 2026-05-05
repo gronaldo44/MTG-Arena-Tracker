@@ -263,6 +263,111 @@ describe('cardEyeballHtml', () => {
   });
 });
 
+// ─── isSplashColor / getColorCombo ───────────────────────────────────────────
+
+const { isSplashColor, getColorCombo } = require('../renderer');
+
+describe('isSplashColor', () => {
+  test('0 is not a splash (absent color)', () => {
+    expect(isSplashColor(0)).toBe(false);
+  });
+
+  test('1–4 copies are a splash', () => {
+    [1, 2, 3, 4].forEach(n => expect(isSplashColor(n)).toBe(true));
+  });
+
+  test('5+ copies are a main color, not a splash', () => {
+    [5, 10, 20].forEach(n => expect(isSplashColor(n)).toBe(false));
+  });
+});
+
+describe('getColorCombo', () => {
+  test('returns canonical WUBRG-ordered string for main colors', () => {
+    expect(getColorCombo(['U', 'W'], { W: 10, U: 8 })).toBe('WU');
+  });
+
+  test('excludes splash colors (1–4 copies)', () => {
+    expect(getColorCombo(['W', 'U', 'R'], { W: 10, U: 8, R: 2 })).toBe('WU');
+  });
+
+  test('returns empty string when all colors are splashes', () => {
+    expect(getColorCombo(['W', 'U'], { W: 1, U: 3 })).toBe('');
+  });
+
+  test('null colorCounts includes all present colors', () => {
+    expect(getColorCombo(['G', 'R'], null)).toBe('RG');
+  });
+
+  test('null / empty colors returns empty string', () => {
+    expect(getColorCombo([], { W: 10 })).toBe('');
+    expect(getColorCombo(null, {})).toBe('');
+  });
+});
+
+// ─── wheelIndicatorHtml ───────────────────────────────────────────────────────
+
+const { wheelIndicatorHtml } = require('../renderer');
+
+describe('wheelIndicatorHtml', () => {
+  test('returns empty string when ata is null', () => {
+    expect(wheelIndicatorHtml(null, 3)).toBe('');
+  });
+
+  test('returns empty string when currentPick is falsy', () => {
+    expect(wheelIndicatorHtml(5, null)).toBe('');
+    expect(wheelIndicatorHtml(5, 0)).toBe('');
+  });
+
+  test('shows wheel icon when ata >= pick + 8', () => {
+    const html = wheelIndicatorHtml(10, 2); // 10 >= 2+8
+    expect(html).toContain('wheel-icon');
+    expect(html).toContain('↻');
+  });
+
+  test('shows wheel-late span when pick > ata + 1', () => {
+    const html = wheelIndicatorHtml(3, 6); // 6 > 3+1
+    expect(html).toContain('wheel-late');
+    expect(html).not.toContain('↻');
+  });
+
+  test('shows wheel-ata span for normal ATA display', () => {
+    const html = wheelIndicatorHtml(5, 5); // 5 === 5, not wheel, not late
+    expect(html).toContain('wheel-ata');
+  });
+});
+
+// ─── draftCardColorPips ───────────────────────────────────────────────────────
+
+const { draftCardColorPips } = require('../renderer');
+
+describe('draftCardColorPips', () => {
+  test('mono-color produces one pip dot', () => {
+    const html = draftCardColorPips('R', '');
+    expect(html).toContain('match-pip-dot');
+    expect((html.match(/match-pip-dot/g) || []).length).toBe(1);
+  });
+
+  test('multicolor produces multiple pip dots', () => {
+    const html = draftCardColorPips('WU', '');
+    expect((html.match(/match-pip-dot/g) || []).length).toBe(2);
+  });
+
+  test('no colorStr falls back to manaCost for pip detection', () => {
+    const html = draftCardColorPips('', '{G}{G}{W}');
+    expect((html.match(/match-pip-dot/g) || []).length).toBe(2); // G + W unique colors
+  });
+
+  test('mana cost with no colored symbols → colorless pip (artifact)', () => {
+    const html = draftCardColorPips('', '{3}');
+    expect(html).toContain('match-pip-colorless');
+  });
+
+  test('no colorStr and no manaCost → empty (land with no data)', () => {
+    expect(draftCardColorPips('', '')).toBe('');
+    expect(draftCardColorPips(null, null)).toBe('');
+  });
+});
+
 // ─── prevCoord / nextCoord ────────────────────────────────────────────────────
 
 const { prevCoord, nextCoord } = require('../renderer');

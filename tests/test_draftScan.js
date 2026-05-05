@@ -86,7 +86,7 @@ jest.mock('../logParserV5', () =>
 );
 
 // GREParser: always returns empty (no card-stat events in these tests)
-jest.mock('../greParser', () =>
+jest.mock('../parser/greParser', () =>
   jest.fn(() => ({ parse: jest.fn(() => []) }))
 );
 

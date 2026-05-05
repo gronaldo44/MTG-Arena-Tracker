@@ -1,0 +1,163 @@
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.stat-card h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.stat-card .value {
+    font-size: 36px;
+    font-weight: 700;
+}
+
+.stat-card.wins .value    { color: var(--success); }
+.stat-card.losses .value  { color: var(--danger); }
+.stat-card.winrate .value { color: var(--primary); }
+
+/* Format Cards */
+.format-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.format-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.format-card h4 {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.format-card .format-name {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.format-card .format-badge {
+    background: var(--primary);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+}
+
+.format-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.mini-stat {
+    text-align: center;
+}
+
+.mini-stat .number {
+    font-size: 24px;
+    font-weight: 700;
+    display: block;
+}
+
+.mini-stat .label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.winrate-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.winrate-bar .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success), #16a34a);
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+/* Inventory Widget */
+.inventory-widget {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border);
+}
+
+.inventory-section {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.inventory-section:last-child {
+    margin-bottom: 0;
+}
+
+.inventory-item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--bg);
+    border-radius: 8px;
+}
+
+.inventory-item .label {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.inventory-item .value {
+    margin-left: auto;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.inventory-item.currency .value {
+    color: var(--warning);
+}
+
+.inventory-item.vault .progress-bar {
+    width: 100px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    margin-left: auto;
+    overflow: hidden;
+}
+
+.inventory-item.vault .progress-bar .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success), var(--warning));
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
