@@ -36,7 +36,10 @@ jest.mock('electron', () => ({
 const {
   gihWrTierClass, colorPip, rarityGem, rarityLabel,
   extractScryfallImageUrl, cardEyeballHtml,
+  comboDotsHtml, renderMatchColorPips, rarityColor,
 } = require('../renderer');
+
+const { isDraftLimited } = require('../sets');
 
 // ─── gihWrTierClass ───────────────────────────────────────────────────────────
 
@@ -426,5 +429,143 @@ describe('prevCoord / nextCoord', () => {
   test('empty picks array → return the same coord (defensive no-op)', () => {
     expect(prevCoord([], { pack: 1, pick: 1 })).toEqual({ pack: 1, pick: 1 });
     expect(nextCoord([], { pack: 1, pick: 1 })).toEqual({ pack: 1, pick: 1 });
+  });
+});
+
+// ─── comboDotsHtml ────────────────────────────────────────────────────────────
+
+describe('comboDotsHtml', () => {
+  test('single color produces one pip span', () => {
+    const html = comboDotsHtml('W');
+    expect(html).toContain('class="mfc-pip-dot"');
+    expect(html.match(/mfc-pip-dot/g)).toHaveLength(1);
+  });
+
+  test('two colors produce two pip spans', () => {
+    const html = comboDotsHtml('UB');
+    expect(html.match(/mfc-pip-dot/g)).toHaveLength(2);
+  });
+
+  test('empty string produces empty output', () => {
+    expect(comboDotsHtml('')).toBe('');
+  });
+
+  test('black pip carries a border style', () => {
+    const html = comboDotsHtml('B');
+    expect(html).toContain('border:');
+  });
+
+  test('white pip uses the correct background color', () => {
+    const html = comboDotsHtml('W');
+    expect(html).toContain('#f5f0e0');
+  });
+});
+
+// ─── renderMatchColorPips ─────────────────────────────────────────────────────
+
+describe('renderMatchColorPips', () => {
+  test('no colors and no colorless → empty string', () => {
+    expect(renderMatchColorPips({ deckColors: [], deckColorCounts: {} })).toBe('');
+  });
+
+  test('null deckColors → empty string', () => {
+    expect(renderMatchColorPips({ deckColors: null, deckColorCounts: {} })).toBe('');
+  });
+
+  test('single main color produces one pip', () => {
+    const html = renderMatchColorPips({
+      deckColors: ['R'],
+      deckColorCounts: { R: 10 },
+    });
+    expect(html).toContain('match-pip-dot');
+    expect(html).toContain('Red: 10 cards');
+  });
+
+  test('splash color (≤4 copies) renders with transparent background', () => {
+    const html = renderMatchColorPips({
+      deckColors: ['G'],
+      deckColorCounts: { G: 3 },
+    });
+    expect(html).toContain('background:transparent');
+  });
+
+  test('colorless cards add a colorless pip', () => {
+    const html = renderMatchColorPips({
+      deckColors: [],
+      deckColorCounts: { C: 2 },
+    });
+    expect(html).toContain('match-pip-colorless');
+    expect(html).toContain('Colorless: 2 cards');
+  });
+
+  test('colorless count of 1 uses singular label', () => {
+    const html = renderMatchColorPips({
+      deckColors: [],
+      deckColorCounts: { C: 1 },
+    });
+    expect(html).toContain('Colorless: 1 card"');
+  });
+
+  test('missing deckColorCounts defaults gracefully', () => {
+    const html = renderMatchColorPips({ deckColors: ['W'] });
+    expect(html).toContain('match-pip-dot');
+  });
+
+  test('wraps output in match-color-pips div', () => {
+    const html = renderMatchColorPips({ deckColors: ['U'], deckColorCounts: { U: 10 } });
+    expect(html).toMatch(/^<div class="match-color-pips">/);
+    expect(html).toMatch(/<\/div>$/);
+  });
+});
+
+// ─── rarityColor ─────────────────────────────────────────────────────────────
+
+describe('rarityColor', () => {
+  test('C → tier-black variable', () => {
+    expect(rarityColor('C')).toBe('var(--tier-black)');
+  });
+
+  test('U → tier-silver variable', () => {
+    expect(rarityColor('U')).toBe('var(--tier-silver)');
+  });
+
+  test('R → tier-gold variable', () => {
+    expect(rarityColor('R')).toBe('var(--tier-gold)');
+  });
+
+  test('M → tier-mythic variable', () => {
+    expect(rarityColor('M')).toBe('var(--tier-mythic)');
+  });
+
+  test('unknown rarity → text-muted fallback', () => {
+    expect(rarityColor('X')).toBe('var(--text-muted)');
+    expect(rarityColor('')).toBe('var(--text-muted)');
+    expect(rarityColor(null)).toBe('var(--text-muted)');
+  });
+});
+
+// ─── isDraftLimited ───────────────────────────────────────────────────────────
+
+describe('isDraftLimited', () => {
+  test('draft formats return true', () => {
+    expect(isDraftLimited('Premier_Draft_SOS')).toBe(true);
+    expect(isDraftLimited('Quick_Draft_BLB')).toBe(true);
+    expect(isDraftLimited('Human_Draft')).toBe(true);
+  });
+
+  test('sealed formats return true', () => {
+    expect(isDraftLimited('Sealed_DSK')).toBe(true);
+    expect(isDraftLimited('Traditional_Sealed')).toBe(true);
+  });
+
+  test('case-insensitive matching', () => {
+    expect(isDraftLimited('DRAFT_SOS')).toBe(true);
+    expect(isDraftLimited('SEALED_BLB')).toBe(true);
+  });
+
+  test('non-draft/sealed formats return false', () => {
+    expect(isDraftLimited('Standard_Constructed')).toBe(false);
+    expect(isDraftLimited('Historic_BO1')).toBe(false);
+    expect(isDraftLimited('')).toBe(false);
   });
 });

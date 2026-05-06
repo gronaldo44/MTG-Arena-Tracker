@@ -12,7 +12,9 @@
   "jest": {
     "testMatch": ["<rootDir>/tests/test_*.js"],
     "testEnvironment": "node",
-    "transform": {}
+    "transform": {},
+    "coverageProvider": "v8",
+    "maxWorkers": 1
   },
   "keywords": [
     "mtg",

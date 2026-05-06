@@ -64,6 +64,12 @@ describe('missingCardsForPick', () => {
     expect(result.sort()).toEqual([201, 202, 203, 204, 205, 206, 207]);
   });
 
+  test('returns [] when draftRecord.picks is not an array', () => {
+    expect(missingCardsForPick({ picks: 'notanarray' }, 1, 9)).toEqual([]);
+    expect(missingCardsForPick({ picks: null }, 1, 9)).toEqual([]);
+    expect(missingCardsForPick({ picks: 42 }, 1, 9)).toEqual([]);
+  });
+
   test('pack 2 (right-pass) returns the same shape as pack 1', () => {
     const r = record(
       { pack: 2, pick: 1, options: [300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 313], picked: 300 },

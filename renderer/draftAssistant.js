@@ -386,12 +386,27 @@ function renderCardDetailContent(card, personal) {
 
 // ─── 17Lands CSV ──────────────────────────────────────────────────────────────
 
+// Re-fetch the current bundle from the main process so win rates are populated
+// with freshly-loaded CSV data. Preserves the user's current viewing position.
+async function refreshCurrentBundle() {
+    if (!state.bundle?.draftId) return;
+    const savedCoord = state.viewingCoord;
+    const newBundle = await ipcRenderer.invoke('view-draft-record', state.bundle.draftId);
+    if (!newBundle) return;
+    state.bundle = newBundle;
+    const coordValid = savedCoord && newBundle.picks.some(
+        p => p.pack === savedCoord.pack && p.pick === savedCoord.pick
+    );
+    state.viewingCoord = coordValid ? savedCoord : newBundle.liveCoord;
+    renderDraftPage();
+}
+
 async function loadCsvFile() {
     const result = await ipcRenderer.invoke('load-17lands-csv');
     if (result.success) {
         csvLoaded = true;
         await updateCsvStatusUI();
-        if (state.currentPage === 'draft') renderDraftPage();
+        await refreshCurrentBundle();
     } else if (result.reason !== 'cancelled') {
         alert(`Failed to load CSV: ${result.reason}`);
     }

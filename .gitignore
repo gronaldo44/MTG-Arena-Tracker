@@ -9,6 +9,9 @@ dist/
 build/
 out/
 
+# Jest coverage output
+coverage/
+
 # Data files (user-specific)
 data/
 *.json

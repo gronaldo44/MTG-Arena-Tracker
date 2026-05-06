@@ -10,7 +10,7 @@ jest.mock('electron', () => ({
 }));
 
 const DataStore = require('../dataStore');
-const { buildDraftUpdatePayload, buildViewerBundle, _resetWarnedGaps } = require('../draftPipeline');
+const { buildDraftUpdatePayload, buildViewerBundle, fillMissingPickPlaceholders, _resetWarnedGaps } = require('../draftPipeline');
 const { buildFullDraft } = require('./fixtures/draft-synthetic');
 
 // A pass-through draftAssistant double that doesn't change array order.
@@ -329,5 +329,21 @@ describe('draftPipeline.buildViewerBundle', () => {
     const pastPath = buildViewerBundle(record, assistant, resolveCards, resolveCard);
 
     expect(JSON.stringify(pastPath)).toBe(JSON.stringify(livePath));
+  });
+});
+
+// ─── fillMissingPickPlaceholders edge cases ──────────────────────────────────
+
+describe('fillMissingPickPlaceholders', () => {
+  test('empty picks array → returns []', () => {
+    expect(fillMissingPickPlaceholders({ draftId: 'd1', startedAt: 0, picks: [] })).toEqual([]);
+  });
+
+  test('null record → returns []', () => {
+    expect(fillMissingPickPlaceholders(null)).toEqual([]);
+  });
+
+  test('record without picks array → returns []', () => {
+    expect(fillMissingPickPlaceholders({ draftId: 'd1' })).toEqual([]);
   });
 });

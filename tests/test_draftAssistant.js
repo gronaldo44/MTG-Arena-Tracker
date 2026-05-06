@@ -431,4 +431,39 @@ describe('DraftAssistant', () => {
       expect(status.csvPath).toBe('/data/my-ratings.csv');
     });
   });
+
+  // ── getAllCardStats ────────────────────────────────────────────────────────
+
+  describe('getAllCardStats', () => {
+    test('returns empty array before any CSV is loaded', () => {
+      expect(assistant.getAllCardStats()).toEqual([]);
+    });
+
+    test('returns an array of all card stat objects after loading', () => {
+      const csv = makeCsv(
+        row('Lightning Bolt', { gihWr: 0.64 }),
+        row('Forest',         { gihWr: 0.52 }),
+      );
+      jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+      jest.spyOn(fs, 'readFileSync').mockReturnValue(csv);
+      assistant.loadCSV('/data/ratings.csv');
+
+      const all = assistant.getAllCardStats();
+      expect(Array.isArray(all)).toBe(true);
+      expect(all).toHaveLength(2);
+      const names = all.map(s => s.name);
+      expect(names).toContain('Lightning Bolt');
+    });
+  });
+
+  // ── _parseCSV error branches ──────────────────────────────────────────────
+
+  describe('_parseCSV error cases', () => {
+    test('CSV with fewer than 2 lines throws an error', () => {
+      const headerOnly = CSV_HEADER;
+      jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+      jest.spyOn(fs, 'readFileSync').mockReturnValue(headerOnly);
+      expect(() => assistant.loadCSV('/data/empty.csv')).toThrow('CSV appears empty or has no data rows');
+    });
+  });
 });

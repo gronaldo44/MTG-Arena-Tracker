@@ -201,4 +201,78 @@ describe('GREParser', () => {
       expect(events.filter(e => e.type === 'GAME_STATS')).toHaveLength(1);
     });
   });
+
+  // ── _processMessage unknown type (line 81) ────────────────────────────────
+
+  describe('_processMessage with unknown message type', () => {
+    test('unknown GRE message type produces no event', () => {
+      // Embed ZoneType_Hand so the performance filter passes, then use an
+      // unknown message type so _processMessage hits the `return null` branch.
+      const event = {
+        greToClientEvent: {
+          greToClientMessages: [
+            {
+              type: 'GREMessageType_UIMessage',
+              gameStateMessage: { zones: [{ type: 'ZoneType_Hand', ownerSeatId: 1, zoneId: 1, objectInstanceIds: [] }] },
+            },
+          ],
+        },
+      };
+      const log = '[UnityCrossThreadLogger]GreToClientEvent\n' + JSON.stringify(event);
+      expect(parser.parse(log)).toHaveLength(0);
+    });
+  });
+
+  // ── GameStateType_Full resets hand tracking (line 125) ────────────────────
+
+  describe('GameStateType_Full between games', () => {
+    test('Full state with gameNumber > 1 resets hand tracking for game 2', () => {
+      // game 1: connect + game-over → emit GAME_STATS
+      // game 2: GameStateType_Full (triggers _resetHandTracking) + game-over → another GAME_STATS
+      const log = [
+        greEventLines([connectRespMsg({ playerSeat: 1, deckCards: [100] })]),
+        greEventLines([gameOverState({ matchID: 'abc', gameNumber: 1, winningTeamId: 1 })]),
+        greEventLines([
+          gameStateMsg({
+            type:       'GameStateType_Full',
+            matchID:    'abc',
+            gameNumber: 2,
+            zones:      [handZone({ zoneId: 10 })],
+          }),
+        ]),
+        greEventLines([gameOverState({ matchID: 'abc', gameNumber: 2, winningTeamId: 2 })]),
+      ].join('\n');
+
+      const events = parser.parse(log);
+      const stats  = events.filter(e => e.type === 'GAME_STATS');
+      expect(stats).toHaveLength(2);
+      expect(stats[0].data.gameNumber).toBe(1);
+      expect(stats[1].data.gameNumber).toBe(2);
+    });
+  });
+
+  // ── gameObjects tracked via hand zone ID (line 136) ───────────────────────
+
+  describe('hand tracking via zone ID on gameObjects', () => {
+    test('card in hand zone is added to handGrpIds when zone was set in a prior message', () => {
+      // Two messages in the same GRE event:
+      //   msg 1 → sets playerHandZoneId via zones
+      //   msg 2 → has a gameObject in that zone → line 136 is hit
+      const log = [
+        greEventLines([connectRespMsg({ playerSeat: 1, deckCards: [100] })]),
+        greEventLines([
+          // Message 1: set the hand zone (also adds instanceMap entry via objectInstanceIds path is N/A here)
+          gameStateMsg({ matchID: 'abc', zones: [handZone({ ownerSeatId: 1, zoneId: 10, objectInstanceIds: [] })] }),
+          // Message 2: game object with zoneId matching the hand zone set above → line 136
+          gameStateMsg({ matchID: 'abc', gameObjects: [gameObject({ ownerSeatId: 1, instanceId: 1, grpId: 100, zoneId: 10 })] }),
+        ]),
+        greEventLines([gameOverState({ matchID: 'abc', gameNumber: 1, winningTeamId: 1 })]),
+      ].join('\n');
+
+      const events = parser.parse(log);
+      const stats  = events.find(e => e.type === 'GAME_STATS');
+      expect(stats).toBeDefined();
+      expect(stats.data.handGrpIds).toContain('100');
+    });
+  });
 });
