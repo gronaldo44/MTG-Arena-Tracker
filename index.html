@@ -145,6 +145,15 @@
                                 <div class="draft-removed-header" id="draft-removed-header">Removed since pick 1</div>
                                 <div class="draft-card-list draft-card-list-removed" id="draft-removed-list"></div>
                             </div>
+
+                            <!-- Pick / draft navigation -->
+                            <div class="draft-pack-nav">
+                                <button class="draft-nav-btn" id="draft-nav-prev-draft" onclick="navPrevDraft()" title="Previous draft">&laquo;</button>
+                                <button class="draft-nav-btn" id="draft-nav-prev-pick"  onclick="navPrevPick()"  title="Previous pick (←)">&lsaquo;</button>
+                                <button class="draft-nav-btn draft-nav-current" id="draft-nav-current" onclick="navCurrent()" title="Jump to current pick">Current</button>
+                                <button class="draft-nav-btn" id="draft-nav-next-pick"  onclick="navNextPick()"  title="Next pick (→)">&rsaquo;</button>
+                                <button class="draft-nav-btn" id="draft-nav-next-draft" onclick="navNextDraft()" title="Next draft">&raquo;</button>
+                            </div>
                         </div>
 
                         <!-- Picks so far -->

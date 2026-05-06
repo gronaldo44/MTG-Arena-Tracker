@@ -115,6 +115,49 @@
     border-top: 1px dashed rgba(255, 255, 255, 0.08);
 }
 
+/* Pick / draft navigation bar */
+.draft-pack-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+}
+
+.draft-nav-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1.4;
+    min-width: 32px;
+    transition: background 0.15s;
+}
+
+.draft-nav-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.draft-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.draft-nav-btn.draft-nav-current {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 14px;
+    min-width: 60px;
+}
+
+.draft-nav-btn.draft-nav-current.at-live {
+    color: var(--text-muted);
+}
+
 .draft-removed-header {
     padding: 0 13px 6px 13px;
     font-size: 12px;

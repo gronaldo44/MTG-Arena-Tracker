@@ -66,6 +66,7 @@ function renderDraftPage() {
     }
     renderRemovedSection(viewingPick.removedCards || [], viewingPick.pick);
     renderPickHistory(state.bundle.picks, state.viewingCoord);
+    updateNavButtons();
 }
 
 // ─── Dropdown ─────────────────────────────────────────────────────────────────
@@ -325,6 +326,87 @@ function _renderFilteredPicks() {
     }).join('');
 }
 
+// ─── Pack navigation ──────────────────────────────────────────────────────────
+
+function updateNavButtons() {
+    const prevDraftBtn = document.getElementById('draft-nav-prev-draft');
+    if (!prevDraftBtn) return;
+
+    const prevPickBtn  = document.getElementById('draft-nav-prev-pick');
+    const currentBtn   = document.getElementById('draft-nav-current');
+    const nextPickBtn  = document.getElementById('draft-nav-next-pick');
+    const nextDraftBtn = document.getElementById('draft-nav-next-draft');
+
+    const hasDraft = !!(state.bundle && state.viewingCoord);
+    const draftList = Array.isArray(state.draftList) ? state.draftList : [];
+    const draftIdx  = hasDraft ? draftList.findIndex(d => d.draftId === state.bundle.draftId) : -1;
+    const picks     = hasDraft ? (state.bundle.picks || []) : [];
+    const coord     = state.viewingCoord;
+
+    prevDraftBtn.disabled = !hasDraft || draftIdx < 0 || draftIdx >= draftList.length - 1;
+    nextDraftBtn.disabled = !hasDraft || draftIdx <= 0;
+
+    if (hasDraft) {
+        const prev = prevCoord(picks, coord);
+        prevPickBtn.disabled = prev.pack === coord.pack && prev.pick === coord.pick;
+        const next = nextCoord(picks, coord);
+        nextPickBtn.disabled = next.pack === coord.pack && next.pick === coord.pick;
+        const isNewestDraft = draftList.length > 0 && state.bundle.draftId === draftList[0].draftId;
+        const atLive = isNewestDraft && state.bundle.liveCoord
+            && coord.pack === state.bundle.liveCoord.pack
+            && coord.pick === state.bundle.liveCoord.pick;
+        currentBtn.classList.toggle('at-live', !!atLive);
+        currentBtn.disabled = false;
+    } else {
+        prevPickBtn.disabled = true;
+        nextPickBtn.disabled = true;
+        currentBtn.disabled  = true;
+        currentBtn.classList.remove('at-live');
+    }
+}
+
+function navPrevPick() {
+    if (!state.bundle || !state.viewingCoord) return;
+    const target = prevCoord(state.bundle.picks, state.viewingCoord);
+    if (target.pack === state.viewingCoord.pack && target.pick === state.viewingCoord.pick) return;
+    state.viewingCoord = target;
+    renderDraftPage();
+}
+
+function navNextPick() {
+    if (!state.bundle || !state.viewingCoord) return;
+    const target = nextCoord(state.bundle.picks, state.viewingCoord);
+    if (target.pack === state.viewingCoord.pack && target.pick === state.viewingCoord.pick) return;
+    state.viewingCoord = target;
+    renderDraftPage();
+}
+
+async function navCurrent() {
+    const draftList = Array.isArray(state.draftList) ? state.draftList : [];
+    if (draftList.length === 0) return;
+    const latestId = draftList[0].draftId;
+    if (state.bundle?.draftId !== latestId) {
+        await onDraftSelectChange(latestId);
+    } else if (state.bundle?.liveCoord) {
+        state.viewingCoord = state.bundle.liveCoord;
+        renderDraftPage();
+    }
+}
+
+async function navPrevDraft() {
+    if (!Array.isArray(state.draftList) || !state.bundle) return;
+    const idx = state.draftList.findIndex(d => d.draftId === state.bundle.draftId);
+    if (idx < 0 || idx >= state.draftList.length - 1) return;
+    await onDraftSelectChange(state.draftList[idx + 1].draftId);
+}
+
+async function navNextDraft() {
+    if (!Array.isArray(state.draftList) || !state.bundle) return;
+    const idx = state.draftList.findIndex(d => d.draftId === state.bundle.draftId);
+    if (idx <= 0) return;
+    await onDraftSelectChange(state.draftList[idx - 1].draftId);
+}
+
 // ─── Card detail drawer ───────────────────────────────────────────────────────
 
 async function toggleCardDetail(idx) {
@@ -473,4 +555,10 @@ module.exports = {
     loadCsvFile,
     updateCsvStatusUI,
     initDraftView,
+    navPrevPick,
+    navNextPick,
+    navCurrent,
+    navPrevDraft,
+    navNextDraft,
+    updateNavButtons,
 };
