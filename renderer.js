@@ -54,8 +54,17 @@ function maximizeWindow()      { ipcRenderer.send('maximize-window'); }
 function closeWindow()         { ipcRenderer.send('close-window'); }
 function openExternalLink(url) { ipcRenderer.send('open-external', url); }
 
+function toggleSidebar() {
+    const sidebar   = document.getElementById('sidebar');
+    const toggle    = document.getElementById('sidebar-toggle');
+    const collapsed = sidebar.classList.toggle('collapsed');
+    toggle.querySelector('.sidebar-toggle-icon').textContent = collapsed ? '›' : '‹';
+    toggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+    localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '');
+}
+
 if (typeof window !== 'undefined') {
-    Object.assign(window, { showPage, minimizeWindow, maximizeWindow, closeWindow, openExternalLink });
+    Object.assign(window, { showPage, minimizeWindow, maximizeWindow, closeWindow, openExternalLink, toggleSidebar });
 }
 
 // ─── IPC event listeners ──────────────────────────────────────────────────────
@@ -151,6 +160,14 @@ if (typeof document !== 'undefined') {
 
 if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', async () => {
+        if (localStorage.getItem('sidebar-collapsed')) {
+            const sidebar = document.getElementById('sidebar');
+            const toggle  = document.getElementById('sidebar-toggle');
+            sidebar.classList.add('collapsed');
+            toggle.querySelector('.sidebar-toggle-icon').textContent = '›';
+            toggle.title = 'Expand sidebar';
+        }
+
         cardPreview.initCardPreview();
         await draftAssist.updateCsvStatusUI();
         dashboard.loadDashboard();

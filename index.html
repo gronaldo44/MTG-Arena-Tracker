@@ -26,34 +26,37 @@
     </div>
 
     <div class="app">
-        <nav class="sidebar">
-            <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()" title="Collapse sidebar">
+                <span class="sidebar-toggle-icon">‹</span>
+            </div>
+            <div class="nav-item active" data-page="dashboard" title="Dashboard" onclick="showPage('dashboard')">
                 <span class="icon">📊</span>
-                <span>Dashboard</span>
+                <span class="nav-label">Dashboard</span>
             </div>
-            <div class="nav-item" data-page="draft" id="nav-draft" onclick="showPage('draft')">
+            <div class="nav-item" data-page="draft" id="nav-draft" title="Draft Assistant" onclick="showPage('draft')">
                 <span class="icon">🎲</span>
-                <span>Draft</span>
+                <span class="nav-label">Draft</span>
             </div>
-            <div class="nav-item" data-page="deckbuilder" onclick="showPage('deckbuilder')">
+            <div class="nav-item" data-page="deckbuilder" title="Deck Builder" onclick="showPage('deckbuilder')">
                 <span class="icon">🏗️</span>
-                <span>Deck Builder</span>
+                <span class="nav-label">Deck Builder</span>
             </div>
-            <div class="nav-item" data-page="stats" onclick="showPage('stats')">
+            <div class="nav-item" data-page="stats" title="Statistics" onclick="showPage('stats')">
                 <span class="icon">📈</span>
-                <span>Statistics</span>
+                <span class="nav-label">Statistics</span>
             </div>
-            <div class="nav-item" data-page="matches" onclick="showPage('matches')">
+            <div class="nav-item" data-page="matches" title="History" onclick="showPage('matches')">
                 <span class="icon">🎮</span>
-                <span>History</span>
+                <span class="nav-label">History</span>
             </div>
-            <div class="nav-item" data-page="settings" onclick="showPage('settings')">
+            <div class="nav-item" data-page="settings" title="Settings" onclick="showPage('settings')">
                 <span class="icon">⚙️</span>
-                <span>Settings</span>
+                <span class="nav-label">Settings</span>
             </div>
-            <div class="nav-item" data-page="about" onclick="showPage('about')">
+            <div class="nav-item" data-page="about" title="About" onclick="showPage('about')">
                 <span class="icon">ℹ️</span>
-                <span>About</span>
+                <span class="nav-label">About</span>
             </div>
         </nav>
 
