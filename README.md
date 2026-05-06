@@ -11,6 +11,7 @@ A **standalone** MTG Arena deck tracker that automatically reads your game logs
 - **Deck Detection** - Automatically identifies your decks with full card lists
 - **Win/Loss Tracking** - Accurate match results based on game state
 - **Card Database** - Auto-updating database from Scryfall with 16,000+ Arena cards
+- **Draft Assistant** - Live pack ratings powered by 17Lands CSV data
 - **Inventory Tracking** - Shows gems, gold, vault progress, wildcards, and packs
 - **Real-time Status** - Status bar updates with match progress and results
 - **System Tray** - Runs in the background with tray notifications
@@ -39,7 +40,7 @@ This tracker reads MTG Arena's log file (`Player.log`) in real-time and extracts
 
 ```bash
 # Clone or download this repository
-cd mtg-arena-auto-tracker
+cd MTG-Arena-Tracker
 
 # Install dependencies
 npm install
@@ -182,27 +183,48 @@ You can export your data anytime from the **Settings** page.
 - **Electron** - Desktop app framework
 - **Chokidar** - File watching for real-time log parsing
 - **Scryfall API** - Card database (bulk data)
+- **17Lands** - Draft card ratings (user-supplied CSV)
 - **Node.js** - Backend runtime
 
 ## App Structure
 
 ```
-mtg-arena-auto-tracker/
-├── main.js              # Electron main process, file watcher
-├── logParserV5.js       # Parses MTG Arena log files
-├── dataStore.js         # Manages match data storage
-├── cardUpdater.js       # Downloads card database from Scryfall
-├── renderer.js          # UI logic
-├── index.html           # App interface
-├── cards.json           # Card database (auto-downloaded)
-├── package.json         # Dependencies
-└── README.md            # This file
+MTG-Arena-Tracker/
+├── main.js                      # Electron main process, file watcher
+├── logParserV5.js               # Parses MTG Arena log files
+├── dataStore.js                 # Manages match data storage
+├── cardUpdater.js               # Downloads card database from Scryfall
+├── renderer.js                  # UI coordinator (thin)
+├── renderer/                    # UI modules
+│   ├── state.js                 # Shared mutable state
+│   ├── shared.js                # Pure utility functions
+│   ├── cardPreview.js           # Scryfall hover preview
+│   ├── dashboard.js             # Dashboard panel
+│   ├── matchHistory.js          # Match history panel
+│   ├── stats.js                 # Card stats panel
+│   ├── draftAssistant.js        # Draft assistant panel
+│   ├── settings.js              # Settings panel
+│   └── deckBuilder/
+│       └── hypgeoCalculator.js  # Hypergeometric probability math + UI
+├── styles/                      # CSS by feature
+│   ├── base.css
+│   ├── layout.css
+│   ├── dashboard.css
+│   ├── matchHistory.css
+│   ├── stats.css
+│   ├── draft.css
+│   ├── deckBuilder.css
+│   └── settings.css
+├── index.html                   # App shell
+├── cards.json                   # Card database (auto-downloaded)
+├── package.json                 # Dependencies
+└── README.md                    # This file
 ```
 
 ## How It Compares to Other Trackers
 
-| Feature | MTG Arena Auto Tracker | Other Trackers |
-|---------|----------------------|-------------------|
+| Feature | MTG Arena Tracker | Other Trackers |
+|---------|-------------------|----------------|
 | In-game overlay | ❌ No | ✅ Yes |
 | System resource usage | ✅ Low | ⚠️ Higher |
 | No third-party accounts | ✅ Yes | ❌ Account required |
@@ -226,16 +248,20 @@ This tracker is perfect if you want:
 
 ## Contributing
 
-Feel free to submit issues or pull requests. This is a community project.
+This is an open source project, not a community-maintained one — it is developed and maintained by the author. That said, you are absolutely free to fork it and use it as the basis for your own work.
+
+Pull requests are also welcome. If you have a bug fix or improvement that fits the project's direction, feel free to open one. There are no guarantees of merge or timeline, but good contributions will be considered.
+
+Please open an issue before submitting a large PR so we can discuss whether it's a good fit.
 
 ## Sources
 
-Based on research from:
-- [MTG Arena Tool](https://mtgatool.com/) - Log parsing approach
-- [gathering-gg/parser](https://pkg.go.dev/github.com/gathering-gg/parser) - Log format documentation
-- [rconroy293/mtga-log-client](https://github.com/rconroy293/mtga-log-client) - 17Lands client reference
-- [Scryfall](https://scryfall.com/) - Card database
+- **[Shalkith/MTG-Arena-Tracker](https://github.com/Shalkith/MTG-Arena-Tracker)** — Original project this was forked from
+- **[Scryfall](https://scryfall.com/)** — Card database API (bulk data download)
+- **[17Lands](https://17lands.com/)** — Draft card ratings and win-rate data (user-supplied CSV from 17lands.com/card-ratings)
+- [MTG Arena Tool](https://mtgatool.com/) — Log parsing approach reference
+- [rconroy293/mtga-log-client](https://github.com/rconroy293/mtga-log-client) — 17Lands client reference
 
 ## License
 
-MIT - Free to use, modify, and distribute.
+MIT — Free to use, modify, and distribute.
