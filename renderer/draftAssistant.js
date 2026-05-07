@@ -67,6 +67,7 @@ function renderDraftPage() {
     renderRemovedSection(viewingPick.removedCards || [], viewingPick.pick);
     renderPickHistory(state.bundle.picks, state.viewingCoord);
     updateNavButtons();
+    if (typeof window !== 'undefined') window.updateDraftBadge?.();
 }
 
 // ─── Dropdown ─────────────────────────────────────────────────────────────────
@@ -137,7 +138,6 @@ function renderCurrentPack(pick) {
     _currentPackOptions = pick.options;
 
     listEl.innerHTML = pick.options.map((card, idx) => {
-        const rank      = idx + 1;
         const name      = card.name || `Card ${card.arena_id}`;
         const gihWr     = card.gihWr;
         const lowSample = card.lowSample;
@@ -149,7 +149,6 @@ function renderCurrentPack(pick) {
 
         return `
             <div class="draft-card-row ${tierClass}" data-idx="${idx}" onclick="toggleCardDetail(${idx})">
-                <div class="draft-rank">${rank}</div>
                 <div class="draft-card-name">
                     ${draftCardColorPips(colorStr, card.manaCost || '')}
                     <span title="${name}">${name}</span>
@@ -180,7 +179,6 @@ function renderRemovedSection(removedCards, currentPick) {
     headerEl.textContent = `Removed since pick ${priorPick}`;
 
     listEl.innerHTML = removedCards.map((card, idx) => {
-        const rank      = idx + 1;
         const name      = card.name || `Card ${card.arena_id}`;
         const gihWr     = card.gihWr;
         const lowSample = card.lowSample;
@@ -192,7 +190,6 @@ function renderRemovedSection(removedCards, currentPick) {
 
         return `
             <div class="draft-card-row removed ${tierClass}">
-                <div class="draft-rank">${rank}</div>
                 <div class="draft-card-name">
                     ${draftCardColorPips(colorStr, card.manaCost || '')}
                     <span title="${name}">${name}</span>
@@ -534,11 +531,12 @@ async function initDraftView() {
         state.draftList = [];
     }
     rebuildDraftDropdown();
-    if (!state.bundle && state.draftList.length > 0) {
-        await onDraftSelectChange(state.draftList[0].draftId);
-    } else if (state.bundle && state.currentPage === 'draft') {
-        renderDraftPage();
-    }
+}
+
+async function ensureDraftLoaded() {
+    if (state.bundle) return;
+    if (!Array.isArray(state.draftList) || state.draftList.length === 0) return;
+    await onDraftSelectChange(state.draftList[0].draftId);
 }
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
@@ -555,6 +553,7 @@ module.exports = {
     loadCsvFile,
     updateCsvStatusUI,
     initDraftView,
+    ensureDraftLoaded,
     navPrevPick,
     navNextPick,
     navCurrent,

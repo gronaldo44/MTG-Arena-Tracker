@@ -69,7 +69,7 @@ function draftCardColorPips(colorStr, manaCost) {
         if (manaCost) {
             return `<span class="match-pip-dot match-pip-colorless" title="Colorless">✦</span>`;
         }
-        return '';
+        return `<span class="pip-land-label">Land</span>`;
     }
 
     const dots = colors.map(c =>

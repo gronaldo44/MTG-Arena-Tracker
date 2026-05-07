@@ -17,7 +17,14 @@
 
 <body>
     <div class="title-bar">
-        <div class="title">MTG Arena Tracker</div>
+        <div class="title-left">
+            <button class="hamburger" onclick="toggleSidebar()" title="Toggle sidebar">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <span class="app-title">MTG Arena Tracker</span>
+        </div>
         <div class="controls">
             <button class="minimize" onclick="minimizeWindow()" title="Minimize"></button>
             <button class="maximize" onclick="maximizeWindow()" title="Maximize/Restore"></button>
@@ -27,19 +34,23 @@
 
     <div class="app">
         <nav class="sidebar" id="sidebar">
-            <div class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()" title="Collapse sidebar">
-                <span class="sidebar-toggle-icon">‹</span>
-            </div>
             <div class="nav-item active" data-page="dashboard" title="Dashboard" onclick="showPage('dashboard')">
                 <span class="icon">📊</span>
                 <span class="nav-label">Dashboard</span>
             </div>
             <div class="nav-item" data-page="draft" id="nav-draft" title="Draft Assistant" onclick="showPage('draft')">
-                <span class="icon">🎲</span>
+                <span class="icon"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="5.5" y="4" width="9" height="12" rx="1.5" transform="rotate(-20 10 16)" opacity="0.5"/>
+                    <rect x="5.5" y="4" width="9" height="12" rx="1.5" transform="rotate(20 10 16)" opacity="0.5"/>
+                    <rect x="5.5" y="4" width="9" height="12" rx="1.5"/>
+                    <path d="M10 6.5L10.45 8.55L12.5 9L10.45 9.45L10 11.5L9.55 9.45L7.5 9L9.55 8.55Z" fill="currentColor" stroke="none"/>
+                </svg></span>
                 <span class="nav-label">Draft</span>
             </div>
             <div class="nav-item" data-page="deckbuilder" title="Deck Builder" onclick="showPage('deckbuilder')">
-                <span class="icon">🏗️</span>
+                <span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L3 3.75l1.5-1.5L8.25 3v1.5l5.25 5.25m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z"/>
+                </svg></span>
                 <span class="nav-label">Deck Builder</span>
             </div>
             <div class="nav-item" data-page="stats" title="Statistics" onclick="showPage('stats')">
@@ -47,7 +58,14 @@
                 <span class="nav-label">Statistics</span>
             </div>
             <div class="nav-item" data-page="matches" title="History" onclick="showPage('matches')">
-                <span class="icon">🎮</span>
+                <span class="icon"><svg viewBox="0 0 20 20" width="18" height="18" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                    <rect x="4" y="2" width="12" height="16" rx="2"/>
+                    <rect x="6.5" y="6.5" width="7" height="1.2" rx="0.4" fill="white" opacity="0.7"/>
+                    <rect x="6.5" y="9.5" width="7" height="1.2" rx="0.4" fill="white" opacity="0.7"/>
+                    <rect x="6.5" y="12.5" width="4.5" height="1.2" rx="0.4" fill="white" opacity="0.7"/>
+                    <path d="M14 3.5C15.5 2 18 3 17 6C16.5 8 15 9 13 9L7.5 16.5L12.5 9.5C11 9 11.5 6.5 14 3.5Z" fill="white" opacity="0.88"/>
+                    <path d="M7.5 16.5L6 18.5L8 17.5Z" fill="white" opacity="0.75"/>
+                </svg></span>
                 <span class="nav-label">History</span>
             </div>
             <div class="nav-item" data-page="settings" title="Settings" onclick="showPage('settings')">

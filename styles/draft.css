@@ -71,7 +71,7 @@
 
 .draft-card-row {
     display: grid;
-    grid-template-columns: 24px 1fr 70px 32px;
+    grid-template-columns: 1fr 70px 32px;
     align-items: center;
     gap: 10px;
     padding: 9px 13px 9px 13px;
@@ -199,17 +199,15 @@
     opacity: 0.42;
 }
 
-/* Rank number */
-.draft-rank {
-    font-size: 13px;
+/* Land label in pip column */
+.pip-land-label {
+    font-size: 9px;
     font-weight: 700;
     color: var(--text-muted);
-    text-align: left;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
-
-.draft-card-row:nth-child(1) .draft-rank { color: #ffd700; }
-.draft-card-row:nth-child(2) .draft-rank { color: #c0c0c0; }
-.draft-card-row:nth-child(3) .draft-rank { color: #cd7f32; }
 
 /* Card name + color pip */
 .draft-card-name {
@@ -414,10 +412,10 @@
 }
 
 .picks-sort-btn {
-    background: none;
-    border: 1px solid var(--border);
+    background: #111;
+    border: 1px solid #444;
     border-radius: 4px;
-    color: var(--text-muted);
+    color: #fff;
     font-size: 10px;
     padding: 2px 6px;
     cursor: pointer;
@@ -425,14 +423,15 @@
 }
 
 .picks-sort-btn.active {
-    background: rgba(93, 95, 239, 0.2);
-    border-color: var(--accent);
-    color: var(--text);
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
 }
 
 .picks-sort-btn:hover:not(.active) {
-    border-color: var(--text-muted);
-    color: var(--text);
+    background: #222;
+    border-color: #888;
+    color: #fff;
 }
 
 .picks-search-input {

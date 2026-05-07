@@ -8,4 +8,5 @@ module.exports = {
     bundle:       null,   // ViewerBundle | null
     draftList:    [],     // [{draftId, startedAt, pickCount}]
     viewingCoord: null,   // {pack, pick} | null
+    liveDraftId:  null,   // draftId of the currently-active live draft, or null
 };

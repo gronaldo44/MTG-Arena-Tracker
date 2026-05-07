@@ -365,9 +365,10 @@ describe('draftCardColorPips', () => {
     expect(html).toContain('match-pip-colorless');
   });
 
-  test('no colorStr and no manaCost → empty (land with no data)', () => {
-    expect(draftCardColorPips('', '')).toBe('');
-    expect(draftCardColorPips(null, null)).toBe('');
+  test('no colorStr and no manaCost → Land label', () => {
+    expect(draftCardColorPips('', '')).toContain('pip-land-label');
+    expect(draftCardColorPips('', '')).toContain('Land');
+    expect(draftCardColorPips(null, null)).toContain('pip-land-label');
   });
 });
 

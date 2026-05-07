@@ -39,12 +39,13 @@ function showPage(page) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(`page-${page}`).classList.add('active');
 
-    if (page === 'dashboard')  dashboard.loadDashboard();
-    if (page === 'draft')      draftAssist.renderDraftPage();
-    if (page === 'matches')    matchHistory.loadMatches();
-    if (page === 'stats')      stats.loadStats();
-    if (page === 'settings')   settings.loadSettings();
-    if (page === 'deckbuilder') deckBuilder.initDeckBuilder();
+    if (page === 'dashboard')   dashboard.loadDashboard();
+    if (page === 'draft')       draftAssist.ensureDraftLoaded().then(() => draftAssist.renderDraftPage());
+    if (page === 'matches')     matchHistory.loadMatches();
+    if (page === 'stats')       stats.loadStats();
+    if (page === 'settings')    settings.loadSettings();
+    if (page === 'deckbuilder') draftAssist.ensureDraftLoaded().then(() => deckBuilder.initDeckBuilder());
+    updateDraftBadge();
 }
 
 // ─── Window controls ──────────────────────────────────────────────────────────
@@ -55,16 +56,41 @@ function closeWindow()         { ipcRenderer.send('close-window'); }
 function openExternalLink(url) { ipcRenderer.send('open-external', url); }
 
 function toggleSidebar() {
-    const sidebar   = document.getElementById('sidebar');
-    const toggle    = document.getElementById('sidebar-toggle');
-    const collapsed = sidebar.classList.toggle('collapsed');
-    toggle.querySelector('.sidebar-toggle-icon').textContent = collapsed ? '›' : '‹';
-    toggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+    const collapsed = document.getElementById('sidebar').classList.toggle('collapsed');
     localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '');
 }
 
+function updateDraftBadge() {
+    const navDraft = document.getElementById('nav-draft');
+    if (!navDraft) return;
+
+    let badge = navDraft.querySelector('.draft-badge');
+
+    const viewingLive = !!state.liveDraftId && state.bundle?.draftId === state.liveDraftId;
+    const showReplay  = !!state.bundle && !viewingLive;
+    const showLive    = viewingLive || (!!state.liveDraftId && !state.bundle);
+
+    if (!showReplay && !showLive) {
+        if (badge) badge.remove();
+        return;
+    }
+
+    if (!badge) {
+        badge = document.createElement('span');
+        navDraft.appendChild(badge);
+    }
+
+    if (showReplay) {
+        badge.className = 'draft-badge replay';
+        badge.textContent = 'Replay';
+    } else {
+        badge.className = 'draft-badge live';
+        badge.textContent = 'Live';
+    }
+}
+
 if (typeof window !== 'undefined') {
-    Object.assign(window, { showPage, minimizeWindow, maximizeWindow, closeWindow, openExternalLink, toggleSidebar });
+    Object.assign(window, { showPage, minimizeWindow, maximizeWindow, closeWindow, openExternalLink, toggleSidebar, updateDraftBadge });
 }
 
 // ─── IPC event listeners ──────────────────────────────────────────────────────
@@ -99,11 +125,17 @@ ipcRenderer.on('card-stats-updated', async () => {
 });
 
 ipcRenderer.on('draft-update', (event, data) => {
-    console.log('[Draft] Update received:', data);
-    state.bundle       = data;
-    state.viewingCoord = data.liveCoord;
+    // If the user has explicitly selected a different (past) draft, preserve
+    // that selection — only switch the bundle if they are following the live draft.
+    const replayMode = !!state.bundle && state.bundle.draftId !== data.draftId;
 
-    if (!state.draftList.some(d => d.draftId === state.bundle?.draftId)) {
+    state.liveDraftId = data.draftId;
+    if (!replayMode) {
+        state.bundle       = data;
+        state.viewingCoord = data.liveCoord;
+    }
+
+    if (!state.draftList.some(d => d.draftId === data.draftId)) {
         ipcRenderer.invoke('list-drafts').then(list => {
             state.draftList = list;
             draftAssist.rebuildDraftDropdown();
@@ -112,21 +144,9 @@ ipcRenderer.on('draft-update', (event, data) => {
         draftAssist.rebuildDraftDropdown();
     }
 
-    const navDraft = document.getElementById('nav-draft');
-    if (navDraft && state.currentPage !== 'draft') {
-        let badge = navDraft.querySelector('.draft-badge');
-        if (!badge) {
-            badge = document.createElement('span');
-            badge.className = 'draft-badge';
-            navDraft.appendChild(badge);
-        }
-        const liveEntry = state.bundle?.picks?.find(p =>
-            p.pack === state.bundle.liveCoord?.pack && p.pick === state.bundle.liveCoord?.pick
-        );
-        badge.textContent = `${liveEntry?.options?.length ?? 0}`;
-    }
+    updateDraftBadge();
 
-    if (state.currentPage === 'draft') draftAssist.renderDraftPage();
+    if (state.currentPage === 'draft' && !replayMode) draftAssist.renderDraftPage();
 });
 
 // ─── Status bar ───────────────────────────────────────────────────────────────
@@ -161,11 +181,7 @@ if (typeof document !== 'undefined') {
 if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', async () => {
         if (localStorage.getItem('sidebar-collapsed')) {
-            const sidebar = document.getElementById('sidebar');
-            const toggle  = document.getElementById('sidebar-toggle');
-            sidebar.classList.add('collapsed');
-            toggle.querySelector('.sidebar-toggle-icon').textContent = '›';
-            toggle.title = 'Expand sidebar';
+            document.getElementById('sidebar').classList.add('collapsed');
         }
 
         cardPreview.initCardPreview();
