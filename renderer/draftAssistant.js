@@ -109,6 +109,7 @@ async function onDraftSelectChange(draftId) {
     state.bundle       = newBundle;
     state.viewingCoord = newBundle.liveCoord;
     renderDraftPage();
+    if (typeof window !== 'undefined') window.updateDraftBadge?.();
 }
 
 // ─── Pack panel ───────────────────────────────────────────────────────────────

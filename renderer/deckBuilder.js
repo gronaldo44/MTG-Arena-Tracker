@@ -1,6 +1,7 @@
 'use strict';
 
-const hypgeo = require('./deckBuilder/hypgeoCalculator');
+const hypgeo    = require('./deckBuilder/hypgeoCalculator');
+const colorPool = require('./deckBuilder/colorPool');
 
 // ─── Deck Builder aggregator ──────────────────────────────────────────────────
 // Entry point called by renderer.js when the user switches to the deckbuilder
@@ -9,12 +10,14 @@ const hypgeo = require('./deckBuilder/hypgeoCalculator');
 function initDeckBuilder() {
     hypgeo.initHypGeoFromDraft();
     hypgeo.renderHypGeoTable();
+    colorPool.renderColorTables();
 }
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
     initDeckBuilder,
-    // Re-export all hypgeo functions so renderer.js can attach them to window.
+    // Re-export all tool functions so renderer.js can attach them to window.
     ...hypgeo,
+    ...colorPool,
 };

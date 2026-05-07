@@ -87,6 +87,21 @@ function updateDraftBadge() {
         badge.className = 'draft-badge live';
         badge.textContent = 'Live';
     }
+
+    _updateDeckBuilderNotice();
+}
+
+function _updateDeckBuilderNotice() {
+    const navEl = document.getElementById('nav-deckbuilder');
+    if (!navEl) return;
+    const iconEl = navEl.querySelector('.icon');
+    if (!iconEl) return;
+    const picks = state.bundle?.picks || [];
+    const isLatest      = !!state.bundle && state.bundle.draftId === state.draftList?.[0]?.draftId;
+    const isDraftComplete = isLatest
+        && picks.length === 42
+        && picks.every(p => p.missing || p.picked !== null);
+    iconEl.classList.toggle('db-ready', isDraftComplete);
 }
 
 if (typeof window !== 'undefined') {
@@ -197,5 +212,6 @@ if (typeof window === 'undefined') {
     module.exports = {
         ...shared,
         ...cardPreview,
+        updateDeckBuilderNotice: _updateDeckBuilderNotice,
     };
 }

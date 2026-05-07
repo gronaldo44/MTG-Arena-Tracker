@@ -221,6 +221,10 @@ function setHypGeoGoingFirst(goFirst) {
     renderHypGeoTable();
 }
 
+function toggleHypGeoGoingFirst() {
+    setHypGeoGoingFirst(!_hypGeoGoingFirst);
+}
+
 function adjustHypGeoSource(color, delta) {
     _hypGeoSources[color] = Math.max(0, Math.min(HYPGEO_DECK_SIZE, (_hypGeoSources[color] || 0) + delta));
     renderHypGeoTable();
@@ -546,6 +550,7 @@ module.exports = {
     initHypGeoFromDraft,
     renderHypGeoTable,
     setHypGeoGoingFirst,
+    toggleHypGeoGoingFirst,
     adjustHypGeoSource,
     adjustHypGeoLands,
     adjustCustomLand,

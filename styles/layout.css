@@ -129,6 +129,14 @@
     justify-content: center;
 }
 
+.nav-item:not(.active) .icon.db-ready {
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.75));
+}
+
+.nav-item:not(.active) .icon.db-ready ~ .nav-label {
+    font-weight: 700;
+}
+
 .nav-label {
     overflow: hidden;
     transition: opacity 0.15s;
