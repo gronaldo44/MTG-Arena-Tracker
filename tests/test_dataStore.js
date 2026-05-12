@@ -256,7 +256,7 @@ describe('DataStore — drafts', () => {
     expect(ds.getDraftSummaries()[0].pickCount).toBe(2);
   });
 
-  test('getDraftSummaries: sorted by startedAt descending', () => {
+  test('getDraftSummaries — sorted by startedAt descending', () => {
     // Insert d1 first, then d2 — d2 has a later startedAt.
     ds.upsertDraft({ draftId: 'd1', picks: [{ pack: 1, pick: 1, options: [10], picked: 10 }], currentPack: null });
     // Force a small delay so startedAt differs.
@@ -268,5 +268,215 @@ describe('DataStore — drafts', () => {
 
     const all = ds.getDraftSummaries();
     expect(all.map(d => d.draftId)).toEqual(['d2', 'd1']);
+  });
+});
+
+// ── Helpers for importFromDirectory tests ─────────────────────────────────
+
+function writeBackupFiles(backupDir, { matches, cardStats, drafts, settings } = {}) {
+  fs.mkdirSync(backupDir, { recursive: true });
+
+  if (matches !== undefined)
+    fs.writeFileSync(path.join(backupDir, 'matches.json'), JSON.stringify(matches));
+  if (cardStats !== undefined)
+    fs.writeFileSync(path.join(backupDir, 'cardStats.json'), JSON.stringify(cardStats));
+  if (drafts !== undefined)
+    fs.writeFileSync(path.join(backupDir, 'drafts.json'), JSON.stringify(drafts));
+  if (settings !== undefined)
+    fs.writeFileSync(path.join(backupDir, 'settings.json'), JSON.stringify(settings));
+}
+
+// ── importFromDirectory ────────────────────────────────────────────────────
+
+describe('DataStore — importFromDirectory', () => {
+  let ds;
+  let backupDir;
+
+  beforeEach(() => {
+    MOCK_USERDATA = fs.mkdtempSync(path.join(os.tmpdir(), 'mtg-ds-'));
+    backupDir     = fs.mkdtempSync(path.join(os.tmpdir(), 'mtg-backup-'));
+    ds = new DataStore();
+  });
+
+  afterEach(() => {
+    fs.rmSync(MOCK_USERDATA, { recursive: true, force: true });
+    fs.rmSync(backupDir,     { recursive: true, force: true });
+  });
+
+  // ── matches ───────────────────────────────────────────────────────────────
+
+  test('imports matches from matches.json', () => {
+    writeBackupFiles(backupDir, {
+      matches: { matches: [{ id: 'm1', result: 'win' }], decks: {} },
+    });
+    ds.importFromDirectory(backupDir);
+    expect(ds.getMatches()).toHaveLength(1);
+    expect(ds.getMatches()[0].id).toBe('m1');
+  });
+
+  test('skips duplicate matches already present', () => {
+    ds.data.matches.push({ id: 'm1', result: 'win' });
+    ds.saveData();
+    writeBackupFiles(backupDir, {
+      matches: {
+        matches: [
+          { id: 'm1', result: 'win' },
+          { id: 'm2', result: 'loss' },
+        ],
+        decks: {},
+      },
+    });
+    ds.importFromDirectory(backupDir);
+    expect(ds.getMatches()).toHaveLength(2);
+  });
+
+  test('imports decks from matches.json', () => {
+    writeBackupFiles(backupDir, {
+      matches: { matches: [], decks: { 'Mono Red': { name: 'Mono Red' } } },
+    });
+    ds.importFromDirectory(backupDir);
+    expect(ds.getDeck('Mono Red')).toMatchObject({ name: 'Mono Red' });
+  });
+
+  test('persists imported matches to disk', () => {
+    writeBackupFiles(backupDir, {
+      matches: { matches: [{ id: 'm1', result: 'win' }], decks: {} },
+    });
+    ds.importFromDirectory(backupDir);
+    const ds2 = new DataStore();
+    expect(ds2.getMatches()).toHaveLength(1);
+  });
+
+  // ── cardStats ─────────────────────────────────────────────────────────────
+
+  test('imports card stats from cardStats.json', () => {
+    writeBackupFiles(backupDir, {
+      cardStats: {
+        processedGames: ['game1'],
+        statsByFormat: {
+          'Premier_Draft_SOS': {
+            '102460': { gamesInDeck: 5, gamesInHand: 3, gamesWonInHand: 2,
+                        gamesOpenHand: 1, gamesWonOpenHand: 1 },
+          },
+        },
+      },
+    });
+    ds.importFromDirectory(backupDir);
+    const stats = ds.getAllCardGameStats('Premier_Draft_SOS');
+    expect(stats['102460'].gamesInDeck).toBe(5);
+    expect(stats['102460'].gamesInHand).toBe(3);
+  });
+
+  test('accumulates card stats when the same grpId already has data', () => {
+    ds.cardStats.statsByFormat['Premier_Draft_SOS'] = {
+      '102460': { gamesInDeck: 2, gamesInHand: 2, gamesWonInHand: 1,
+                  gamesOpenHand: 1, gamesWonOpenHand: 0 },
+    };
+    writeBackupFiles(backupDir, {
+      cardStats: {
+        processedGames: [],
+        statsByFormat: {
+          'Premier_Draft_SOS': {
+            '102460': { gamesInDeck: 3, gamesInHand: 3, gamesWonInHand: 2,
+                        gamesOpenHand: 2, gamesWonOpenHand: 1 },
+          },
+        },
+      },
+    });
+    ds.importFromDirectory(backupDir);
+    const s = ds.getAllCardGameStats('Premier_Draft_SOS')['102460'];
+    expect(s.gamesInDeck).toBe(5);
+    expect(s.gamesInHand).toBe(5);
+    expect(s.gamesWonInHand).toBe(3);
+  });
+
+  test('merges card stats formats that did not previously exist', () => {
+    writeBackupFiles(backupDir, {
+      cardStats: {
+        processedGames: [],
+        statsByFormat: {
+          'Quick_Draft_SOS':   { '102460': { gamesInDeck: 1, gamesInHand: 1, gamesWonInHand: 0, gamesOpenHand: 0, gamesWonOpenHand: 0 } },
+          'Premier_Draft_SOS': { '102461': { gamesInDeck: 2, gamesInHand: 2, gamesWonInHand: 1, gamesOpenHand: 1, gamesWonOpenHand: 0 } },
+        },
+      },
+    });
+    ds.importFromDirectory(backupDir);
+    expect(ds.getAllCardGameStats('Quick_Draft_SOS')['102460'].gamesInDeck).toBe(1);
+    expect(ds.getAllCardGameStats('Premier_Draft_SOS')['102461'].gamesInDeck).toBe(2);
+  });
+
+  test('persists imported card stats to disk', () => {
+    writeBackupFiles(backupDir, {
+      cardStats: {
+        processedGames: ['g1'],
+        statsByFormat: { 'Premier_Draft_SOS': { '102460': { gamesInDeck: 4, gamesInHand: 2, gamesWonInHand: 1, gamesOpenHand: 1, gamesWonOpenHand: 0 } } },
+      },
+    });
+    ds.importFromDirectory(backupDir);
+    const ds2 = new DataStore();
+    expect(ds2.getAllCardGameStats('Premier_Draft_SOS')['102460'].gamesInDeck).toBe(4);
+  });
+
+  // ── drafts ────────────────────────────────────────────────────────────────
+
+  test('imports drafts from drafts.json', () => {
+    writeBackupFiles(backupDir, {
+      drafts: { drafts: { 'draft-1': { draftId: 'draft-1', startedAt: 1000, picks: [] } } },
+    });
+    ds.importFromDirectory(backupDir);
+    expect(ds.getDraft('draft-1')).toMatchObject({ draftId: 'draft-1' });
+  });
+
+  test('skips drafts that already exist', () => {
+    ds.upsertDraft({ draftId: 'draft-1', picks: [{ pack: 1, pick: 1, options: [10], picked: 10 }], currentPack: null });
+    writeBackupFiles(backupDir, {
+      drafts: { drafts: { 'draft-1': { draftId: 'draft-1', startedAt: 999, picks: [] } } },
+    });
+    ds.importFromDirectory(backupDir);
+    // Original picks should be preserved, not overwritten by the empty backup
+    expect(ds.getDraft('draft-1').picks).toHaveLength(1);
+  });
+
+  test('persists imported drafts to disk', () => {
+    writeBackupFiles(backupDir, {
+      drafts: { drafts: { 'draft-1': { draftId: 'draft-1', startedAt: 1000, picks: [] } } },
+    });
+    ds.importFromDirectory(backupDir);
+    const ds2 = new DataStore();
+    expect(ds2.getDraft('draft-1')).not.toBeNull();
+  });
+
+  // ── settings ──────────────────────────────────────────────────────────────
+
+  test('imports settings from settings.json', () => {
+    writeBackupFiles(backupDir, {
+      settings: { logPath: 'C:\\Users\\user\\log.txt', minimizeToTray: false },
+    });
+    ds.importFromDirectory(backupDir);
+    expect(ds.getSettings().logPath).toBe('C:\\Users\\user\\log.txt');
+    expect(ds.getSettings().minimizeToTray).toBe(false);
+  });
+
+  test('does not import mtgaDbPath from settings (likely stale after reinstall)', () => {
+    writeBackupFiles(backupDir, {
+      settings: { logPath: 'C:\\log.txt', mtgaDbPath: 'C:\\old\\path\\Raw_CardDatabase.mtga' },
+    });
+    ds.importFromDirectory(backupDir);
+    expect(ds.getSettings().mtgaDbPath || '').toBe('');
+  });
+
+  // ── missing files ─────────────────────────────────────────────────────────
+
+  test('handles an empty backup directory without throwing', () => {
+    expect(() => ds.importFromDirectory(backupDir)).not.toThrow();
+  });
+
+  test('imports only the files that are present (partial backup)', () => {
+    writeBackupFiles(backupDir, {
+      matches: { matches: [{ id: 'm1', result: 'win' }], decks: {} },
+      // cardStats, drafts, settings intentionally absent
+    });
+    expect(() => ds.importFromDirectory(backupDir)).not.toThrow();
+    expect(ds.getMatches()).toHaveLength(1);
   });
 });

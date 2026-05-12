@@ -13,10 +13,12 @@ out/
 coverage/
 
 # Data files (user-specific)
+data-backup/
 data/
 *.json
 !cards.json
 !package.json
+!sos-card-data.json
 *.mtga
 
 # Logs

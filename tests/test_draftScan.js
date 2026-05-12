@@ -34,6 +34,7 @@ jest.mock('electron', () => ({
     getVersion:                jest.fn(() => '1.0.0'),
     getPath:                   jest.fn(() => '/mock/userdata'),
     getName:                   jest.fn(() => 'MTG Arena Tracker'),
+    setName:                   jest.fn(),
     isPackaged:                false,
     whenReady:                 jest.fn(() => Promise.resolve()),
     requestSingleInstanceLock: jest.fn(() => true),
@@ -150,6 +151,7 @@ jest.mock('../draftPipeline', () => ({
 }));
 
 jest.mock('../setEnricher', () => ({
+  init:            jest.fn(),
   needsEnrichment: jest.fn(() => false),
   enrich:          jest.fn(() => Promise.resolve(false)),
 }));

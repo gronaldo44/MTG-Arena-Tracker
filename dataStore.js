@@ -12,15 +12,16 @@ class DataStore {
     // Determine data directory based on environment
     if (process.type === 'browser' || process.type === undefined) {
       // Main process
-      this.dataDir = path.join(app.getPath('userData'), 'data');
+      this.dataDir   = path.join(app.getPath('userData'), 'data');
+      this.cardsFile = path.join(app.getPath('userData'), 'cards.json');
     } else {
       // Renderer process - use app.getPath won't work, use a default
-      this.dataDir = path.join(require('os').homedir(), '.mtg-arena-tracker', 'data');
+      this.dataDir   = path.join(require('os').homedir(), '.mtg-arena-tracker', 'data');
+      this.cardsFile = path.join(require('os').homedir(), '.mtg-arena-tracker', 'cards.json');
     }
 
     this.dataFile     = path.join(this.dataDir, 'matches.json');
     this.settingsFile = path.join(this.dataDir, 'settings.json');
-    this.cardsFile    = path.join(__dirname, 'cards.json');
     this.cardStatsFile = path.join(this.dataDir, 'cardStats.json');
     this.draftsFile   = path.join(this.dataDir, 'drafts.json');
 
@@ -157,8 +158,7 @@ class DataStore {
     return {
       logPath: '',
       autoLaunch: false,
-      minimizeToTray: true,
-      showNotifications: true
+      minimizeToTray: true
     };
   }
 
@@ -497,24 +497,66 @@ class DataStore {
   }
 
   /**
-   * Import data from file
+   * Import all data files from a backup directory.
+   * Reads matches.json, cardStats.json, drafts.json, and settings.json
+   * if present, merging each into the current data without overwriting
+   * records that already exist.
    */
-  importFromFile(filePath) {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const importData = JSON.parse(content);
+  importFromDirectory(dirPath) {
+    const read = name => {
+      const p = path.join(dirPath, name);
+      return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
+    };
 
-    if (importData.matches && Array.isArray(importData.matches)) {
-      // Merge with existing data, avoiding duplicates by ID
+    const matchesData = read('matches.json');
+    if (matchesData?.matches && Array.isArray(matchesData.matches)) {
       const existingIds = new Set(this.data.matches.map(m => m.id));
-      const newMatches = importData.matches.filter(m => !existingIds.has(m.id));
+      const newMatches  = matchesData.matches.filter(m => !existingIds.has(m.id));
       this.data.matches.push(...newMatches);
     }
+    if (matchesData?.decks) {
+      this.data.decks = { ...this.data.decks, ...matchesData.decks };
+    }
+    this.saveData();
 
-    if (importData.decks) {
-      this.data.decks = { ...this.data.decks, ...importData.decks };
+    const statsData = read('cardStats.json');
+    if (statsData?.statsByFormat) {
+      for (const [fmt, stats] of Object.entries(statsData.statsByFormat)) {
+        if (!this.cardStats.statsByFormat[fmt]) {
+          this.cardStats.statsByFormat[fmt] = {};
+        }
+        for (const [grpId, s] of Object.entries(stats)) {
+          const existing = this.cardStats.statsByFormat[fmt][grpId];
+          if (existing) {
+            existing.gamesInDeck      += s.gamesInDeck      || 0;
+            existing.gamesInHand      += s.gamesInHand      || 0;
+            existing.gamesWonInHand   += s.gamesWonInHand   || 0;
+            existing.gamesOpenHand    += s.gamesOpenHand    || 0;
+            existing.gamesWonOpenHand += s.gamesWonOpenHand || 0;
+          } else {
+            this.cardStats.statsByFormat[fmt][grpId] = { ...s };
+          }
+        }
+      }
+      if (Array.isArray(statsData.processedGames)) {
+        for (const id of statsData.processedGames) this.cardStats.processedGames.add(id);
+      }
+      this.saveCardStats();
     }
 
-    this.saveData();
+    const draftsData = read('drafts.json');
+    if (draftsData?.drafts) {
+      for (const [id, draft] of Object.entries(draftsData.drafts)) {
+        if (!this.drafts[id]) this.drafts[id] = draft;
+      }
+      this.saveDrafts();
+    }
+
+    const settingsData = read('settings.json');
+    if (settingsData) {
+      const { mtgaDbPath: _ignored, ...safeSettings } = settingsData;
+      this.saveSettings(safeSettings);
+    }
   }
 
   // ─── Personal card game stats ────────────────────────────────────────────

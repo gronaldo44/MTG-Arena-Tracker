@@ -58,6 +58,8 @@ function openExternalLink(url) { ipcRenderer.send('open-external', url); }
 function toggleSidebar() {
     const collapsed = document.getElementById('sidebar').classList.toggle('collapsed');
     localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '');
+    const bar = document.querySelector('.status-bar');
+    if (bar) bar.style.left = collapsed ? '56px' : '220px';
 }
 
 function updateDraftBadge() {
@@ -112,14 +114,24 @@ if (typeof window !== 'undefined') {
 
 ipcRenderer.on('match-started', (event, data) => {
     console.log('Match started:', data);
-    updateStatus('Match in progress…');
 });
 
 ipcRenderer.on('match-ended', (event, data) => {
     console.log('Match ended:', data);
-    updateStatus(`Match ended: ${data.result}`);
     if (state.currentPage === 'dashboard') dashboard.loadDashboard();
     if (state.currentPage === 'matches')   matchHistory.loadMatches();
+});
+
+const STATUS_DEFAULT = 'Connected — Watching for matches';
+let _statusResetTimer = null;
+
+ipcRenderer.on('card-db-progress', (event, data) => {
+    if (data.done) {
+        clearTimeout(_statusResetTimer);
+        _statusResetTimer = setTimeout(() => updateStatus(STATUS_DEFAULT), 2000);
+        return;
+    }
+    updateStatus(`Downloading card database… ${data.withArenaId.toLocaleString()} cards`);
 });
 
 ipcRenderer.on('deck-submitted', (event, data) => {
@@ -197,6 +209,8 @@ if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', async () => {
         if (localStorage.getItem('sidebar-collapsed')) {
             document.getElementById('sidebar').classList.add('collapsed');
+            const bar = document.querySelector('.status-bar');
+            if (bar) bar.style.left = '56px';
         }
 
         cardPreview.initCardPreview();

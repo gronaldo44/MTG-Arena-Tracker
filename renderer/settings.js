@@ -11,7 +11,6 @@ async function loadSettings() {
     document.getElementById('log-path-input').value         = settings.logPath || logPath;
     document.getElementById('mtga-db-path-input').value     = settings.mtgaDbPath || '';
     document.getElementById('setting-minimize').checked     = settings.minimizeToTray !== false;
-    document.getElementById('setting-notifications').checked = settings.showNotifications !== false;
 
     await loadCardDbStatus();
     await require('./draftAssistant').updateCsvStatusUI();
@@ -57,20 +56,30 @@ async function updateCardDatabase() {
     statusEl.style.color  = 'var(--primary)';
     detailsEl.textContent = 'This may take 30–60 seconds. Please wait…';
 
+    const progressListener = (event, data) => {
+        if (!data.done) {
+            detailsEl.textContent = `Processing… ${data.withArenaId.toLocaleString()} Arena cards found`;
+        }
+    };
+    ipcRenderer.on('card-db-progress', progressListener);
+
     try {
         const result = await ipcRenderer.invoke('update-card-db');
+        ipcRenderer.removeListener('card-db-progress', progressListener);
         if (result.success) {
             statusEl.textContent = result.updated
                 ? `✅ Updated! (${result.cardCount?.toLocaleString() || '0'} cards)`
                 : '✅ Already up to date';
-            statusEl.style.color = 'var(--success)';
+            statusEl.style.color  = 'var(--success)';
+            detailsEl.textContent = '';
         } else {
-            statusEl.textContent = '❌ Update failed';
-            statusEl.style.color = 'var(--danger)';
+            statusEl.textContent  = '❌ Update failed';
+            statusEl.style.color  = 'var(--danger)';
             detailsEl.textContent = result.error || 'Unknown error';
         }
         setTimeout(loadCardDbStatus, 1000);
     } catch (error) {
+        ipcRenderer.removeListener('card-db-progress', progressListener);
         statusEl.textContent  = '❌ Update failed';
         statusEl.style.color  = 'var(--danger)';
         detailsEl.textContent = error.message;
@@ -82,7 +91,6 @@ async function saveSettings() {
         logPath:           document.getElementById('log-path-input').value,
         mtgaDbPath:        document.getElementById('mtga-db-path-input').value,
         minimizeToTray:    document.getElementById('setting-minimize').checked,
-        showNotifications: document.getElementById('setting-notifications').checked,
     };
     await ipcRenderer.invoke('save-settings', settings);
     alert('Settings saved!');
@@ -124,15 +132,6 @@ async function scanLogNow() {
     }
 }
 
-async function testNotification() {
-    const result = await ipcRenderer.invoke('test-notification');
-    if (result.success) {
-        alert('Test notification sent!' + (result.troubleshooting ? '\n\n' + result.troubleshooting : ''));
-    } else {
-        alert(`Notification failed: ${result.error}`);
-    }
-}
-
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -144,5 +143,4 @@ module.exports = {
     browseMtgaDb,
     runSetEnrichment,
     scanLogNow,
-    testNotification,
 };

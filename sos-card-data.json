@@ -1,0 +1,3642 @@
+{
+  "setCodes": [
+    "SOS",
+    "SOA"
+  ],
+  "cards": {
+    "102753": {
+      "name": "Akroma's Will",
+      "manaCost": "{3}{W}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102754": {
+      "name": "Angel's Grace",
+      "manaCost": "{W}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102755": {
+      "name": "Armageddon",
+      "manaCost": "{3}{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102756": {
+      "name": "Duty Beyond Death",
+      "manaCost": "{1}{W}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102757": {
+      "name": "Helping Hand",
+      "manaCost": "{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102758": {
+      "name": "Hop to It",
+      "manaCost": "{2}{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102759": {
+      "name": "Prismatic Ending",
+      "manaCost": "{X}{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102760": {
+      "name": "Repel Calamity",
+      "manaCost": "{1}{W}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102761": {
+      "name": "Reprieve",
+      "manaCost": "{1}{W}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102762": {
+      "name": "Requisition Raid",
+      "manaCost": "{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102763": {
+      "name": "Return to the Ranks",
+      "manaCost": "{X}{W}{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102764": {
+      "name": "Winds of Abandon",
+      "manaCost": "{1}{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102765": {
+      "name": "Brain Freeze",
+      "manaCost": "{1}{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102766": {
+      "name": "Cyclonic Rift",
+      "manaCost": "{1}{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102767": {
+      "name": "Daze",
+      "manaCost": "{1}{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102768": {
+      "name": "Deduce",
+      "manaCost": "{1}{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102769": {
+      "name": "Disdainful Stroke",
+      "manaCost": "{1}{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102770": {
+      "name": "Flusterstorm",
+      "manaCost": "{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102771": {
+      "name": "Force of Will",
+      "manaCost": "{3}{U}{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102772": {
+      "name": "Pongify",
+      "manaCost": "{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102773": {
+      "name": "Preordain",
+      "manaCost": "{U}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102774": {
+      "name": "Sleight of Hand",
+      "manaCost": "{U}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102775": {
+      "name": "Spell Pierce",
+      "manaCost": "{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102776": {
+      "name": "Stock Up",
+      "manaCost": "{2}{U}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102777": {
+      "name": "Ad Nauseam",
+      "manaCost": "{3}{B}{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102778": {
+      "name": "Bitter Triumph",
+      "manaCost": "{1}{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102779": {
+      "name": "Culling the Weak",
+      "manaCost": "{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102780": {
+      "name": "Dismember",
+      "manaCost": "{1}{B/P}{B/P}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102781": {
+      "name": "Feed the Swarm",
+      "manaCost": "{1}{B}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102782": {
+      "name": "Living End",
+      "manaCost": "",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102783": {
+      "name": "Locust Spray",
+      "manaCost": "{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102784": {
+      "name": "Sheoldred's Edict",
+      "manaCost": "{1}{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102785": {
+      "name": "Smallpox",
+      "manaCost": "{B}{B}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102786": {
+      "name": "Stargaze",
+      "manaCost": "{X}{B}{B}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102787": {
+      "name": "Vampiric Tutor",
+      "manaCost": "{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102788": {
+      "name": "Zombify",
+      "manaCost": "{3}{B}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102789": {
+      "name": "Abrade",
+      "manaCost": "{1}{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102790": {
+      "name": "Big Score",
+      "manaCost": "{3}{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102791": {
+      "name": "Brotherhood's End",
+      "manaCost": "{1}{R}{R}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102792": {
+      "name": "Bulk Up",
+      "manaCost": "{1}{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102793": {
+      "name": "Burst Lightning",
+      "manaCost": "{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102794": {
+      "name": "Crackle with Power",
+      "manaCost": "{X}{X}{X}{R}{R}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102795": {
+      "name": "Empty the Warrens",
+      "manaCost": "{3}{R}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102796": {
+      "name": "Jeska's Will",
+      "manaCost": "{2}{R}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102797": {
+      "name": "Monstrous Rage",
+      "manaCost": "{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102798": {
+      "name": "Pyretic Ritual",
+      "manaCost": "{1}{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102799": {
+      "name": "Return the Favor",
+      "manaCost": "{R}{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102800": {
+      "name": "Subterranean Tremors",
+      "manaCost": "{X}{R}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102801": {
+      "name": "Awaken the Woods",
+      "manaCost": "{X}{G}{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102802": {
+      "name": "Berserk",
+      "manaCost": "{G}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102803": {
+      "name": "Crop Rotation",
+      "manaCost": "{G}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102804": {
+      "name": "Giant Growth",
+      "manaCost": "{G}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102805": {
+      "name": "Glimpse of Nature",
+      "manaCost": "{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102806": {
+      "name": "Knockout Maneuver",
+      "manaCost": "{2}{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102807": {
+      "name": "Pick Your Poison",
+      "manaCost": "{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102808": {
+      "name": "Royal Treatment",
+      "manaCost": "{G}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102809": {
+      "name": "Shamanic Revelation",
+      "manaCost": "{3}{G}{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102810": {
+      "name": "Shared Roots",
+      "manaCost": "{1}{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102811": {
+      "name": "Triumph of the Hordes",
+      "manaCost": "{2}{G}{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102812": {
+      "name": "Veil of Summer",
+      "manaCost": "{G}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102813": {
+      "name": "Bring to Light",
+      "manaCost": "{3}{G}{U}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102814": {
+      "name": "Culling Ritual",
+      "manaCost": "{2}{B}{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102815": {
+      "name": "Deflecting Palm",
+      "manaCost": "{R}{W}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102816": {
+      "name": "Expressive Iteration",
+      "manaCost": "{U}{R}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102817": {
+      "name": "Fracture",
+      "manaCost": "{W}{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104578": {
+      "name": "Akroma's Will",
+      "manaCost": "{3}{W}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104579": {
+      "name": "Angel's Grace",
+      "manaCost": "{W}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104580": {
+      "name": "Armageddon",
+      "manaCost": "{3}{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104581": {
+      "name": "Duty Beyond Death",
+      "manaCost": "{1}{W}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104582": {
+      "name": "Helping Hand",
+      "manaCost": "{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104583": {
+      "name": "Hop to It",
+      "manaCost": "{2}{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104584": {
+      "name": "Prismatic Ending",
+      "manaCost": "{X}{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104585": {
+      "name": "Repel Calamity",
+      "manaCost": "{1}{W}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104586": {
+      "name": "Reprieve",
+      "manaCost": "{1}{W}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104587": {
+      "name": "Requisition Raid",
+      "manaCost": "{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104588": {
+      "name": "Return to the Ranks",
+      "manaCost": "{X}{W}{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104589": {
+      "name": "Winds of Abandon",
+      "manaCost": "{1}{W}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104590": {
+      "name": "Brain Freeze",
+      "manaCost": "{1}{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104591": {
+      "name": "Cyclonic Rift",
+      "manaCost": "{1}{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104592": {
+      "name": "Daze",
+      "manaCost": "{1}{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104593": {
+      "name": "Deduce",
+      "manaCost": "{1}{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104594": {
+      "name": "Disdainful Stroke",
+      "manaCost": "{1}{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104595": {
+      "name": "Flusterstorm",
+      "manaCost": "{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104596": {
+      "name": "Force of Will",
+      "manaCost": "{3}{U}{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104597": {
+      "name": "Pongify",
+      "manaCost": "{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104598": {
+      "name": "Preordain",
+      "manaCost": "{U}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104599": {
+      "name": "Sleight of Hand",
+      "manaCost": "{U}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104600": {
+      "name": "Spell Pierce",
+      "manaCost": "{U}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104601": {
+      "name": "Stock Up",
+      "manaCost": "{2}{U}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104602": {
+      "name": "Ad Nauseam",
+      "manaCost": "{3}{B}{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104603": {
+      "name": "Bitter Triumph",
+      "manaCost": "{1}{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104604": {
+      "name": "Culling the Weak",
+      "manaCost": "{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104605": {
+      "name": "Dismember",
+      "manaCost": "{1}{B/P}{B/P}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104606": {
+      "name": "Feed the Swarm",
+      "manaCost": "{1}{B}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104607": {
+      "name": "Living End",
+      "manaCost": "",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104608": {
+      "name": "Locust Spray",
+      "manaCost": "{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104609": {
+      "name": "Sheoldred's Edict",
+      "manaCost": "{1}{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104610": {
+      "name": "Smallpox",
+      "manaCost": "{B}{B}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104611": {
+      "name": "Stargaze",
+      "manaCost": "{X}{B}{B}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104612": {
+      "name": "Vampiric Tutor",
+      "manaCost": "{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104613": {
+      "name": "Zombify",
+      "manaCost": "{3}{B}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104614": {
+      "name": "Abrade",
+      "manaCost": "{1}{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104615": {
+      "name": "Big Score",
+      "manaCost": "{3}{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104616": {
+      "name": "Brotherhood's End",
+      "manaCost": "{1}{R}{R}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104617": {
+      "name": "Bulk Up",
+      "manaCost": "{1}{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104618": {
+      "name": "Burst Lightning",
+      "manaCost": "{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104619": {
+      "name": "Crackle with Power",
+      "manaCost": "{X}{X}{X}{R}{R}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104620": {
+      "name": "Empty the Warrens",
+      "manaCost": "{3}{R}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104621": {
+      "name": "Jeska's Will",
+      "manaCost": "{2}{R}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104622": {
+      "name": "Monstrous Rage",
+      "manaCost": "{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104623": {
+      "name": "Pyretic Ritual",
+      "manaCost": "{1}{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104624": {
+      "name": "Return the Favor",
+      "manaCost": "{R}{R}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104625": {
+      "name": "Subterranean Tremors",
+      "manaCost": "{X}{R}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104626": {
+      "name": "Awaken the Woods",
+      "manaCost": "{X}{G}{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104627": {
+      "name": "Berserk",
+      "manaCost": "{G}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104628": {
+      "name": "Crop Rotation",
+      "manaCost": "{G}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104629": {
+      "name": "Giant Growth",
+      "manaCost": "{G}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104630": {
+      "name": "Glimpse of Nature",
+      "manaCost": "{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104631": {
+      "name": "Knockout Maneuver",
+      "manaCost": "{2}{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104632": {
+      "name": "Pick Your Poison",
+      "manaCost": "{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104633": {
+      "name": "Royal Treatment",
+      "manaCost": "{G}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104634": {
+      "name": "Shamanic Revelation",
+      "manaCost": "{3}{G}{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104635": {
+      "name": "Shared Roots",
+      "manaCost": "{1}{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104636": {
+      "name": "Triumph of the Hordes",
+      "manaCost": "{2}{G}{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104637": {
+      "name": "Veil of Summer",
+      "manaCost": "{G}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104638": {
+      "name": "Bring to Light",
+      "manaCost": "{3}{G}{U}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104639": {
+      "name": "Culling Ritual",
+      "manaCost": "{2}{B}{G}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104640": {
+      "name": "Deflecting Palm",
+      "manaCost": "{R}{W}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104641": {
+      "name": "Expressive Iteration",
+      "manaCost": "{U}{R}",
+      "type": "Sorcery",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "104642": {
+      "name": "Fracture",
+      "manaCost": "{W}{B}",
+      "type": "Instant",
+      "set": "SOA",
+      "digitalReleaseSet": ""
+    },
+    "102460": {
+      "name": "The Dawning Archaic",
+      "manaCost": "{10}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102461": {
+      "name": "Rancorous Archaic",
+      "manaCost": "{5}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102462": {
+      "name": "Sundering Archaic",
+      "manaCost": "{6}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102463": {
+      "name": "Together as One",
+      "manaCost": "{6}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102464": {
+      "name": "Transcendent Archaic",
+      "manaCost": "{7}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102465": {
+      "name": "Ajani's Response",
+      "manaCost": "{4}{W}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102466": {
+      "name": "Antiquities on the Loose",
+      "manaCost": "{1}{W}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102467": {
+      "name": "Ascendant Dustspeaker",
+      "manaCost": "{4}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102468": {
+      "name": "Daydream",
+      "manaCost": "{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102469": {
+      "name": "Dig Site Inventory",
+      "manaCost": "{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102470": {
+      "name": "Eager Glyphmage",
+      "manaCost": "{3}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102471": {
+      "name": "Elite Interceptor",
+      "manaCost": "{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102472": {
+      "name": "Emeritus of Truce",
+      "manaCost": "{1}{W}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102473": {
+      "name": "Ennis, Debate Moderator",
+      "manaCost": "{1}{W}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102474": {
+      "name": "Erode",
+      "manaCost": "{W}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102475": {
+      "name": "Graduation Day",
+      "manaCost": "{W}",
+      "type": "Enchantment",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102476": {
+      "name": "Group Project",
+      "manaCost": "{1}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102477": {
+      "name": "Harsh Annotation",
+      "manaCost": "{1}{W}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102478": {
+      "name": "Honorbound Page",
+      "manaCost": "{3}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102479": {
+      "name": "Informed Inkwright",
+      "manaCost": "{1}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102480": {
+      "name": "Inkshape Demonstrator",
+      "manaCost": "{3}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102481": {
+      "name": "Interjection",
+      "manaCost": "{W}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102482": {
+      "name": "Joined Researchers",
+      "manaCost": "{1}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102483": {
+      "name": "Owlin Historian",
+      "manaCost": "{2}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102484": {
+      "name": "Practiced Offense",
+      "manaCost": "{2}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102485": {
+      "name": "Primary Research",
+      "manaCost": "{4}{W}",
+      "type": "Enchantment",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102486": {
+      "name": "Quill-Blade Laureate",
+      "manaCost": "{1}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102487": {
+      "name": "Rapier Wit",
+      "manaCost": "{1}{W}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102488": {
+      "name": "Rehearsed Debater",
+      "manaCost": "{2}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102489": {
+      "name": "Restoration Seminar",
+      "manaCost": "{5}{W}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102490": {
+      "name": "Shattered Acolyte",
+      "manaCost": "{1}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102491": {
+      "name": "Soaring Stoneglider",
+      "manaCost": "{2}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102492": {
+      "name": "Spiritcall Enthusiast",
+      "manaCost": "{2}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102493": {
+      "name": "Stand Up for Yourself",
+      "manaCost": "{2}{W}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102494": {
+      "name": "Stirring Hopesinger",
+      "manaCost": "{2}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102495": {
+      "name": "Stone Docent",
+      "manaCost": "{1}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102496": {
+      "name": "Summoned Dromedary",
+      "manaCost": "{3}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102497": {
+      "name": "Banishing Betrayal",
+      "manaCost": "{1}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102498": {
+      "name": "Brush Off",
+      "manaCost": "{2}{U}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102499": {
+      "name": "Campus Composer",
+      "manaCost": "{3}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102500": {
+      "name": "Chase Inspiration",
+      "manaCost": "{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102501": {
+      "name": "Deluge Virtuoso",
+      "manaCost": "{2}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102502": {
+      "name": "Divergent Equation",
+      "manaCost": "{X}{X}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102503": {
+      "name": "Echocasting Symposium",
+      "manaCost": "{4}{U}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102504": {
+      "name": "Emeritus of Ideation",
+      "manaCost": "{3}{U}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102505": {
+      "name": "Encouraging Aviator",
+      "manaCost": "{2}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102506": {
+      "name": "Essence Scatter",
+      "manaCost": "{1}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102507": {
+      "name": "Exhibition Tidecaller",
+      "manaCost": "{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102508": {
+      "name": "Flow State",
+      "manaCost": "{1}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102509": {
+      "name": "Fractal Anomaly",
+      "manaCost": "{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102510": {
+      "name": "Fractalize",
+      "manaCost": "{X}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102511": {
+      "name": "Harmonized Trio",
+      "manaCost": "{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102512": {
+      "name": "Homesickness",
+      "manaCost": "{4}{U}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102513": {
+      "name": "Hydro-Channeler",
+      "manaCost": "{1}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102514": {
+      "name": "Jadzi, Steward of Fate",
+      "manaCost": "{2}{U}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102515": {
+      "name": "Landscape Painter",
+      "manaCost": "{1}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102516": {
+      "name": "Mana Sculpt",
+      "manaCost": "{1}{U}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102517": {
+      "name": "Mathemagics",
+      "manaCost": "{X}{X}{U}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102518": {
+      "name": "Matterbending Mage",
+      "manaCost": "{2}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102519": {
+      "name": "Muse Seeker",
+      "manaCost": "{1}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102520": {
+      "name": "Muse's Encouragement",
+      "manaCost": "{4}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102521": {
+      "name": "Orysa, Tide Choreographer",
+      "manaCost": "{4}{U}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102522": {
+      "name": "Pensive Professor",
+      "manaCost": "{1}{U}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102523": {
+      "name": "Procrastinate",
+      "manaCost": "{X}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102524": {
+      "name": "Quick Study",
+      "manaCost": "{2}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102525": {
+      "name": "Run Behind",
+      "manaCost": "{3}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102526": {
+      "name": "Skycoach Conductor",
+      "manaCost": "{2}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102527": {
+      "name": "Spellbook Seeker",
+      "manaCost": "{3}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102528": {
+      "name": "Tester of the Tangential",
+      "manaCost": "{1}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102529": {
+      "name": "Textbook Tabulator",
+      "manaCost": "{2}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102530": {
+      "name": "Wisdom of Ages",
+      "manaCost": "{4}{U}{U}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102531": {
+      "name": "Adventurous Eater",
+      "manaCost": "{2}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102532": {
+      "name": "Arcane Omens",
+      "manaCost": "{4}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102533": {
+      "name": "Arnyn, Deathbloom Botanist",
+      "manaCost": "{2}{B}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102534": {
+      "name": "Burrog Banemaker",
+      "manaCost": "{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102535": {
+      "name": "Cheerful Osteomancer",
+      "manaCost": "{3}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102536": {
+      "name": "Cost of Brilliance",
+      "manaCost": "{2}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102537": {
+      "name": "Decorum Dissertation",
+      "manaCost": "{3}{B}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102538": {
+      "name": "Dissection Practice",
+      "manaCost": "{B}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102539": {
+      "name": "Emeritus of Woe",
+      "manaCost": "{3}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102540": {
+      "name": "End of the Hunt",
+      "manaCost": "{1}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102541": {
+      "name": "Eternal Student",
+      "manaCost": "{3}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102542": {
+      "name": "Foolish Fate",
+      "manaCost": "{2}{B}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102543": {
+      "name": "Forum Necroscribe",
+      "manaCost": "{5}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102544": {
+      "name": "Grave Researcher",
+      "manaCost": "{2}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102545": {
+      "name": "Last Gasp",
+      "manaCost": "{1}{B}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102546": {
+      "name": "Lecturing Scornmage",
+      "manaCost": "{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102547": {
+      "name": "Leech Collector",
+      "manaCost": "{1}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102548": {
+      "name": "Masterful Flourish",
+      "manaCost": "{B}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102549": {
+      "name": "Melancholic Poet",
+      "manaCost": "{1}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102550": {
+      "name": "Moseo, Vein's New Dean",
+      "manaCost": "{2}{B}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102551": {
+      "name": "Poisoner's Apprentice",
+      "manaCost": "{2}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102552": {
+      "name": "Postmortem Professor",
+      "manaCost": "{1}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102553": {
+      "name": "Pox Plague",
+      "manaCost": "{B}{B}{B}{B}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102554": {
+      "name": "Pull from the Grave",
+      "manaCost": "{2}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102555": {
+      "name": "Rabid Attack",
+      "manaCost": "{1}{B}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102556": {
+      "name": "Ral Zarek, Guest Lecturer",
+      "manaCost": "{1}{B}{B}",
+      "type": "Legendary Planeswalker",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102557": {
+      "name": "Scathing Shadelock",
+      "manaCost": "{4}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102558": {
+      "name": "Scheming Silvertongue",
+      "manaCost": "{1}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102559": {
+      "name": "Send in the Pest",
+      "manaCost": "{1}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102560": {
+      "name": "Sneering Shadewriter",
+      "manaCost": "{4}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102561": {
+      "name": "Tragedy Feaster",
+      "manaCost": "{2}{B}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102562": {
+      "name": "Ulna Alley Shopkeep",
+      "manaCost": "{2}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102563": {
+      "name": "Wander Off",
+      "manaCost": "{3}{B}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102564": {
+      "name": "Withering Curse",
+      "manaCost": "{1}{B}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102565": {
+      "name": "Ancestral Anger",
+      "manaCost": "{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102566": {
+      "name": "Archaic's Agony",
+      "manaCost": "{4}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102567": {
+      "name": "Artistic Process",
+      "manaCost": "{3}{R}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102568": {
+      "name": "Blazing Firesinger",
+      "manaCost": "{2}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102569": {
+      "name": "Charging Strifeknight",
+      "manaCost": "{2}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102570": {
+      "name": "Choreographed Sparks",
+      "manaCost": "{R}{R}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102571": {
+      "name": "Duel Tactics",
+      "manaCost": "{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102572": {
+      "name": "Emeritus of Conflict",
+      "manaCost": "{1}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102573": {
+      "name": "Expressive Firedancer",
+      "manaCost": "{1}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102574": {
+      "name": "Flashback",
+      "manaCost": "{R}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102575": {
+      "name": "Garrison Excavator",
+      "manaCost": "{3}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102576": {
+      "name": "Goblin Glasswright",
+      "manaCost": "{1}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102577": {
+      "name": "Heated Argument",
+      "manaCost": "{4}{R}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102578": {
+      "name": "Impractical Joke",
+      "manaCost": "{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102579": {
+      "name": "Improvisation Capstone",
+      "manaCost": "{5}{R}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102580": {
+      "name": "Living History",
+      "manaCost": "{1}{R}",
+      "type": "Enchantment",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102581": {
+      "name": "Maelstrom Artisan",
+      "manaCost": "{1}{R}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102582": {
+      "name": "Magmablood Archaic",
+      "manaCost": "{2/R}{2/R}{2/R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102583": {
+      "name": "Mica, Reader of Ruins",
+      "manaCost": "{3}{R}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102584": {
+      "name": "Molten-Core Maestro",
+      "manaCost": "{1}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102585": {
+      "name": "Pigment Wrangler",
+      "manaCost": "{4}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102586": {
+      "name": "Rearing Embermare",
+      "manaCost": "{4}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102587": {
+      "name": "Rubble Rouser",
+      "manaCost": "{2}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102588": {
+      "name": "Seize the Spoils",
+      "manaCost": "{2}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102589": {
+      "name": "Steal the Show",
+      "manaCost": "{2}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102590": {
+      "name": "Strife Scholar",
+      "manaCost": "{2}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102591": {
+      "name": "Tablet of Discovery",
+      "manaCost": "{2}{R}",
+      "type": "Artifact",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102592": {
+      "name": "Tackle Artist",
+      "manaCost": "{3}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102593": {
+      "name": "Thunderdrum Soloist",
+      "manaCost": "{1}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102594": {
+      "name": "Tome Blast",
+      "manaCost": "{1}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102595": {
+      "name": "Unsubtle Mockery",
+      "manaCost": "{2}{R}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102596": {
+      "name": "Zealous Lorecaster",
+      "manaCost": "{5}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102597": {
+      "name": "Aberrant Manawurm",
+      "manaCost": "{3}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102598": {
+      "name": "Additive Evolution",
+      "manaCost": "{3}{G}{G}",
+      "type": "Enchantment",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102599": {
+      "name": "Ambitious Augmenter",
+      "manaCost": "{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102600": {
+      "name": "Burrog Barrage",
+      "manaCost": "{1}{G}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102601": {
+      "name": "Chelonian Tackle",
+      "manaCost": "{2}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102602": {
+      "name": "Comforting Counsel",
+      "manaCost": "{1}{G}",
+      "type": "Enchantment",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102603": {
+      "name": "Efflorescence",
+      "manaCost": "{2}{G}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102604": {
+      "name": "Emeritus of Abundance",
+      "manaCost": "{2}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102605": {
+      "name": "Emil, Vastlands Roamer",
+      "manaCost": "{2}{G}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102606": {
+      "name": "Environmental Scientist",
+      "manaCost": "{1}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102607": {
+      "name": "Follow the Lumarets",
+      "manaCost": "{1}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102608": {
+      "name": "Germination Practicum",
+      "manaCost": "{3}{G}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102609": {
+      "name": "Glorious Decay",
+      "manaCost": "{1}{G}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102610": {
+      "name": "Hungry Graffalon",
+      "manaCost": "{3}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102611": {
+      "name": "Infirmary Healer",
+      "manaCost": "{1}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102612": {
+      "name": "Lumaret's Favor",
+      "manaCost": "{1}{G}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102613": {
+      "name": "Mindful Biomancer",
+      "manaCost": "{1}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102614": {
+      "name": "Noxious Newt",
+      "manaCost": "{1}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102615": {
+      "name": "Oracle's Restoration",
+      "manaCost": "{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102616": {
+      "name": "Pestbrood Sloth",
+      "manaCost": "{3}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102617": {
+      "name": "Planar Engineering",
+      "manaCost": "{3}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102618": {
+      "name": "Shopkeeper's Bane",
+      "manaCost": "{2}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102619": {
+      "name": "Slumbering Trudge",
+      "manaCost": "{X}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102620": {
+      "name": "Snarl Song",
+      "manaCost": "{5}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102621": {
+      "name": "Studious First-Year",
+      "manaCost": "{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102622": {
+      "name": "Tenured Concocter",
+      "manaCost": "{4}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102623": {
+      "name": "Thornfist Striker",
+      "manaCost": "{2}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102624": {
+      "name": "Topiary Lecturer",
+      "manaCost": "{2}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102625": {
+      "name": "Vastlands Scavenger",
+      "manaCost": "{1}{G}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102626": {
+      "name": "Wild Hypothesis",
+      "manaCost": "{X}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102627": {
+      "name": "Wildgrowth Archaic",
+      "manaCost": "{2/G}{2/G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102628": {
+      "name": "Zimone's Experiment",
+      "manaCost": "{3}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102629": {
+      "name": "Abigale, Poet Laureate",
+      "manaCost": "{1}{W}{B}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102630": {
+      "name": "Abstract Paintmage",
+      "manaCost": "{U}{U/R}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102631": {
+      "name": "Applied Geometry",
+      "manaCost": "{2}{G}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102632": {
+      "name": "Ark of Hunger",
+      "manaCost": "{2}{R}{W}",
+      "type": "Artifact",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102633": {
+      "name": "Aziza, Mage Tower Captain",
+      "manaCost": "{R}{W}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102634": {
+      "name": "Berta, Wise Extrapolator",
+      "manaCost": "{2}{G}{U}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102635": {
+      "name": "Blech, Loafing Pest",
+      "manaCost": "{1}{B}{G}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102636": {
+      "name": "Bogwater Lumaret",
+      "manaCost": "{B}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102637": {
+      "name": "Borrowed Knowledge",
+      "manaCost": "{2}{R}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102638": {
+      "name": "Cauldron of Essence",
+      "manaCost": "{1}{B}{G}",
+      "type": "Artifact",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102639": {
+      "name": "Colorstorm Stallion",
+      "manaCost": "{1}{U}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102640": {
+      "name": "Colossus of the Blood Age",
+      "manaCost": "{4}{R}{W}",
+      "type": "Artifact Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102641": {
+      "name": "Conciliator's Duelist",
+      "manaCost": "{W}{W}{B}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102642": {
+      "name": "Cuboid Colony",
+      "manaCost": "{G}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102643": {
+      "name": "Dina's Guidance",
+      "manaCost": "{1}{B}{G}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102644": {
+      "name": "Elemental Mascot",
+      "manaCost": "{1}{U}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102645": {
+      "name": "Embrace the Paradox",
+      "manaCost": "{3}{G}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102646": {
+      "name": "Essenceknit Scholar",
+      "manaCost": "{B}{B/G}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102647": {
+      "name": "Fix What's Broken",
+      "manaCost": "{2}{W}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102648": {
+      "name": "Fractal Mascot",
+      "manaCost": "{4}{G}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102649": {
+      "name": "Fractal Tender",
+      "manaCost": "{3}{G}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102650": {
+      "name": "Geometer's Arthropod",
+      "manaCost": "{G}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102651": {
+      "name": "Grapple with Death",
+      "manaCost": "{1}{B}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102652": {
+      "name": "Growth Curve",
+      "manaCost": "{G}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102653": {
+      "name": "Hardened Academic",
+      "manaCost": "{R}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102654": {
+      "name": "Imperious Inkmage",
+      "manaCost": "{1}{W}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102655": {
+      "name": "Inkling Mascot",
+      "manaCost": "{W}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102656": {
+      "name": "Killian's Confidence",
+      "manaCost": "{W}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102657": {
+      "name": "Kirol, History Buff",
+      "manaCost": "{R}{W}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102658": {
+      "name": "Lluwen, Exchange Student",
+      "manaCost": "{2}{B}{G}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102659": {
+      "name": "Lorehold Charm",
+      "manaCost": "{R}{W}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102660": {
+      "name": "Lorehold, the Historian",
+      "manaCost": "{3}{R}{W}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102661": {
+      "name": "Mind into Matter",
+      "manaCost": "{X}{G}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102662": {
+      "name": "Mind Roots",
+      "manaCost": "{1}{B}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102663": {
+      "name": "Molten Note",
+      "manaCost": "{X}{R}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102664": {
+      "name": "Moment of Reckoning",
+      "manaCost": "{3}{W}{W}{B}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102665": {
+      "name": "Nita, Forum Conciliator",
+      "manaCost": "{1}{W}{B}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102666": {
+      "name": "Old-Growth Educator",
+      "manaCost": "{2}{B}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102667": {
+      "name": "Paradox Surveyor",
+      "manaCost": "{G}{G/U}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102668": {
+      "name": "Pest Mascot",
+      "manaCost": "{1}{B}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102669": {
+      "name": "Practiced Scrollsmith",
+      "manaCost": "{R}{R/W}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102670": {
+      "name": "Prismari Charm",
+      "manaCost": "{U}{R}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102671": {
+      "name": "Prismari, the Inspiration",
+      "manaCost": "{5}{U}{R}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102672": {
+      "name": "Proctor's Gaze",
+      "manaCost": "{2}{G}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102673": {
+      "name": "Professor Dellian Fel",
+      "manaCost": "{2}{B}{G}",
+      "type": "Legendary Planeswalker",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102674": {
+      "name": "Pterafractyl",
+      "manaCost": "{X}{G}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102675": {
+      "name": "Pursue the Past",
+      "manaCost": "{R}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102676": {
+      "name": "Quandrix Charm",
+      "manaCost": "{G}{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102677": {
+      "name": "Quandrix, the Proof",
+      "manaCost": "{4}{G}{U}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102678": {
+      "name": "Rapturous Moment",
+      "manaCost": "{4}{U}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102679": {
+      "name": "Render Speechless",
+      "manaCost": "{2}{W}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102680": {
+      "name": "Resonating Lute",
+      "manaCost": "{2}{U}{R}",
+      "type": "Artifact",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102681": {
+      "name": "Root Manipulation",
+      "manaCost": "{3}{B}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102682": {
+      "name": "Sanar, Unfinished Genius",
+      "manaCost": "{U}{R}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102683": {
+      "name": "Scolding Administrator",
+      "manaCost": "{W}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102684": {
+      "name": "Silverquill Charm",
+      "manaCost": "{W}{B}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102685": {
+      "name": "Silverquill, the Disputant",
+      "manaCost": "{2}{W}{B}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102686": {
+      "name": "Snooping Page",
+      "manaCost": "{1}{W}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102687": {
+      "name": "Social Snub",
+      "manaCost": "{1}{W}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102688": {
+      "name": "Spectacular Skywhale",
+      "manaCost": "{2}{U}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102689": {
+      "name": "Spirit Mascot",
+      "manaCost": "{R}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102690": {
+      "name": "Splatter Technique",
+      "manaCost": "{1}{U}{U}{R}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102691": {
+      "name": "Stadium Tidalmage",
+      "manaCost": "{2}{U}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102692": {
+      "name": "Startled Relic Sloth",
+      "manaCost": "{2}{R}{W}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102693": {
+      "name": "Stirring Honormancer",
+      "manaCost": "{2}{W}{W/B}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102694": {
+      "name": "Stress Dream",
+      "manaCost": "{3}{U}{R}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102695": {
+      "name": "Suspend Aggression",
+      "manaCost": "{1}{R}{W}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102696": {
+      "name": "Tam, Observant Sequencer",
+      "manaCost": "{2}{G}{U}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102697": {
+      "name": "Teacher's Pest",
+      "manaCost": "{B}{G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102698": {
+      "name": "Traumatic Critique",
+      "manaCost": "{X}{U}{R}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102699": {
+      "name": "Vibrant Outburst",
+      "manaCost": "{U}{R}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102700": {
+      "name": "Vicious Rivalry",
+      "manaCost": "{2}{B}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102701": {
+      "name": "Visionary's Dance",
+      "manaCost": "{5}{U}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102702": {
+      "name": "Wilt in the Heat",
+      "manaCost": "{2}{R}{W}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102703": {
+      "name": "Witherbloom Charm",
+      "manaCost": "{B}{G}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102704": {
+      "name": "Witherbloom, the Balancer",
+      "manaCost": "{6}{B}{G}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102705": {
+      "name": "Zaffai and the Tempests",
+      "manaCost": "{5}{U}{R}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102706": {
+      "name": "Biblioplex Tomekeeper",
+      "manaCost": "{4}",
+      "type": "Artifact Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102707": {
+      "name": "Diary of Dreams",
+      "manaCost": "{2}",
+      "type": "Artifact",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102708": {
+      "name": "Mage Tower Referee",
+      "manaCost": "{2}",
+      "type": "Artifact Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102709": {
+      "name": "Page, Loose Leaf",
+      "manaCost": "{2}",
+      "type": "Legendary Artifact Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102710": {
+      "name": "Potioner's Trove",
+      "manaCost": "{3}",
+      "type": "Artifact",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102711": {
+      "name": "Strixhaven Skycoach",
+      "manaCost": "{3}",
+      "type": "Artifact",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102712": {
+      "name": "Deathcap Glade",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102713": {
+      "name": "Dreamroot Cascade",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102714": {
+      "name": "Fields of Strife",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102715": {
+      "name": "Forum of Amity",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102716": {
+      "name": "Great Hall of the Biblioplex",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102717": {
+      "name": "Paradox Gardens",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102718": {
+      "name": "Petrified Hamlet",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102719": {
+      "name": "Shattered Sanctum",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102720": {
+      "name": "Skycoach Waypoint",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102721": {
+      "name": "Spectacle Summit",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102722": {
+      "name": "Stormcarved Coast",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102723": {
+      "name": "Sundown Pass",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102724": {
+      "name": "Terramorphic Expanse",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102725": {
+      "name": "Titan's Grave",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102726": {
+      "name": "Plains",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102727": {
+      "name": "Island",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102728": {
+      "name": "Swamp",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102729": {
+      "name": "Mountain",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102730": {
+      "name": "Forest",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102731": {
+      "name": "Plains",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102732": {
+      "name": "Plains",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102733": {
+      "name": "Island",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102734": {
+      "name": "Island",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102735": {
+      "name": "Swamp",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102736": {
+      "name": "Swamp",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102737": {
+      "name": "Mountain",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102738": {
+      "name": "Mountain",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102739": {
+      "name": "Forest",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102740": {
+      "name": "Forest",
+      "manaCost": "",
+      "type": "Basic Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104056": {
+      "name": "Rejoinder",
+      "manaCost": "{1}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104057": {
+      "name": "Swords to Plowshares",
+      "manaCost": "{W}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104058": {
+      "name": "Forum's Favor",
+      "manaCost": "{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104059": {
+      "name": "Secret Rendezvous",
+      "manaCost": "{1}{W}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104060": {
+      "name": "Twofold Intent",
+      "manaCost": "{1}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104061": {
+      "name": "Scrollboost",
+      "manaCost": "{1}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104062": {
+      "name": "Aqueous Aria",
+      "manaCost": "{4}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104063": {
+      "name": "Ancestral Recall",
+      "manaCost": "{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104064": {
+      "name": "Jump",
+      "manaCost": "{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104065": {
+      "name": "Brainstorm",
+      "manaCost": "{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104066": {
+      "name": "Oracle's Gift",
+      "manaCost": "{X}{X}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104067": {
+      "name": "Vibrant Idea",
+      "manaCost": "{4}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104068": {
+      "name": "All Aboard",
+      "manaCost": "{U}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104069": {
+      "name": "Careful Study",
+      "manaCost": "{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104070": {
+      "name": "Have a Bite",
+      "manaCost": "{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104071": {
+      "name": "Raise Dead",
+      "manaCost": "{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104072": {
+      "name": "Demonic Tutor",
+      "manaCost": "{1}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104073": {
+      "name": "Reanimate",
+      "manaCost": "{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104074": {
+      "name": "Bloodletting",
+      "manaCost": "{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104075": {
+      "name": "Venomous Words",
+      "manaCost": "{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104076": {
+      "name": "Sign in Blood",
+      "manaCost": "{B}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104077": {
+      "name": "Seething Song",
+      "manaCost": "{2}{R}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104078": {
+      "name": "Lightning Bolt",
+      "manaCost": "{R}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104079": {
+      "name": "Craft with Pride",
+      "manaCost": "{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104080": {
+      "name": "Rocket Volley",
+      "manaCost": "{1}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104081": {
+      "name": "Striking Palette",
+      "manaCost": "{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104082": {
+      "name": "Awaken the Ages",
+      "manaCost": "{5}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104083": {
+      "name": "Regrowth",
+      "manaCost": "{1}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104084": {
+      "name": "Stream of Life",
+      "manaCost": "{X}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104085": {
+      "name": "Rampant Growth",
+      "manaCost": "{1}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104086": {
+      "name": "Bind to Life",
+      "manaCost": "{4}{G}",
+      "type": "Instant",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104087": {
+      "name": "Heroic Stanza",
+      "manaCost": "{1}{W/B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104088": {
+      "name": "Pack a Punch",
+      "manaCost": "{1}{R}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104089": {
+      "name": "Pest Friend",
+      "manaCost": "{B/G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104090": {
+      "name": "Wild Idea",
+      "manaCost": "{3}{U}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104091": {
+      "name": "Deep Sight",
+      "manaCost": "{G}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104102": {
+      "name": "Lorehold, the Historian",
+      "manaCost": "{3}{R}{W}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104103": {
+      "name": "Prismari, the Inspiration",
+      "manaCost": "{5}{U}{R}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104104": {
+      "name": "Quandrix, the Proof",
+      "manaCost": "{4}{G}{U}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104105": {
+      "name": "Silverquill, the Disputant",
+      "manaCost": "{2}{W}{B}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104106": {
+      "name": "Witherbloom, the Balancer",
+      "manaCost": "{6}{B}{G}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104107": {
+      "name": "The Dawning Archaic",
+      "manaCost": "{10}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104108": {
+      "name": "Restoration Seminar",
+      "manaCost": "{5}{W}{W}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104109": {
+      "name": "Echocasting Symposium",
+      "manaCost": "{4}{U}{U}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104110": {
+      "name": "Decorum Dissertation",
+      "manaCost": "{3}{B}{B}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104111": {
+      "name": "Tragedy Feaster",
+      "manaCost": "{2}{B}{B}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104112": {
+      "name": "Improvisation Capstone",
+      "manaCost": "{5}{R}{R}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104113": {
+      "name": "Magmablood Archaic",
+      "manaCost": "{2/R}{2/R}{2/R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104114": {
+      "name": "Germination Practicum",
+      "manaCost": "{3}{G}{G}",
+      "type": "Sorcery",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104115": {
+      "name": "Wildgrowth Archaic",
+      "manaCost": "{2/G}{2/G}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104116": {
+      "name": "Blech, Loafing Pest",
+      "manaCost": "{1}{B}{G}",
+      "type": "Legendary Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104117": {
+      "name": "Colorstorm Stallion",
+      "manaCost": "{1}{U}{R}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104118": {
+      "name": "Geometer's Arthropod",
+      "manaCost": "{G}{U}",
+      "type": "Creature",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104119": {
+      "name": "Ral Zarek, Guest Lecturer",
+      "manaCost": "{1}{B}{B}",
+      "type": "Legendary Planeswalker",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104120": {
+      "name": "Professor Dellian Fel",
+      "manaCost": "{2}{B}{G}",
+      "type": "Legendary Planeswalker",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104121": {
+      "name": "Deathcap Glade",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104122": {
+      "name": "Dreamroot Cascade",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104123": {
+      "name": "Shattered Sanctum",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104124": {
+      "name": "Stormcarved Coast",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "104125": {
+      "name": "Sundown Pass",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SOS",
+      "digitalReleaseSet": ""
+    },
+    "102826": {
+      "name": "Archaeomancer",
+      "manaCost": "{2}{U}{U}",
+      "type": "Creature",
+      "set": "SPG",
+      "digitalReleaseSet": "SPG-SOS"
+    },
+    "102827": {
+      "name": "Archmage Emeritus",
+      "manaCost": "{2}{U}{U}",
+      "type": "Creature",
+      "set": "SPG",
+      "digitalReleaseSet": "SPG-SOS"
+    },
+    "102828": {
+      "name": "Murmuring Mystic",
+      "manaCost": "{3}{U}",
+      "type": "Creature",
+      "set": "SPG",
+      "digitalReleaseSet": "SPG-SOS"
+    },
+    "102829": {
+      "name": "Grim Haruspex",
+      "manaCost": "{2}{B}",
+      "type": "Creature",
+      "set": "SPG",
+      "digitalReleaseSet": "SPG-SOS"
+    },
+    "102830": {
+      "name": "Dualcaster Mage",
+      "manaCost": "{1}{R}{R}",
+      "type": "Creature",
+      "set": "SPG",
+      "digitalReleaseSet": "SPG-SOS"
+    },
+    "102831": {
+      "name": "Magus of the Library",
+      "manaCost": "{G}{G}",
+      "type": "Creature",
+      "set": "SPG",
+      "digitalReleaseSet": "SPG-SOS"
+    },
+    "102832": {
+      "name": "Sylvan Library",
+      "manaCost": "{1}{G}",
+      "type": "Enchantment",
+      "set": "SPG",
+      "digitalReleaseSet": "SPG-SOS"
+    },
+    "102833": {
+      "name": "Adrix and Nev, Twincasters",
+      "manaCost": "{2}{G}{U}",
+      "type": "Legendary Creature",
+      "set": "SPG",
+      "digitalReleaseSet": "SPG-SOS"
+    },
+    "102834": {
+      "name": "Codie, Vociferous Codex",
+      "manaCost": "{3}",
+      "type": "Legendary Artifact Creature",
+      "set": "SPG",
+      "digitalReleaseSet": "SPG-SOS"
+    },
+    "104126": {
+      "name": "Library of Alexandria",
+      "manaCost": "",
+      "type": "Land",
+      "set": "SPG",
+      "digitalReleaseSet": "SPG-SOS"
+    }
+  },
+  "mainDraftSets": [
+    {
+      "code": "SOS",
+      "primaryCount": 281,
+      "firstGrpId": 102460
+    },
+    {
+      "code": "TMT",
+      "primaryCount": 205,
+      "firstGrpId": 100458
+    },
+    {
+      "code": "ECL",
+      "primaryCount": 283,
+      "firstGrpId": 98316
+    },
+    {
+      "code": "TLE",
+      "primaryCount": 238,
+      "firstGrpId": 98172
+    },
+    {
+      "code": "OM1",
+      "primaryCount": 188,
+      "firstGrpId": 97814
+    },
+    {
+      "code": "TLA",
+      "primaryCount": 296,
+      "firstGrpId": 97274
+    },
+    {
+      "code": "EOE",
+      "primaryCount": 276,
+      "firstGrpId": 96575
+    },
+    {
+      "code": "FIN",
+      "primaryCount": 336,
+      "firstGrpId": 95853
+    },
+    {
+      "code": "TDM",
+      "primaryCount": 292,
+      "firstGrpId": 95516
+    },
+    {
+      "code": "DFT",
+      "primaryCount": 291,
+      "firstGrpId": 94803
+    },
+    {
+      "code": "PIO",
+      "primaryCount": 278,
+      "firstGrpId": 94223
+    },
+    {
+      "code": "FDN",
+      "primaryCount": 534,
+      "firstGrpId": 93636
+    },
+    {
+      "code": "J25",
+      "primaryCount": 794,
+      "firstGrpId": 92857
+    },
+    {
+      "code": "DSK",
+      "primaryCount": 288,
+      "firstGrpId": 92055
+    },
+    {
+      "code": "BLB",
+      "primaryCount": 305,
+      "firstGrpId": 91537
+    },
+    {
+      "code": "MH3",
+      "primaryCount": 325,
+      "firstGrpId": 90783
+    },
+    {
+      "code": "OTJ",
+      "primaryCount": 286,
+      "firstGrpId": 90347
+    },
+    {
+      "code": "MKM",
+      "primaryCount": 289,
+      "firstGrpId": 88922
+    },
+    {
+      "code": "LCI",
+      "primaryCount": 297,
+      "firstGrpId": 87131
+    },
+    {
+      "code": "WOE",
+      "primaryCount": 291,
+      "firstGrpId": 86683
+    },
+    {
+      "code": "SIR",
+      "primaryCount": 291,
+      "firstGrpId": 86034
+    },
+    {
+      "code": "LTR",
+      "primaryCount": 314,
+      "firstGrpId": 84693
+    },
+    {
+      "code": "MOM",
+      "primaryCount": 306,
+      "firstGrpId": 84247
+    },
+    {
+      "code": "ONE",
+      "primaryCount": 281,
+      "firstGrpId": 83701
+    },
+    {
+      "code": "BRO",
+      "primaryCount": 304,
+      "firstGrpId": 82485
+    },
+    {
+      "code": "DMU",
+      "primaryCount": 303,
+      "firstGrpId": 82053
+    },
+    {
+      "code": "HBG",
+      "primaryCount": 314,
+      "firstGrpId": 81231
+    },
+    {
+      "code": "SNC",
+      "primaryCount": 325,
+      "firstGrpId": 80152
+    },
+    {
+      "code": "NEO",
+      "primaryCount": 319,
+      "firstGrpId": 79418
+    },
+    {
+      "code": "J21",
+      "primaryCount": 151,
+      "firstGrpId": 79235
+    },
+    {
+      "code": "VOW",
+      "primaryCount": 292,
+      "firstGrpId": 78776
+    },
+    {
+      "code": "MID",
+      "primaryCount": 289,
+      "firstGrpId": 78322
+    },
+    {
+      "code": "AFR",
+      "primaryCount": 307,
+      "firstGrpId": 77106
+    },
+    {
+      "code": "STX",
+      "primaryCount": 294,
+      "firstGrpId": 76393
+    },
+    {
+      "code": "KLR",
+      "primaryCount": 302,
+      "firstGrpId": 75579
+    },
+    {
+      "code": "ANB",
+      "primaryCount": 118,
+      "firstGrpId": 75442
+    },
+    {
+      "code": "KHM",
+      "primaryCount": 328,
+      "firstGrpId": 75036
+    },
+    {
+      "code": "AKR",
+      "primaryCount": 339,
+      "firstGrpId": 73773
+    },
+    {
+      "code": "ZNR",
+      "primaryCount": 300,
+      "firstGrpId": 73183
+    },
+    {
+      "code": "JMP",
+      "primaryCount": 495,
+      "firstGrpId": 72104
+    },
+    {
+      "code": "M21",
+      "primaryCount": 300,
+      "firstGrpId": 71783
+    },
+    {
+      "code": "IKO",
+      "primaryCount": 277,
+      "firstGrpId": 71068
+    },
+    {
+      "code": "THB",
+      "primaryCount": 273,
+      "firstGrpId": 70512
+    },
+    {
+      "code": "ELD",
+      "primaryCount": 300,
+      "firstGrpId": 70148
+    },
+    {
+      "code": "M20",
+      "primaryCount": 345,
+      "firstGrpId": 69786
+    },
+    {
+      "code": "WAR",
+      "primaryCount": 275,
+      "firstGrpId": 69452
+    },
+    {
+      "code": "RNA",
+      "primaryCount": 272,
+      "firstGrpId": 69129
+    },
+    {
+      "code": "GRN",
+      "primaryCount": 276,
+      "firstGrpId": 68462
+    },
+    {
+      "code": "M19",
+      "primaryCount": 315,
+      "firstGrpId": 67682
+    },
+    {
+      "code": "DAR",
+      "primaryCount": 281,
+      "firstGrpId": 67106
+    },
+    {
+      "code": "RIX",
+      "primaryCount": 206,
+      "firstGrpId": 66619
+    },
+    {
+      "code": "XLN",
+      "primaryCount": 288,
+      "firstGrpId": 65961
+    },
+    {
+      "code": "KTK",
+      "primaryCount": 257,
+      "firstGrpId": 57939
+    }
+  ]
+}

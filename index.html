@@ -367,7 +367,7 @@
                     <div class="form-row">
                         <div style="flex: 1;">
                             <label>Database Path</label>
-                            <input type="text" id="mtga-db-path-input" placeholder="Path to data_cards_*.mtga">
+                            <input type="text" id="mtga-db-path-input" placeholder="Path to Raw_CardDatabase_*.mtga">
                         </div>
                         <button class="btn btn-primary" onclick="browseMtgaDb()">Browse</button>
                     </div>
@@ -375,7 +375,7 @@
                         <div id="mtga-enrich-status" style="font-size:12px;color:var(--text-muted);flex:1;"></div>
                         <button class="btn btn-secondary" onclick="runSetEnrichment()">Import Now</button>
                     </div>
-                    <small style="color: var(--text-muted);">Used to import cards for sets not yet on Scryfall. Look for <strong>data_cards_*.mtga</strong> under <code>MTGA_Data/Downloads/Data/</code> or <strong>Raw_CardDatabase_*.mtga</strong> under <code>MTGA_Data/Downloads/Raw/</code> in your MTGA installation folder.</small>
+                    <small style="color: var(--text-muted);">Used to import cards for sets not yet on Scryfall. Look for <strong>Raw_CardDatabase_*.mtga</strong> under <code>MTGA_Data/Downloads/Raw/</code> in your local MTGA install.</small>
                 </div>
 
                 <div class="settings-group">
@@ -399,16 +399,6 @@
                             <input type="checkbox" id="setting-minimize">
                             <span>Minimize to system tray</span>
                         </label>
-                    </div>
-                    <div class="form-row">
-                        <label class="checkbox-row">
-                            <input type="checkbox" id="setting-notifications">
-                            <span>Show match result notifications</span>
-                        </label>
-                    </div>
-                    <div class="form-row">
-                        <span>Test notification system</span>
-                        <button class="btn btn-secondary" onclick="testNotification()">Test Notification</button>
                     </div>
                 </div>
 
@@ -444,7 +434,7 @@
                     <h3>Data Management</h3>
                     <div class="form-row"><span>Export all your match data</span><button class="btn btn-secondary"
                             onclick="exportData()">Export</button></div>
-                    <div class="form-row"><span>Import data from backup</span><button class="btn btn-secondary"
+                    <div class="form-row"><span>Restore from backup folder (select your data folder)</span><button class="btn btn-secondary"
                             onclick="importData()">Import</button></div>
                     <div class="form-row"><span style="color: var(--danger);">Delete all match data</span><button
                             class="btn btn-danger" onclick="clearAllData()">Clear Data</button></div>
@@ -500,7 +490,7 @@
                                 <li>Inventory tracking (gems, gold, wildcards, packs)</li>
                                 <li>Format grouping and statistics</li>
                                 <li>Borderless window with custom controls</li>
-                                <li>Tray notifications and system tray integration</li>
+                                <li>System tray integration</li>
                             </ul>
                         </div>
                     </div>

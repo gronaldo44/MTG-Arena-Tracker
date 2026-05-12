@@ -8,11 +8,11 @@ const fs = require('fs');
 const path = require('path');
 
 const BULK_DATA_URL = 'https://api.scryfall.com/bulk-data';
-const CARDS_FILE = path.join(__dirname, 'cards.json');
 const UPDATE_INTERVAL_HOURS = 24; // Update once per day
 
 class CardUpdater {
-  constructor() {
+  constructor(userDataPath = __dirname) {
+    this.cardsFile = path.join(userDataPath, 'cards.json');
     this.cardsData = { cards: {}, lastUpdated: null };
   }
 
@@ -21,12 +21,12 @@ class CardUpdater {
    */
   needsUpdate() {
     try {
-      if (!fs.existsSync(CARDS_FILE)) {
+      if (!fs.existsSync(this.cardsFile)) {
         console.log('[CardUpdater] cards.json does not exist, update needed');
         return true;
       }
 
-      const content = fs.readFileSync(CARDS_FILE, 'utf8');
+      const content = fs.readFileSync(this.cardsFile, 'utf8');
       const data = JSON.parse(content);
 
       if (!data.lastUpdated) {
@@ -93,7 +93,7 @@ class CardUpdater {
    * Download and process the bulk card data
    * Uses streaming to handle large files efficiently
    */
-  async downloadCards() {
+  async downloadCards(onProgress) {
     console.log('[CardUpdater] Starting card database update...');
 
     try {
@@ -114,7 +114,7 @@ class CardUpdater {
       console.log('[CardUpdater] Downloading card data (this may take 30-60 seconds)...');
       console.log('[CardUpdater] Processing cards with Arena IDs only...');
 
-      const cards = await this.downloadAndProcessCards(defaultCards.download_uri);
+      const cards = await this.downloadAndProcessCards(defaultCards.download_uri, onProgress);
 
       // Step 3: Save the processed data
       this.cardsData = {
@@ -125,9 +125,9 @@ class CardUpdater {
       };
 
       // Write to temp file first, then rename for atomic operation
-      const tempFile = CARDS_FILE + '.tmp';
+      const tempFile = this.cardsFile + '.tmp';
       fs.writeFileSync(tempFile, JSON.stringify(this.cardsData, null, 2));
-      fs.renameSync(tempFile, CARDS_FILE);
+      fs.renameSync(tempFile, this.cardsFile);
 
       const cardCount = Object.keys(cards).length;
       console.log(`[CardUpdater] Successfully saved ${cardCount} cards with Arena IDs to cards.json`);
@@ -143,7 +143,7 @@ class CardUpdater {
       console.error('[CardUpdater] Error updating cards:', error.message);
 
       // If we have existing cards, keep using them
-      if (fs.existsSync(CARDS_FILE)) {
+      if (fs.existsSync(this.cardsFile)) {
         console.log('[CardUpdater] Keeping existing cards.json');
         return false;
       }
@@ -156,7 +156,7 @@ class CardUpdater {
    * Download the large JSON file and extract Arena cards
    * Uses streaming for memory efficiency
    */
-  downloadAndProcessCards(url) {
+  downloadAndProcessCards(url, onProgress) {
     return new Promise((resolve, reject) => {
       const cards = {};
       let processed = 0;
@@ -252,6 +252,7 @@ class CardUpdater {
 
                     if (processed % 1000 === 0) {
                       console.log(`[CardUpdater] Processed ${processed} cards, found ${withArenaId} with Arena IDs...`);
+                      if (onProgress) onProgress({ processed, withArenaId });
                     }
                   } catch (e) {
                     // Skip malformed objects
@@ -283,9 +284,9 @@ class CardUpdater {
   /**
    * Main update function - checks if update is needed and downloads if so
    */
-  async update() {
+  async update(onProgress) {
     if (this.needsUpdate()) {
-      return await this.downloadCards();
+      return await this.downloadCards(onProgress);
     }
     return false; // No update needed
   }
@@ -295,8 +296,8 @@ class CardUpdater {
    */
   loadCards() {
     try {
-      if (fs.existsSync(CARDS_FILE)) {
-        const content = fs.readFileSync(CARDS_FILE, 'utf8');
+      if (fs.existsSync(this.cardsFile)) {
+        const content = fs.readFileSync(this.cardsFile, 'utf8');
         const data = JSON.parse(content);
         this.cardsData = data;
         console.log(`[CardUpdater] Loaded ${Object.keys(data.cards || {}).length} cards from disk`);

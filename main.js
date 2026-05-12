@@ -1,4 +1,8 @@
-const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, Notification, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, shell } = require('electron');
+
+// Must be set before any call to app.getPath('userData') so the user-data
+// folder is "MTG Arena Tracker" rather than the package name "mtg-arena-auto-tracker".
+app.setName('MTG Arena Tracker');
 const path = require('path');
 const fs = require('fs');
 const chokidar = require('chokidar');
@@ -28,13 +32,26 @@ let cards = {};
 
 function loadCards() {
   try {
-    const cardsPath = path.join(__dirname, 'cards.json');
+    const cardsPath = path.join(app.getPath('userData'), 'cards.json');
     const data = JSON.parse(fs.readFileSync(cardsPath, 'utf8'));
     cards = data.cards || {};
     console.log(`[Cards] Loaded ${Object.keys(cards).length} cards`);
   } catch (e) {
     console.error('[Cards] Failed to load cards:', e);
     cards = {};
+  }
+}
+
+function migrateCardsJson() {
+  const devPath  = path.join(__dirname, 'cards.json');
+  const userPath = path.join(app.getPath('userData'), 'cards.json');
+  if (fs.existsSync(devPath) && !fs.existsSync(userPath)) {
+    try {
+      fs.copyFileSync(devPath, userPath);
+      console.log('[Cards] Migrated cards.json to userData');
+    } catch (e) {
+      console.error('[Cards] Migration failed:', e.message);
+    }
   }
 }
 
@@ -398,26 +415,6 @@ function handleGameEvent(event) {
           mainWindow.webContents.send('match-ended', event.data);
         }
 
-        const settings = dataStore.getSettings();
-        if (tray && settings.showNotifications !== false) {
-          const result = event.data.result;
-          const emoji = result === 'win' ? '🏆' : result === 'loss' ? '❌' : '🤝';
-
-          if (process.platform === 'win32') {
-            tray.displayBalloon({
-              title: 'MTG Arena Tracker',
-              content: `${emoji} Match ended: ${result.toUpperCase()}`,
-              iconType: 'info'
-            });
-          } else {
-            const notif = new Notification({
-              title: 'MTG Arena Tracker',
-              body: `${emoji} Match ended: ${result.toUpperCase()}`,
-              icon: path.join(__dirname, 'icon.png')
-            });
-            notif.show();
-          }
-        }
       } catch (e) {
         console.error('Error handling match end:', e);
       }
@@ -811,15 +808,13 @@ ipcMain.handle('export-data', async () => {
 
 ipcMain.handle('import-data', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
-    filters: [
-      { name: 'JSON Files', extensions: ['json'] }
-    ],
-    properties: ['openFile']
+    title: 'Select your data backup folder',
+    properties: ['openDirectory'],
   });
 
   if (!result.canceled && result.filePaths.length > 0) {
     try {
-      dataStore.importFromFile(result.filePaths[0]);
+      dataStore.importFromDirectory(result.filePaths[0]);
       return true;
     } catch (e) {
       console.error('Import error:', e);
@@ -903,7 +898,7 @@ ipcMain.handle('save-settings', async (event, settings) => {
 
 ipcMain.handle('get-card-db-status', async () => {
   try {
-    const cardsPath = path.join(__dirname, 'cards.json');
+    const cardsPath = path.join(app.getPath('userData'), 'cards.json');
     if (!fs.existsSync(cardsPath)) {
       return { exists: false, cardCount: 0, lastUpdated: null };
     }
@@ -926,11 +921,17 @@ ipcMain.handle('get-card-db-status', async () => {
 
 ipcMain.handle('update-card-db', async () => {
   if (!cardUpdater) {
-    cardUpdater = new CardUpdater();
+    cardUpdater = new CardUpdater(app.getPath('userData'));
   }
 
   try {
-    const result = await cardUpdater.update();
+    const progressSender = (progress) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('card-db-progress', progress);
+      }
+    };
+    const result = await cardUpdater.update(progressSender);
+    progressSender({ done: true });
 
     if (dataStore) {
       dataStore.reloadCards();
@@ -966,79 +967,64 @@ ipcMain.on('open-external', (event, url) => {
   shell.openExternal(url);
 });
 
-ipcMain.handle('test-notification', async () => {
-  try {
-    const settings = dataStore.getSettings();
-
-    if (!tray) {
-      return { success: false, error: 'Tray not available' };
-    }
-
-    if (settings.showNotifications === false) {
-      return { success: false, error: 'Notifications are disabled in settings' };
-    }
-
-    const isWindows = process.platform === 'win32';
-
-    if (isWindows) {
-      tray.displayBalloon({
-        title: 'MTG Arena Tracker - Test',
-        content: '🏆 This is a test notification! Match ended: WIN',
-        iconType: 'info'
-      });
-    } else {
-      const notification = new Notification({
-        title: 'MTG Arena Tracker - Test',
-        body: '🏆 This is a test notification! Match ended: WIN',
-        icon: path.join(__dirname, 'icon.png')
-      });
-      notification.show();
-    }
-
-    return {
-      success: true,
-      platform: process.platform,
-      isWindows,
-      method: isWindows ? 'balloon' : 'native'
-    };
-  } catch (error) {
-    console.error('[Test Notification] Error:', error);
-    return { success: false, error: error.message };
-  }
-});
 
 app.whenReady().then(async () => {
+  // Point all modules that write cards.json to the writable userData directory,
+  // then migrate any existing dev-time cards.json from the project root.
+  setEnricher.init(app.getPath('userData'));
+  migrateCardsJson();
+
   // Initialize dataStore and cards before creating the window so that IPC
   // handlers (list-drafts, view-draft-record, etc.) have data available when
   // the renderer fires DOMContentLoaded. Without this, the renderer's first
   // list-drafts call races against the async cardUpdater.update() below and
   // always wins — returning [] even though drafts.json has saved records.
   dataStore = new DataStore();
+
+  // Clear any stored mtgaDbPath that no longer exists on disk (e.g. after an
+  // MTGA update renames the database file, or after moving the install).
+  const { mtgaDbPath } = dataStore.getSettings();
+  if (mtgaDbPath && !fs.existsSync(mtgaDbPath)) {
+    dataStore.saveSettings({ mtgaDbPath: '' });
+  }
+
   loadCards();
 
   createWindow();
   createTray();
 
   console.log('[App] Checking for card database updates...');
-  cardUpdater = new CardUpdater();
+  cardUpdater = new CardUpdater(app.getPath('userData'));
+
+  const sendProgress = (progress) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('card-db-progress', progress);
+    }
+  };
 
   let scryfallUpdated = false;
   try {
-    scryfallUpdated = await cardUpdater.update();
+    scryfallUpdated = await cardUpdater.update(sendProgress);
     if (scryfallUpdated) {
       console.log('[App] Card database was updated');
+      loadCards();
     } else {
       console.log('[App] Card database is up to date');
     }
   } catch (error) {
     console.error('[App] Failed to update card database:', error.message);
   }
+  sendProgress({ done: true });
 
   // Enrich cards.json with MTGA-sourced data for sets not yet mapped on Scryfall.
   // Runs when Scryfall just refreshed or when enrichment hasn't been done yet.
   if (scryfallUpdated || setEnricher.needsEnrichment()) {
     const { mtgaDbPath } = dataStore.getSettings();
-    await setEnricher.enrich({ mtgaDbPath });
+    const enriched = await setEnricher.enrich({ mtgaDbPath });
+    if (enriched) {
+      dataStore.reloadCards();
+      loadCards();
+    }
   }
 
   // Auto-load last 17Lands CSV from previous session
