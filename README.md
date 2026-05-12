@@ -4,27 +4,30 @@ A **standalone** MTG Arena deck tracker that automatically reads your game logs
 
 ## Features
 
-- **Automatic Match Tracking** - Detects matches as you play in real-time
-- **Deck Detection** - Automatically identifies your decks with full card lists
-- **Win/Loss Tracking** - Accurate match results based on game state
-- **Card Database** - Auto-updating database from Scryfall with 16,000+ Arena cards
-- **Draft Assistant** - Live pack ratings powered by 17Lands CSV data
-- **Deck Builder** - Hypergeometric probability calculator and draft card pool analysis by color
-- **Inventory Tracking** - Shows gems, gold, vault progress, wildcards, and packs
-- **Real-time Status** - Status bar updates with match progress and results
-- **System Tray** - Runs in the background with tray notifications
-- **Data Export/Import** - Backup and restore your match history
-- **No Account Required** - All data stays local on your machine
-
-## Screenshots
+### Dashboard
+At-a-glance view of your match summary, inventory (gems, gold, wildcards, packs), and recent matches.
 
 ![Dashboard](images/dashboard.png)
 
+### Draft Assistant
+Live pack ratings for your current draft pick, powered by your 17Lands CSV data.
+
 ![Draft Assistant](images/Draft%20Assistant.jpg)
+
+### Deck Builder
+Analyze your draft card pool by color and calculate the odds of drawing any card in your opening hand.
+
+![Deck Builder](images/Deck%20Builder.jpg)
+
+### Statistics Tracking
+Card-level win-rate stats across your entire match history.
 
 ![Statistics](images/Statistics.jpg)
 
-![Deck Builder](images/Deck%20Builder.jpg)
+### History by Format
+Browse and filter all your past matches organized by format and deck.
+
+![History](images/History.jpg)
 
 ## How It Works
 
