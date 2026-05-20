@@ -580,7 +580,7 @@ async function exportData() {
 
 async function importData() {
     const success = await ipcRenderer.invoke('import-data');
-    if (success) { alert('Data imported successfully!'); require('./dashboard').loadDashboard(); }
+    if (success) { alert('Data imported successfully! Please restart the app to see all your data.'); require('./dashboard').loadDashboard(); }
     else alert('Failed to import data.');
 }
 
