@@ -540,66 +540,21 @@ class DataStore {
   }
 
   /**
-   * Import all data files from a backup directory.
-   * Reads matches.json, cardStats.json, drafts.json, and settings.json
-   * if present, merging each into the current data without overwriting
-   * records that already exist.
+   * Import data from a single exported JSON file.
+   * Merges matches and decks without overwriting records that already exist.
    */
-  importFromDirectory(dirPath) {
-    const read = name => {
-      const p = path.join(dirPath, name);
-      return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
-    };
+  importFromFile(filePath) {
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-    const matchesData = read('matches.json');
-    if (matchesData?.matches && Array.isArray(matchesData.matches)) {
+    if (data.matches && Array.isArray(data.matches)) {
       const existingIds = new Set(this.data.matches.map(m => m.id));
-      const newMatches  = matchesData.matches.filter(m => !existingIds.has(m.id));
+      const newMatches  = data.matches.filter(m => !existingIds.has(m.id));
       this.data.matches.push(...newMatches);
     }
-    if (matchesData?.decks) {
-      this.data.decks = { ...this.data.decks, ...matchesData.decks };
+    if (data.decks) {
+      this.data.decks = { ...this.data.decks, ...data.decks };
     }
     this.saveData();
-
-    const statsData = read('cardStats.json');
-    if (statsData?.statsByFormat) {
-      for (const [fmt, stats] of Object.entries(statsData.statsByFormat)) {
-        if (!this.cardStats.statsByFormat[fmt]) {
-          this.cardStats.statsByFormat[fmt] = {};
-        }
-        for (const [grpId, s] of Object.entries(stats)) {
-          const existing = this.cardStats.statsByFormat[fmt][grpId];
-          if (existing) {
-            existing.gamesInDeck      += s.gamesInDeck      || 0;
-            existing.gamesInHand      += s.gamesInHand      || 0;
-            existing.gamesWonInHand   += s.gamesWonInHand   || 0;
-            existing.gamesOpenHand    += s.gamesOpenHand    || 0;
-            existing.gamesWonOpenHand += s.gamesWonOpenHand || 0;
-          } else {
-            this.cardStats.statsByFormat[fmt][grpId] = { ...s };
-          }
-        }
-      }
-      if (Array.isArray(statsData.processedGames)) {
-        for (const id of statsData.processedGames) this.cardStats.processedGames.add(id);
-      }
-      this.saveCardStats();
-    }
-
-    const draftsData = read('drafts.json');
-    if (draftsData?.drafts) {
-      for (const [id, draft] of Object.entries(draftsData.drafts)) {
-        if (!this.drafts[id]) this.drafts[id] = draft;
-      }
-      this.saveDrafts();
-    }
-
-    const settingsData = read('settings.json');
-    if (settingsData) {
-      const { mtgaDbPath: _ignored, ...safeSettings } = settingsData;
-      this.saveSettings(safeSettings);
-    }
   }
 
   // ─── Personal card game stats ────────────────────────────────────────────

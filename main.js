@@ -875,13 +875,14 @@ ipcMain.handle('export-data', async () => {
 
 ipcMain.handle('import-data', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
-    title: 'Select your data backup folder',
-    properties: ['openDirectory'],
+    title: 'Select your data backup file',
+    filters: [{ name: 'JSON Files', extensions: ['json'] }],
+    properties: ['openFile'],
   });
 
   if (!result.canceled && result.filePaths.length > 0) {
     try {
-      dataStore.importFromDirectory(result.filePaths[0]);
+      dataStore.importFromFile(result.filePaths[0]);
       return true;
     } catch (e) {
       console.error('Import error:', e);
