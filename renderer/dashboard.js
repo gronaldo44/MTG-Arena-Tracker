@@ -1,6 +1,7 @@
 'use strict';
 
 const { ipcRenderer } = require('electron');
+const { isDraftFormat, groupIntoDraftRuns, draftComboTrophyStats, getColorCombo } = require('./shared');
 
 // ─── Inventory widget ─────────────────────────────────────────────────────────
 
@@ -43,8 +44,11 @@ function renderInventory(inventory) {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 async function loadDashboard() {
-    const stats     = await ipcRenderer.invoke('get-stats');
-    const inventory = await ipcRenderer.invoke('get-inventory');
+    const [stats, inventory, matches] = await Promise.all([
+        ipcRenderer.invoke('get-stats'),
+        ipcRenderer.invoke('get-inventory'),
+        ipcRenderer.invoke('get-matches'),
+    ]);
 
     document.getElementById('stat-total').textContent   = stats.total || 0;
     document.getElementById('stat-wins').textContent    = stats.wins || 0;
@@ -53,6 +57,21 @@ async function loadDashboard() {
 
     const inventoryContainer = document.getElementById('inventory-widget');
     if (inventoryContainer) inventoryContainer.innerHTML = renderInventory(inventory);
+
+    // Pre-compute draft run stats per format from full match list
+    const matchesByFormat = {};
+    for (const m of matches) {
+        const fmt = m.format || 'Unknown';
+        if (!matchesByFormat[fmt]) matchesByFormat[fmt] = [];
+        matchesByFormat[fmt].push(m);
+    }
+    const draftFmtStats = {};
+    for (const [fmt, fmtMatches] of Object.entries(matchesByFormat)) {
+        if (!isDraftFormat(fmt)) continue;
+        const runs     = groupIntoDraftRuns(fmtMatches);
+        const trophies = runs.filter(r => r.trophy).length;
+        draftFmtStats[fmt] = { totalRuns: runs.length, trophies };
+    }
 
     const formatContainer = document.getElementById('format-stats');
     const formats = stats.formats || {};
@@ -68,16 +87,20 @@ async function loadDashboard() {
             .sort((a, b) => b[1].total - a[1].total)
             .map(([format, data]) => {
                 const winRate = data.total > 0 ? Math.round((data.wins / data.total) * 100) : 0;
+                const ds      = draftFmtStats[format];
+                const draftMiniStats = ds ? `
+                    <div class="mini-stat"><span class="number">${ds.totalRuns}</span><span class="label">Drafts</span></div>
+                    <div class="mini-stat"><span class="number">${ds.totalRuns > 0 ? Math.round(ds.trophies / ds.totalRuns * 100) : 0}%</span><span class="label">Trophy</span></div>
+                ` : '';
                 return `
                     <div class="format-card">
                         <h4>
                             <span class="format-name">${format}</span>
-                            <span class="format-badge">${data.total} matches</span>
                         </h4>
                         <div class="format-stats">
-                            <div class="mini-stat"><span class="number">${data.wins}</span><span class="label">Wins</span></div>
-                            <div class="mini-stat"><span class="number">${data.losses}</span><span class="label">Losses</span></div>
+                            <div class="mini-stat"><span class="number">${data.total}</span><span class="label">Matches</span></div>
                             <div class="mini-stat"><span class="number">${winRate}%</span><span class="label">Win Rate</span></div>
+                            ${draftMiniStats}
                         </div>
                         <div class="winrate-bar"><div class="fill" style="width: ${winRate}%"></div></div>
                     </div>`;
@@ -85,7 +108,6 @@ async function loadDashboard() {
     }
 
     const recentContainer = document.getElementById('recent-matches');
-    const matches = await ipcRenderer.invoke('get-matches');
     const { renderMatchItem } = require('./matchHistory');
 
     recentContainer.innerHTML = matches.slice(0, 10).length === 0

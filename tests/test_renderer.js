@@ -293,17 +293,29 @@ describe('getColorCombo', () => {
     expect(getColorCombo(['W', 'U', 'R'], { W: 10, U: 8, R: 2 })).toBe('WU');
   });
 
-  test('returns empty string when all colors are splashes', () => {
-    expect(getColorCombo(['W', 'U'], { W: 1, U: 3 })).toBe('');
+  test('all colors ≤6 with count data → returns all present colors (not treated as splashes)', () => {
+    expect(getColorCombo(['W', 'U'], { W: 1, U: 3 })).toBe('WU');
   });
 
-  test('null colorCounts includes all present colors', () => {
+  test('five colors all ≤6 → returns all five colors', () => {
+    expect(getColorCombo(['W', 'U', 'B', 'R', 'G'], { W: 4, U: 4, B: 4, R: 4, G: 4 })).toBe('WUBRG');
+  });
+
+  test('one color exceeds 6 → normal splash filtering applies', () => {
+    expect(getColorCombo(['W', 'U', 'R'], { W: 10, U: 2, R: 2 })).toBe('W');
+  });
+
+  test('null colorCounts → no count data → uses splash-filter fallback, 0-count colors pass through', () => {
     expect(getColorCombo(['G', 'R'], null)).toBe('RG');
   });
 
   test('null / empty colors returns empty string', () => {
     expect(getColorCombo([], { W: 10 })).toBe('');
     expect(getColorCombo(null, {})).toBe('');
+  });
+
+  test('all colors have count 0 (no count data present) → falls back to splash filter', () => {
+    expect(getColorCombo(['W', 'U'], { W: 0, U: 0 })).toBe('WU');
   });
 });
 

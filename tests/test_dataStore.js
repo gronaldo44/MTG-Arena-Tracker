@@ -480,3 +480,156 @@ describe('DataStore — importFromDirectory', () => {
     expect(ds.getMatches()).toHaveLength(1);
   });
 });
+
+// ─── Migration: _backfillPremierDraft ─────────────────────────────────────────
+
+describe('DataStore — _backfillPremierDraft migration', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir       = fs.mkdtempSync(path.join(os.tmpdir(), 'mtg-ds-mig-'));
+    MOCK_USERDATA = tmpDir;
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function writeMatches(matches) {
+    const dataDir = path.join(tmpDir, 'data');
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, 'matches.json'), JSON.stringify({ matches, decks: {} }));
+  }
+
+  function writeCardStats(statsByFormat) {
+    const dataDir = path.join(tmpDir, 'data');
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, 'cardStats.json'), JSON.stringify({
+      processedGames: [],
+      statsByFormat,
+    }));
+  }
+
+  test('"[Set] Draft" match format is upgraded to "Premier Draft [Set]"', () => {
+    writeMatches([{ id: '1', matchId: 'x', result: 'win', format: 'Secrets of Strixhaven Draft' }]);
+    const ds = new DataStore();
+    expect(ds.getMatches()[0].format).toBe('Premier Draft Secrets of Strixhaven');
+  });
+
+  test('bare "Draft" format is upgraded to "Premier Draft"', () => {
+    writeMatches([{ id: '1', matchId: 'x', result: 'win', format: 'Draft' }]);
+    const ds = new DataStore();
+    expect(ds.getMatches()[0].format).toBe('Premier Draft');
+  });
+
+  test('Quick Draft format is not changed', () => {
+    writeMatches([{ id: '1', matchId: 'x', result: 'win', format: 'Strixhaven Quick Draft' }]);
+    const ds = new DataStore();
+    expect(ds.getMatches()[0].format).toBe('Strixhaven Quick Draft');
+  });
+
+  test('Traditional Draft format is not changed', () => {
+    writeMatches([{ id: '1', matchId: 'x', result: 'win', format: 'Strixhaven Traditional Draft' }]);
+    const ds = new DataStore();
+    expect(ds.getMatches()[0].format).toBe('Strixhaven Traditional Draft');
+  });
+
+  test('Sealed format is not changed', () => {
+    writeMatches([{ id: '1', matchId: 'x', result: 'win', format: 'Strixhaven Sealed' }]);
+    const ds = new DataStore();
+    expect(ds.getMatches()[0].format).toBe('Strixhaven Sealed');
+  });
+
+  test('already-correct "Premier Draft [Set]" is not changed', () => {
+    writeMatches([{ id: '1', matchId: 'x', result: 'win', format: 'Premier Draft Secrets of Strixhaven' }]);
+    const ds = new DataStore();
+    expect(ds.getMatches()[0].format).toBe('Premier Draft Secrets of Strixhaven');
+  });
+
+  test('cardStats key "[Set] Draft" is renamed to "Premier Draft [Set]"', () => {
+    writeMatches([]);
+    writeCardStats({
+      'Secrets of Strixhaven Draft': { '111': { gamesInDeck: 5, gamesInHand: 3, gamesWon: 2, gamesOpenHand: 1, gamesWonOpenHand: 1 } },
+    });
+    const ds = new DataStore();
+    expect(ds.cardStats.statsByFormat['Premier Draft Secrets of Strixhaven']).toBeDefined();
+    expect(ds.cardStats.statsByFormat['Secrets of Strixhaven Draft']).toBeUndefined();
+    expect(ds.cardStats.statsByFormat['Premier Draft Secrets of Strixhaven']['111'].gamesInDeck).toBe(5);
+  });
+
+  test('cardStats for non-draft formats are not changed', () => {
+    writeMatches([]);
+    writeCardStats({ 'Standard': { '222': { gamesInDeck: 1, gamesInHand: 0, gamesWon: 0, gamesOpenHand: 0, gamesWonOpenHand: 0 } } });
+    const ds = new DataStore();
+    expect(ds.cardStats.statsByFormat['Standard']).toBeDefined();
+  });
+});
+
+// ─── Migration: _reorderPremierDraft ─────────────────────────────────────────
+
+describe('DataStore — _reorderPremierDraft migration', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir        = fs.mkdtempSync(path.join(os.tmpdir(), 'mtg-ds-reorder-'));
+    MOCK_USERDATA = tmpDir;
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function writeMatches(matches) {
+    const dataDir = path.join(tmpDir, 'data');
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, 'matches.json'), JSON.stringify({ matches, decks: {} }));
+  }
+
+  function writeCardStats(statsByFormat) {
+    const dataDir = path.join(tmpDir, 'data');
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, 'cardStats.json'), JSON.stringify({
+      processedGames: [],
+      statsByFormat,
+    }));
+  }
+
+  test('"[Set] Premier Draft" is reordered to "Premier Draft [Set]"', () => {
+    writeMatches([{ id: '1', matchId: 'x', result: 'win', format: 'Secrets of Strixhaven Premier Draft' }]);
+    const ds = new DataStore();
+    expect(ds.getMatches()[0].format).toBe('Premier Draft Secrets of Strixhaven');
+  });
+
+  test('already-correct "Premier Draft [Set]" is not changed', () => {
+    writeMatches([{ id: '1', matchId: 'x', result: 'win', format: 'Premier Draft Secrets of Strixhaven' }]);
+    const ds = new DataStore();
+    expect(ds.getMatches()[0].format).toBe('Premier Draft Secrets of Strixhaven');
+  });
+
+  test('bare "Premier Draft" (no set name) is not changed', () => {
+    writeMatches([{ id: '1', matchId: 'x', result: 'win', format: 'Premier Draft' }]);
+    const ds = new DataStore();
+    expect(ds.getMatches()[0].format).toBe('Premier Draft');
+  });
+
+  test('cardStats key "[Set] Premier Draft" is reordered', () => {
+    writeMatches([]);
+    writeCardStats({
+      'Secrets of Strixhaven Premier Draft': { '333': { gamesInDeck: 3, gamesInHand: 2, gamesWon: 1, gamesOpenHand: 0, gamesWonOpenHand: 0 } },
+    });
+    const ds = new DataStore();
+    expect(ds.cardStats.statsByFormat['Premier Draft Secrets of Strixhaven']).toBeDefined();
+    expect(ds.cardStats.statsByFormat['Secrets of Strixhaven Premier Draft']).toBeUndefined();
+  });
+
+  test('multiple matches across both old formats are all migrated in one pass', () => {
+    writeMatches([
+      { id: '1', matchId: 'a', result: 'win',  format: 'Secrets of Strixhaven Premier Draft' },
+      { id: '2', matchId: 'b', result: 'loss', format: 'Secrets of Strixhaven Premier Draft' },
+      { id: '3', matchId: 'c', result: 'win',  format: 'Premier Draft Secrets of Strixhaven' },
+    ]);
+    const ds = new DataStore();
+    const formats = ds.getMatches().map(m => m.format);
+    expect(formats.every(f => f === 'Premier Draft Secrets of Strixhaven')).toBe(true);
+  });
+});

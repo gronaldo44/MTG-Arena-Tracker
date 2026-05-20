@@ -2,6 +2,15 @@
 
 const { SET_NAMES, SKIP_CODES } = require('../sets');
 
+// Lazy-load the card DB to check basic land type without a hard dependency.
+let _cardDb = null;
+function _isBasicLand(grpId) {
+    if (!_cardDb) {
+        try { _cardDb = require('../cards.json'); } catch { _cardDb = { cards: {} }; }
+    }
+    return _cardDb.cards?.[String(grpId)]?.type === 'Basic Land';
+}
+
 /**
  * Parses match-lifecycle lines from the MTGA UnityCrossThreadLogger.
  *
@@ -52,6 +61,13 @@ class MatchParser {
     }
     if (line.includes('"gameEndReason"') || line.includes('"winningTeamId"')) {
       return this.handleGameEnd(line);
+    }
+    // deckMessage arrives in the GRE ConnectResp right after each game starts.
+    // Handle it inline so each match picks up its own deck, not just the first
+    // deck found in a pre-scan pass.
+    if (line.includes('"deckMessage"') && line.includes('"deckCards"')) {
+      this._handleDeckMessage(line);
+      return null;
     }
     return null;
   }
@@ -236,14 +252,26 @@ class MatchParser {
       }
     }
 
+    const playerDeck = this.currentMatch.playerDeck || null;
+    // Sorted non-basic grpId lists for main deck + sideboard, pipe-separated.
+    // Basic lands are excluded — they vary per-printing and add no signal for
+    // draft identity (any draft could run the same basics).
+    // Including the sideboard makes collisions across different drafts impossible.
+    const deckFingerprint = playerDeck?.deckCards?.length
+      ? [...playerDeck.deckCards].filter(id => !_isBasicLand(id)).sort((a, b) => a - b).join(',')
+        + '|'
+        + [...(playerDeck.sideboardCards || [])].filter(id => !_isBasicLand(id)).sort((a, b) => a - b).join(',')
+      : null;
+
     const matchData = {
-      matchId:      this.currentMatch.matchId,
+      matchId:         this.currentMatch.matchId,
       result,
-      format:       this.currentMatch.format,
-      deckName:     this.currentMatch.deckName || 'Unknown Deck',
-      opponentName: this.currentMatch.opponentName || null,
-      playerDeck:   this.currentMatch.playerDeck || null,
-      timestamp:    new Date().toISOString(),
+      format:          this.currentMatch.format,
+      deckName:        this.currentMatch.deckName || 'Unknown Deck',
+      opponentName:    this.currentMatch.opponentName || null,
+      playerDeck,
+      deckFingerprint,
+      timestamp:       new Date().toISOString(),
     };
     console.log(`[Parser] Match ended: ${matchData.matchId}, Result: ${result}, Deck: ${matchData.deckName}, Opponent: ${matchData.opponentName}`);
     this.pendingResult = null;
@@ -317,6 +345,25 @@ class MatchParser {
       }
     } catch { /* not valid JSON */ }
     return null;
+  }
+
+  // ─── Inline deck message handler ──────────────────────────────────────────
+
+  _handleDeckMessage(line) {
+    try {
+      const cardsMatch = line.match(/"deckCards"\s*:\s*(\[[^\]]*\])/);
+      if (!cardsMatch) return;
+      const deckCards      = JSON.parse(cardsMatch[1]);
+      const sbMatch        = line.match(/"sideboardCards"\s*:\s*(\[[^\]]*\])/);
+      const sideboardCards = sbMatch  ? JSON.parse(sbMatch[1])  : [];
+      const cmdrMatch      = line.match(/"commanderCards"\s*:\s*(\[[^\]]*\])/);
+      const commanderCards = cmdrMatch ? JSON.parse(cmdrMatch[1]) : [];
+      this.deckCards = { deckCards, sideboardCards, commandZoneCards: commanderCards };
+      // Update the live match so handleMatchCompleted sees the correct deck.
+      if (this.currentMatch) this.currentMatch.playerDeck = this.deckCards;
+    } catch (e) {
+      console.log('[Parser] Failed to parse inline deckMessage:', e.message);
+    }
   }
 
   // ─── Pre-scan deck extraction ──────────────────────────────────────────────
@@ -407,10 +454,11 @@ class MatchParser {
   detectDraftFormat(eventName) {
     const name = eventName.toLowerCase();
     let draftType;
-    if (name.includes('sealed'))      draftType = 'Sealed';
-    else if (name.includes('quick'))  draftType = 'Quick Draft';
-    else if (name.includes('traditional')) draftType = 'Traditional Draft';
-    else                              draftType = 'Draft';
+    if (name.includes('sealed'))           draftType = 'Sealed';
+    else if (name.includes('quick'))       draftType = 'Quick Draft';
+    else if (name.includes('traditional') || name.includes('trad')) draftType = 'Traditional Draft';
+    else if (name.includes('premier'))     draftType = 'Premier Draft';
+    else                                   draftType = 'Draft';
 
     const setCode = eventName
       .split(/[_\-\s]+/)
@@ -418,6 +466,7 @@ class MatchParser {
 
     if (setCode) {
       const setName = SET_NAMES[setCode] ?? setCode;
+      if (draftType === 'Premier Draft') return `Premier Draft ${setName}`;
       return `${setName} ${draftType}`;
     }
     return draftType;

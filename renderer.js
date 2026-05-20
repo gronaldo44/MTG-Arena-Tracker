@@ -68,12 +68,14 @@ function updateDraftBadge() {
 
     let badge = navDraft.querySelector('.draft-badge');
 
-    const viewingLive = !!state.liveDraftId && state.bundle?.draftId === state.liveDraftId;
+    const hasLive     = !!state.liveDraftId && !state.liveDraftEnded;
+    const viewingLive = hasLive && state.bundle?.draftId === state.liveDraftId;
     const showReplay  = !!state.bundle && !viewingLive;
-    const showLive    = viewingLive || (!!state.liveDraftId && !state.bundle);
+    const showLive    = viewingLive || (hasLive && !state.bundle);
 
     if (!showReplay && !showLive) {
         if (badge) badge.remove();
+        _updateDeckBuilderNotice();
         return;
     }
 
@@ -98,12 +100,11 @@ function _updateDeckBuilderNotice() {
     if (!navEl) return;
     const iconEl = navEl.querySelector('.icon');
     if (!iconEl) return;
-    const picks = state.bundle?.picks || [];
-    const isLatest      = !!state.bundle && state.bundle.draftId === state.draftList?.[0]?.draftId;
-    const isDraftComplete = isLatest
-        && picks.length === 42
-        && picks.every(p => p.missing || p.picked !== null);
-    iconEl.classList.toggle('db-ready', isDraftComplete);
+
+    // Highlight only when the user is viewing a draft that is currently live (in progress).
+    const isLive = !!state.bundle && state.bundle.draftId === state.liveDraftId && !state.liveDraftEnded;
+
+    iconEl.classList.toggle('db-ready', isLive);
 }
 
 if (typeof window !== 'undefined') {
@@ -151,11 +152,21 @@ ipcRenderer.on('card-stats-updated', async () => {
     }
 });
 
-ipcRenderer.on('draft-update', (event, data) => {
-    // If the user has explicitly selected a different (past) draft, preserve
-    // that selection — only switch the bundle if they are following the live draft.
-    const replayMode = !!state.bundle && state.bundle.draftId !== data.draftId;
+ipcRenderer.on('draft-ended', (event, data) => {
+    if (data.draftId === state.liveDraftId) {
+        state.liveDraftEnded = true;
+        updateDraftBadge();
+    }
+});
 
+ipcRenderer.on('draft-update', (event, data) => {
+    // Replay mode: the user is viewing a past draft while the SAME live draft
+    // continues to emit updates. Only applies when the live draft hasn't changed —
+    // a brand-new draft session always takes over regardless of what's displayed.
+    const isNewDraft = data.draftId !== state.liveDraftId;
+    const replayMode = !isNewDraft && !!state.bundle && state.bundle.draftId !== data.draftId;
+
+    if (isNewDraft) state.liveDraftEnded = false;
     state.liveDraftId = data.draftId;
     if (!replayMode) {
         state.bundle       = data;

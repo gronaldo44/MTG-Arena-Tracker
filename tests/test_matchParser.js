@@ -58,13 +58,16 @@ describe('MatchParser', () => {
       ['Pioneer_League',        'Pioneer'],
       ['Timeless_Event',        'Timeless'],
       ['Brawl_FriendlyBrawl',   'Brawl'],
-      ['Draft_QuickDraft_SOS',  'Secrets of Strixhaven Quick Draft'],
-      ['Sealed_Event',          'Sealed'],
-      ['Constructed_Event',     'Constructed'],
-      ['historic_play',         'Historic'],
-      ['',                      'Unknown'],
-      [null,                    'Unknown'],
-      ['WeekendChampionship',   'Unknown'],
+      ['Draft_QuickDraft_SOS',       'Secrets of Strixhaven Quick Draft'],
+      ['PremierDraft_SOS_20250601',  'Premier Draft Secrets of Strixhaven'],
+      ['Draft_PremierDraft_SOS',     'Premier Draft Secrets of Strixhaven'],
+      ['TradDraft_SOS_20250601',     'Secrets of Strixhaven Traditional Draft'],
+      ['Sealed_Event',               'Sealed'],
+      ['Constructed_Event',          'Constructed'],
+      ['historic_play',              'Historic'],
+      ['',                           'Unknown'],
+      [null,                         'Unknown'],
+      ['WeekendChampionship',        'Unknown'],
     ];
 
     test.each(cases)('"%s" → "%s"', (input, expected) => {

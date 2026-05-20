@@ -55,7 +55,7 @@ jest.mock('electron', () => ({
     isMaximized: jest.fn(() => false),
     restore:     jest.fn(),
     focus:       jest.fn(),
-    webContents: { send: jest.fn(), openDevTools: jest.fn() },
+    webContents: { send: jest.fn(), openDevTools: jest.fn(), on: jest.fn(), toggleDevTools: jest.fn() },
   })),
   Tray: jest.fn(() => ({
     setContextMenu: jest.fn(),
@@ -242,7 +242,7 @@ describe('refresh-log — DRAFT_UPDATE routing', () => {
     mockEvents = [matchEndEvent('M42')];
     await registeredHandlers['refresh-log'](null);
     expect(mockAddMatch).toHaveBeenCalledTimes(1);
-    expect(mockAddMatch).toHaveBeenCalledWith(expect.objectContaining({ matchId: 'M42' }));
+    expect(mockAddMatch.mock.calls[0][0]).toMatchObject({ matchId: 'M42' });
   });
 
   test('DRAFT_UPDATE does not increment matchesProcessed', async () => {

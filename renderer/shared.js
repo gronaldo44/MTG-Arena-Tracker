@@ -18,10 +18,11 @@ function isSplashColor(count) {
 }
 
 function getColorCombo(colors, colorCounts) {
-    const counts = colorCounts || {};
-    return ['W', 'U', 'B', 'R', 'G']
-        .filter(c => (colors || []).includes(c) && !isSplashColor(counts[c] || 0))
-        .join('');
+    const counts  = colorCounts || {};
+    const present = ['W', 'U', 'B', 'R', 'G'].filter(c => (colors || []).includes(c));
+    const hasCountData = present.some(c => (counts[c] || 0) > 0);
+    if (hasCountData && present.every(c => (counts[c] || 0) <= 6)) return present.join('');
+    return present.filter(c => !isSplashColor(counts[c] || 0)).join('');
 }
 
 function comboDotsHtml(combo) {
@@ -169,6 +170,160 @@ function rarityColor(r) {
     }[r] || 'var(--text-muted)';
 }
 
+// ─── Draft run helpers ────────────────────────────────────────────────────────
+
+function isDraftFormat(format) {
+    const f = (format || '').toLowerCase();
+    return f.includes('draft') || f.includes('sealed');
+}
+
+// Group matches for one draft format into runs.
+// Prefers draftId grouping (accurate, handles retires) when matches have been
+// tagged with a draftId by the main process. Falls back to sequential
+// win/loss counting for legacy matches that predate that tagging.
+function groupIntoDraftRuns(matches) {
+    const tagged   = matches.filter(m => m.draftId);
+    const untagged = matches.filter(m => !m.draftId);
+
+    const runs = [];
+
+    // — draftId-grouped path —
+    if (tagged.length > 0) {
+        const byId = new Map();
+        for (const m of tagged) {
+            if (!byId.has(m.draftId)) byId.set(m.draftId, []);
+            byId.get(m.draftId).push(m);
+        }
+        for (const draftMatches of byId.values()) {
+            const sorted = [...draftMatches].sort(
+                (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+            );
+            const wins   = sorted.filter(m => m.result === 'win').length;
+            const losses = sorted.filter(m => m.result === 'loss').length;
+            const last   = sorted[sorted.length - 1];
+            const trophy = wins >= 7;
+            runs.push({
+                wins, losses, trophy,
+                trophyColors:      trophy ? (last.deckColors      || [])   : null,
+                trophyColorCounts: trophy ? (last.deckColorCounts || null) : null,
+                matches:           sorted,
+                inProgress:        wins < 7 && losses < 3,
+            });
+        }
+    }
+
+    // — fallback for legacy (untagged) matches —
+    if (untagged.length > 0) {
+        const sorted = [...untagged].sort(
+            (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+        );
+
+        const pushRun = (cur, inProgress = false) => {
+            const last = cur.matches[cur.matches.length - 1];
+            runs.push({
+                wins: cur.wins, losses: cur.losses, trophy: cur.wins >= 7,
+                trophyColors:      cur.wins >= 7 ? (last.deckColors      || [])   : null,
+                trophyColorCounts: cur.wins >= 7 ? (last.deckColorCounts || null) : null,
+                matches:   cur.matches,
+                inProgress,
+            });
+        };
+
+        const applyWL = (cur, m) => {
+            if (m.result === 'win')       cur.wins++;
+            else if (m.result === 'loss') cur.losses++;
+        };
+
+        // ── Fingerprint path ──────────────────────────────────────────────────
+        // Group all fingerprinted matches by their deck fingerprint (non-basic
+        // main deck + sideboard, sorted).  Same fingerprint = same drafted deck
+        // = same draft run.  Two drafts with identical non-basic decklists and
+        // sideboards cannot happen, so this grouping is unambiguous.
+        const fingerprinted    = sorted.filter(m =>  m.deckFingerprint);
+        const nonFingerprinted = sorted.filter(m => !m.deckFingerprint);
+
+        const byFp = new Map();
+        for (const m of fingerprinted) {
+            if (!byFp.has(m.deckFingerprint)) byFp.set(m.deckFingerprint, []);
+            byFp.get(m.deckFingerprint).push(m);
+        }
+        for (const fpMatches of byFp.values()) {
+            // Apply 7W/3L cap as a safety net (should fire at most once).
+            let cur = { wins: 0, losses: 0, matches: [] };
+            for (const m of fpMatches) {
+                cur.matches.push(m);
+                applyWL(cur, m);
+                if (cur.wins >= 7 || cur.losses >= 3) {
+                    pushRun(cur);
+                    cur = { wins: 0, losses: 0, matches: [] };
+                }
+            }
+            if (cur.matches.length > 0) {
+                pushRun(cur, cur.wins < 7 && cur.losses < 3);
+            }
+        }
+
+        // ── Sequential fallback for matches without a deck fingerprint ────────
+        // Uses core color change and a 4-hour time gap as retire signals.
+        if (nonFingerprinted.length > 0) {
+            const coreKey = m => {
+                if (!m.deckColors || m.deckColors.length === 0) return null;
+                const counts = m.deckColorCounts || {};
+                return ['W', 'U', 'B', 'R', 'G']
+                    .filter(c => m.deckColors.includes(c) && (counts[c] || 0) > SPLASH_THRESHOLD)
+                    .join('') || null;
+            };
+
+            let cur = { wins: 0, losses: 0, matches: [] };
+            for (const m of nonFingerprinted) {
+                if (cur.matches.length > 0) {
+                    const prev        = cur.matches[cur.matches.length - 1];
+                    const prevKey     = coreKey(prev), curKey = coreKey(m);
+                    const colorChange = prevKey && curKey && prevKey !== curKey;
+                    const gapMs       = new Date(m.timestamp) - new Date(prev.timestamp);
+                    if (colorChange || gapMs > 4 * 60 * 60 * 1000) {
+                        pushRun(cur);
+                        cur = { wins: 0, losses: 0, matches: [] };
+                    }
+                }
+                cur.matches.push(m);
+                applyWL(cur, m);
+                if (cur.wins >= 7 || cur.losses >= 3) {
+                    pushRun(cur);
+                    cur = { wins: 0, losses: 0, matches: [] };
+                }
+            }
+            if (cur.matches.length > 0) pushRun(cur, true);
+        }
+    }
+
+    return runs;
+}
+
+// Compute trophy stats per color combo from a set of draft runs.
+// Returns { [combo]: { runs, trophies } }
+// - runs:     total draft runs that included this combo in any match
+// - trophies: runs that trophied AND whose 7th-win match used this combo
+function draftComboTrophyStats(runs, getColorComboFn) {
+    const stats = {};
+    for (const run of runs) {
+        const runCombos = new Set();
+        for (const m of run.matches) {
+            const c = getColorComboFn(m.deckColors, m.deckColorCounts);
+            if (c) runCombos.add(c);
+        }
+        const trophyCombo = run.trophy
+            ? getColorComboFn(run.trophyColors, run.trophyColorCounts)
+            : null;
+        for (const c of runCombos) {
+            if (!stats[c]) stats[c] = { runs: 0, trophies: 0 };
+            stats[c].runs++;
+            if (run.trophy && trophyCombo === c) stats[c].trophies++;
+        }
+    }
+    return stats;
+}
+
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -178,4 +333,5 @@ module.exports = {
     cardEyeballHtml, extractScryfallImageUrl,
     prevCoord, nextCoord,
     gihWrTierClass, colorPip, rarityGem, rarityLabel, rarityColor,
+    isDraftFormat, groupIntoDraftRuns, draftComboTrophyStats,
 };

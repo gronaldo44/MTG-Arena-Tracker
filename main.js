@@ -28,6 +28,26 @@ let isQuitting = false;
 let scanInterval;
 let lastDraftEventData = null; // raw DRAFT_UPDATE event.data for re-enrichment after CSV load
 
+// Active draft tracking — reset when a draft ends or a new one starts.
+let activeDraftId    = null;
+let activeDraftWins  = 0;
+let activeDraftLoss  = 0;
+
+function endActiveDraft() {
+  if (!activeDraftId) return;
+  const draftId = activeDraftId;
+  const wins    = activeDraftWins;
+  const losses  = activeDraftLoss;
+  dataStore.endDraft(draftId, wins, losses);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('draft-ended', { draftId, wins, losses, trophy: wins >= 7 });
+  }
+  console.log(`[Draft] Ended draft ${draftId}: ${wins}W-${losses}L${wins >= 7 ? ' TROPHY' : ''}`);
+  activeDraftId   = null;
+  activeDraftWins = 0;
+  activeDraftLoss = 0;
+}
+
 let cards = {};
 
 function loadCards() {
@@ -96,6 +116,12 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
+
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12' && input.type === 'keyDown') {
+      mainWindow.webContents.toggleDevTools();
+    }
+  });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -226,6 +252,15 @@ async function initialLogScan(logPath) {
           dataStore.upsertDraft(event.data);
           seenDraftIds.add(event.data.draftId);
         }
+        // Set activeDraftId so subsequent MATCH_END events get tagged with it.
+        // A new draftId means the previous draft was retired.
+        const { draftId } = event.data;
+        if (activeDraftId && activeDraftId !== draftId) endActiveDraft();
+        if (activeDraftId !== draftId) {
+          activeDraftId   = draftId;
+          activeDraftWins = 0;
+          activeDraftLoss = 0;
+        }
       } else {
         if (event.type === 'MATCH_END') matchCount++;
         handleGameEvent(event);
@@ -239,6 +274,7 @@ async function initialLogScan(logPath) {
         const format = dataStore.getMatchFormat(ev.data.matchId) ?? 'Unknown';
         if (dataStore.updateCardGameStats(ev.data, format)) newGames++;
         dataStore.updateMatchColors(ev.data.matchId, deriveColors(ev.data.deckGrpIds), deriveColorCounts(ev.data.deckCardsRaw));
+        dataStore.updateMatchPlayerDeck(ev.data.matchId, ev.data.deckCardsRaw);
       }
     }
 
@@ -295,6 +331,7 @@ function startLogWatcher(logPath) {
                 const format = dataStore.getMatchFormat(ev.data.matchId) ?? 'Unknown';
                 if (dataStore.updateCardGameStats(ev.data, format)) newGames++;
                 dataStore.updateMatchColors(ev.data.matchId, deriveColors(ev.data.deckGrpIds), deriveColorCounts(ev.data.deckCardsRaw));
+        dataStore.updateMatchPlayerDeck(ev.data.matchId, ev.data.deckCardsRaw);
               }
             }
             if (newGames > 0) {
@@ -393,9 +430,16 @@ function handleGameEvent(event) {
 
     case 'MATCH_END':
       try {
-        dataStore.addMatch(event.data);
+        dataStore.addMatch(event.data, activeDraftId);
         console.log('Match saved:', event.data);
         updateTrayStatus(`Match ended: ${event.data.result}`);
+
+        // Update active draft win/loss counters and detect natural end.
+        if (activeDraftId) {
+          if (event.data.result === 'win')       activeDraftWins++;
+          else if (event.data.result === 'loss') activeDraftLoss++;
+          if (activeDraftWins >= 7 || activeDraftLoss >= 3) endActiveDraft();
+        }
 
         if (event.data.playerDeck) {
           console.log('[Deck Save] Saving deck with card data:', JSON.stringify(event.data.playerDeck));
@@ -442,9 +486,17 @@ function handleGameEvent(event) {
     case 'GRE_TO_CLIENT':
       break;
 
-    case 'DRAFT_UPDATE':
+    case 'DRAFT_UPDATE': {
+      const { draftId } = event.data;
+      // A new draftId means the player retired the previous draft.
+      if (activeDraftId && activeDraftId !== draftId) endActiveDraft();
+      if (activeDraftId !== draftId) {
+        activeDraftId   = draftId;
+        activeDraftWins = 0;
+        activeDraftLoss = 0;
+      }
       if (mainWindow) {
-        lastDraftEventData = event.data; // persist for re-enrichment when CSV is loaded later
+        lastDraftEventData = event.data;
         const payload = draftPipeline.buildDraftUpdatePayload(
           event.data,
           dataStore,
@@ -455,6 +507,7 @@ function handleGameEvent(event) {
         mainWindow.webContents.send('draft-update', payload);
       }
       break;
+    }
   }
 }
 
@@ -623,6 +676,20 @@ ipcMain.handle('get-card-stats-by-grpid', async (event, grpId) => {
   const gihWr17l      = stats17l?.gihWr ?? null;
   const delta         = (gihWrPersonal !== null && gihWr17l !== null) ? gihWrPersonal - gihWr17l : null;
   return { grpId, name, gamesInDeck, gamesInHand, gihWrPersonal, gamesOpenHand, ohWrPersonal, gihWr17l, delta };
+});
+
+ipcMain.handle('get-deck-card-details', async (event, grpIds) => {
+  if (!dataStore || !Array.isArray(grpIds)) return [];
+  return grpIds.map(grpId => {
+    const card      = resolveCard(grpId);
+    const stats     = draftAssistant.isLoaded() ? draftAssistant.getCardStats(card.name) : null;
+    const gihWr     = stats?.gihWr ?? null;
+    const lowSample = stats ? stats.lowSample : true;
+    const tier      = draftAssistant.isLoaded()
+      ? draftAssistant.getCardTier(gihWr, card.name, lowSample)
+      : 'none';
+    return { ...card, gihWr, tier };
+  });
 });
 
 ipcMain.handle('delete-format', async (event, format) => {
@@ -862,6 +929,7 @@ ipcMain.handle('refresh-log', async () => {
             const format = dataStore.getMatchFormat(ev.data.matchId) ?? 'Unknown';
             if (dataStore.updateCardGameStats(ev.data, format)) newGames++;
             dataStore.updateMatchColors(ev.data.matchId, deriveColors(ev.data.deckGrpIds), deriveColorCounts(ev.data.deckCardsRaw));
+        dataStore.updateMatchPlayerDeck(ev.data.matchId, ev.data.deckCardsRaw);
           }
         }
         console.log(`[Manual Refresh] Recorded stats for ${newGames} new game(s)`);

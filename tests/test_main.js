@@ -53,6 +53,8 @@ jest.mock('electron', () => ({
     webContents: {
       send:          jest.fn(),
       openDevTools:  jest.fn(),
+      on:            jest.fn(),
+      toggleDevTools: jest.fn(),
     },
   })),
   Tray: jest.fn(() => ({

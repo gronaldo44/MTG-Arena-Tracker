@@ -18,11 +18,12 @@ jest.mock('electron', () => ({
 // ─── State mock ───────────────────────────────────────────────────────────────
 
 jest.mock('../renderer/state', () => ({
-    bundle:       null,
-    draftList:    [],
-    currentPage:  'dashboard',
-    viewingCoord: null,
-    liveDraftId:  null,
+    bundle:         null,
+    draftList:      [],
+    currentPage:    'dashboard',
+    viewingCoord:   null,
+    liveDraftId:    null,
+    liveDraftEnded: false,
 }));
 
 const state = require('../renderer/state');
@@ -50,8 +51,10 @@ beforeEach(() => {
         id === 'nav-deckbuilder' ? mockNavEl : null
     );
 
-    state.bundle    = null;
-    state.draftList = [];
+    state.bundle         = null;
+    state.draftList      = [];
+    state.liveDraftId    = null;
+    state.liveDraftEnded = false;
 });
 
 // ─── DOM guard ────────────────────────────────────────────────────────────────
@@ -138,39 +141,49 @@ describe('updateDeckBuilderNotice — draft not yet complete', () => {
     });
 });
 
-// ─── Complete draft ───────────────────────────────────────────────────────────
+// ─── Completed draft (no longer highlights) ───────────────────────────────────
 
-describe('updateDeckBuilderNotice — complete draft', () => {
-    test('latest draft with all 42 picks settled → db-ready is on', () => {
+describe('updateDeckBuilderNotice — completed draft', () => {
+    test('latest completed draft with 42 picks → db-ready is off (not live)', () => {
         state.bundle    = { draftId: 'latest', picks: make42Picks() };
         state.draftList = [{ draftId: 'latest' }];
         updateDeckBuilderNotice();
-        expect(mockIconEl.classList.toggle).toHaveBeenCalledWith('db-ready', true);
+        expect(mockIconEl.classList.toggle).toHaveBeenCalledWith('db-ready', false);
     });
 
-    test('latest draft with some missing picks (all 42 slots filled) → db-ready is on', () => {
-        const picks = make42Picks([
-            { index: 3,  pick: missingPick() },
-            { index: 17, pick: missingPick() },
-        ]);
-        state.bundle    = { draftId: 'latest', picks };
-        state.draftList = [{ draftId: 'latest' }];
+    test('ended live draft (liveDraftEnded=true) → db-ready is off', () => {
+        state.bundle         = { draftId: 'live', picks: make42Picks() };
+        state.liveDraftId    = 'live';
+        state.liveDraftEnded = true;
+        updateDeckBuilderNotice();
+        expect(mockIconEl.classList.toggle).toHaveBeenCalledWith('db-ready', false);
+    });
+});
+
+// ─── Live draft ───────────────────────────────────────────────────────────────
+
+describe('updateDeckBuilderNotice — live draft', () => {
+    test('bundle matches liveDraftId and draft not ended → db-ready is on', () => {
+        state.bundle         = { draftId: 'live', picks: [] };
+        state.liveDraftId    = 'live';
+        state.liveDraftEnded = false;
         updateDeckBuilderNotice();
         expect(mockIconEl.classList.toggle).toHaveBeenCalledWith('db-ready', true);
     });
 
-    test('latest draft where all 42 picks are missing → db-ready is on', () => {
-        const picks = Array.from({ length: 42 }, missingPick);
-        state.bundle    = { draftId: 'latest', picks };
-        state.draftList = [{ draftId: 'latest' }];
+    test('bundle draftId differs from liveDraftId → db-ready is off', () => {
+        state.bundle         = { draftId: 'other', picks: [] };
+        state.liveDraftId    = 'live';
+        state.liveDraftEnded = false;
         updateDeckBuilderNotice();
-        expect(mockIconEl.classList.toggle).toHaveBeenCalledWith('db-ready', true);
+        expect(mockIconEl.classList.toggle).toHaveBeenCalledWith('db-ready', false);
     });
 
-    test('latest when multiple drafts exist → db-ready is on only for newest', () => {
-        state.bundle    = { draftId: 'newest', picks: make42Picks() };
-        state.draftList = [{ draftId: 'newest' }, { draftId: 'older' }];
+    test('liveDraftId is null even with a bundle → db-ready is off', () => {
+        state.bundle         = { draftId: 'live', picks: [] };
+        state.liveDraftId    = null;
+        state.liveDraftEnded = false;
         updateDeckBuilderNotice();
-        expect(mockIconEl.classList.toggle).toHaveBeenCalledWith('db-ready', true);
+        expect(mockIconEl.classList.toggle).toHaveBeenCalledWith('db-ready', false);
     });
 });

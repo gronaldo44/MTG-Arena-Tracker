@@ -36,6 +36,18 @@ class DataStore {
     this.cards      = this.loadCards();
     this.cardStats  = this.loadCardStats();
     this.drafts     = this.loadDrafts();
+
+    // One-time migration: collapse any cross-day duplicates created before the
+    // addMatch dedup fix (parser always stamps with new Date(), not log time).
+    this._deduplicateMatches();
+    // One-time migration: backfill the `id` field for matches recorded before
+    // it was added to the schema (prevents all such matches sharing data-match-id="undefined").
+    this._backfillMatchIds();
+    // One-time migration: rename bare "… Draft" format labels to "… Premier Draft"
+    // for matches recorded before the parser distinguished Premier Draft from other draft types.
+    this._backfillPremierDraft();
+    // One-time migration: reorder "[Set] Premier Draft" → "Premier Draft [Set]".
+    this._reorderPremierDraft();
   }
 
   /**
@@ -265,15 +277,19 @@ class DataStore {
   /**
    * Add a match result
    */
-  addMatch(matchData) {
-    // Check for existing match - same matchId, same day, AND same result
-    // Different results (win/loss) are treated as separate games
-    const matchDate = new Date(matchData.timestamp || Date.now()).toDateString();
+  addMatch(matchData, draftId = null) {
+    // Dedup: for known matchIds use matchId+result only (no date) because the
+    // parser always stamps events with new Date(), not the actual match time.
+    // For the fallback 'unknown' matchId, include the day to avoid merging
+    // genuinely different matches that lack an ID.
+    const incomingId = matchData.matchId || 'unknown';
     const existingMatchIndex = this.data.matches.findIndex(m => {
+      if (incomingId !== 'unknown') {
+        return m.matchId === incomingId && m.result === (matchData.result || 'unknown');
+      }
+      const matchDate    = new Date(matchData.timestamp || Date.now()).toDateString();
       const existingDate = new Date(m.timestamp).toDateString();
-      return m.matchId === (matchData.matchId || 'unknown') &&
-             existingDate === matchDate &&
-             m.result === matchData.result;
+      return m.matchId === 'unknown' && existingDate === matchDate && m.result === matchData.result;
     });
 
     if (existingMatchIndex >= 0) {
@@ -285,7 +301,11 @@ class DataStore {
         format: matchData.format || existingMatch.format,
         deckName: matchData.deckName || existingMatch.deckName,
         deckId: matchData.deckId || existingMatch.deckId,
-        gamesPlayed: matchData.gamesPlayed || existingMatch.gamesPlayed
+        gamesPlayed: matchData.gamesPlayed || existingMatch.gamesPlayed,
+        // Backfill draftId, deckFingerprint, and playerDeck if re-processed
+        draftId:         existingMatch.draftId         || draftId                    || null,
+        deckFingerprint: existingMatch.deckFingerprint || matchData.deckFingerprint  || null,
+        playerDeck:      existingMatch.playerDeck      || matchData.playerDeck       || null,
       };
       this.data.matches[existingMatchIndex] = updatedMatch;
       this.saveData();
@@ -305,8 +325,11 @@ class DataStore {
       opponentDeck: matchData.opponentDeck || null,
       opponentName: matchData.opponentName || null,
       opponentRank: matchData.opponentRank || null,
-      timestamp: matchData.timestamp || new Date().toISOString(),
-      raw: matchData.raw || null
+      timestamp:       matchData.timestamp || new Date().toISOString(),
+      raw:             matchData.raw || null,
+      draftId:         draftId || null,
+      deckFingerprint: matchData.deckFingerprint || null,
+      playerDeck:      matchData.playerDeck      || null,
     };
 
     this.data.matches.push(match);
@@ -370,6 +393,26 @@ class DataStore {
       }
     }
     if (changed) this.saveData();
+  }
+
+  /**
+   * Backfill the main deck card list for a match from GRE GAME_STATS data.
+   * Only runs when the match has no playerDeck yet (i.e., was recorded before
+   * per-match deck tracking was added).  Sideboard is unavailable from GRE
+   * data, so sideboardCards is left empty and greOnly is flagged so the UI
+   * can explain the gap to the user.
+   */
+  updateMatchPlayerDeck(matchId, deckCardsRaw) {
+    if (!matchId || !deckCardsRaw?.length) return;
+    const match = this.data.matches.find(m => m.matchId === matchId);
+    if (!match || match.playerDeck?.deckCards?.length) return;
+    match.playerDeck = {
+      deckCards:        deckCardsRaw.map(Number),
+      sideboardCards:   [],
+      commandZoneCards: [],
+      greOnly:          true,  // sideboard data not available from GRE logs
+    };
+    this.saveData();
   }
 
   /**
@@ -768,6 +811,20 @@ class DataStore {
   }
 
   /**
+   * Mark a draft as ended and store its final win/loss record.
+   */
+  endDraft(draftId, wins, losses) {
+    const record = this.drafts[draftId];
+    if (!record) return;
+    record.ended  = true;
+    record.wins   = wins;
+    record.losses = losses;
+    record.trophy = wins >= 7;
+    this.saveDrafts();
+    console.log(`[DataStore] Draft ended: ${draftId} (${wins}W-${losses}L)${wins >= 7 ? ' TROPHY' : ''}`);
+  }
+
+  /**
    * Return the DraftRecord for draftId, or null.
    */
   getDraft(draftId) {
@@ -796,6 +853,168 @@ class DataStore {
         pickCount: Array.isArray(r.picks) ? r.picks.length : 0,
       }))
       .sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0));
+  }
+
+  /**
+   * Merge duplicate match records that share the same matchId+result.
+   * Duplicates arise when the parser stamps events with new Date() instead of
+   * the actual log timestamp, causing the old date-based dedup to miss them on
+   * subsequent days. For each duplicate group we keep the earliest record and
+   * backfill any fields (draftId, deckColors, deckColorCounts) from the others.
+   */
+  _deduplicateMatches() {
+    const groups = new Map(); // `${matchId}_${result}` → [match, ...]
+    const unknown = [];
+
+    for (const m of this.data.matches) {
+      if (!m.matchId || m.matchId === 'unknown') { unknown.push(m); continue; }
+      const key = `${m.matchId}_${m.result}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(m);
+    }
+
+    const removeIds = new Set();
+    const merged    = [];
+
+    for (const dupes of groups.values()) {
+      if (dupes.length === 1) { merged.push(dupes[0]); continue; }
+
+      // Keep earliest timestamp as canonical; merge useful fields from later copies.
+      dupes.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      const base = { ...dupes[0] };
+      for (let i = 1; i < dupes.length; i++) {
+        const d = dupes[i];
+        if (!base.draftId        && d.draftId)        base.draftId        = d.draftId;
+        if (!base.deckColors?.length && d.deckColors?.length) base.deckColors = d.deckColors;
+        if (!base.deckColorCounts && d.deckColorCounts) base.deckColorCounts = d.deckColorCounts;
+        if (!base.opponentName    && d.opponentName)    base.opponentName    = d.opponentName;
+        if (!base.deckFingerprint && d.deckFingerprint) base.deckFingerprint = d.deckFingerprint;
+        removeIds.add(d.id);
+      }
+      merged.push(base);
+    }
+
+    if (removeIds.size === 0) return;
+
+    this.data.matches = [...merged, ...unknown];
+    this.saveData();
+    console.log(`[DataStore] Removed ${removeIds.size} duplicate match record(s)`);
+  }
+
+  _backfillMatchIds() {
+    let dirty = false;
+    for (const match of this.data.matches) {
+      if (!match.id) {
+        match.id = this.generateId();
+        dirty = true;
+      }
+    }
+    if (dirty) {
+      this.saveData();
+      console.log('[DataStore] Backfilled missing id fields on match records');
+    }
+  }
+
+  _backfillPremierDraft() {
+    const needsUpgrade = fmt => {
+      if (!fmt) return false;
+      const lower = fmt.toLowerCase();
+      return (fmt === 'Draft' || fmt.endsWith(' Draft'))
+        && !lower.includes('quick')
+        && !lower.includes('traditional')
+        && !lower.includes('premier')
+        && !lower.includes('sealed');
+    };
+    const upgrade = fmt => fmt === 'Draft'
+      ? 'Premier Draft'
+      : `Premier Draft ${fmt.replace(/ Draft$/, '')}`;
+
+    let matchDirty = false;
+    for (const match of this.data.matches) {
+      if (needsUpgrade(match.format)) {
+        match.format = upgrade(match.format);
+        matchDirty = true;
+      }
+    }
+    if (matchDirty) {
+      this.saveData();
+      console.log('[DataStore] Backfilled Premier Draft format on historical match records');
+    }
+
+    let statsDirty = false;
+    for (const fmt of Object.keys(this.cardStats.statsByFormat)) {
+      if (!needsUpgrade(fmt)) continue;
+      const newFmt = upgrade(fmt);
+      const oldStats = this.cardStats.statsByFormat[fmt];
+      if (!this.cardStats.statsByFormat[newFmt]) {
+        this.cardStats.statsByFormat[newFmt] = oldStats;
+      } else {
+        for (const [grpId, s] of Object.entries(oldStats)) {
+          const existing = this.cardStats.statsByFormat[newFmt][grpId];
+          if (existing) {
+            existing.gamesInDeck      += s.gamesInDeck      || 0;
+            existing.gamesInHand      += s.gamesInHand      || 0;
+            existing.gamesWon         += s.gamesWon         || 0;
+            existing.gamesOpenHand    += s.gamesOpenHand    || 0;
+            existing.gamesWonOpenHand += s.gamesWonOpenHand || 0;
+          } else {
+            this.cardStats.statsByFormat[newFmt][grpId] = { ...s };
+          }
+        }
+      }
+      delete this.cardStats.statsByFormat[fmt];
+      statsDirty = true;
+    }
+    if (statsDirty) {
+      this.saveCardStats();
+      console.log('[DataStore] Backfilled Premier Draft format on historical card stat records');
+    }
+  }
+
+  _reorderPremierDraft() {
+    const needsReorder = fmt => fmt && fmt.endsWith(' Premier Draft') && !fmt.startsWith('Premier Draft');
+    const reorder = fmt => `Premier Draft ${fmt.replace(/ Premier Draft$/, '')}`;
+
+    let matchDirty = false;
+    for (const match of this.data.matches) {
+      if (needsReorder(match.format)) {
+        match.format = reorder(match.format);
+        matchDirty = true;
+      }
+    }
+    if (matchDirty) {
+      this.saveData();
+      console.log('[DataStore] Reordered Premier Draft format labels to "Premier Draft [Set]"');
+    }
+
+    let statsDirty = false;
+    for (const fmt of Object.keys(this.cardStats.statsByFormat)) {
+      if (!needsReorder(fmt)) continue;
+      const newFmt = reorder(fmt);
+      const oldStats = this.cardStats.statsByFormat[fmt];
+      if (!this.cardStats.statsByFormat[newFmt]) {
+        this.cardStats.statsByFormat[newFmt] = oldStats;
+      } else {
+        for (const [grpId, s] of Object.entries(oldStats)) {
+          const existing = this.cardStats.statsByFormat[newFmt][grpId];
+          if (existing) {
+            existing.gamesInDeck      += s.gamesInDeck      || 0;
+            existing.gamesInHand      += s.gamesInHand      || 0;
+            existing.gamesWon         += s.gamesWon         || 0;
+            existing.gamesOpenHand    += s.gamesOpenHand    || 0;
+            existing.gamesWonOpenHand += s.gamesWonOpenHand || 0;
+          } else {
+            this.cardStats.statsByFormat[newFmt][grpId] = { ...s };
+          }
+        }
+      }
+      delete this.cardStats.statsByFormat[fmt];
+      statsDirty = true;
+    }
+    if (statsDirty) {
+      this.saveCardStats();
+      console.log('[DataStore] Reordered Premier Draft format labels in card stats');
+    }
   }
 
   /**

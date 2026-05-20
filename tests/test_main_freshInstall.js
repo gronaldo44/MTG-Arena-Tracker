@@ -47,7 +47,7 @@ jest.mock('electron', () => ({
     show:        jest.fn(),
     hide:        jest.fn(),
     isDestroyed: jest.fn(() => false),
-    webContents: { send: jest.fn(), openDevTools: jest.fn() },
+    webContents: { send: jest.fn(), openDevTools: jest.fn(), on: jest.fn(), toggleDevTools: jest.fn() },
   })),
   Tray: jest.fn(() => ({
     setContextMenu: jest.fn(),

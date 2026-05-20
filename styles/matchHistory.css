@@ -5,6 +5,11 @@
     gap: 10px;
 }
 
+.load-more-container {
+    text-align: center;
+    padding: 16px 0 4px;
+}
+
 .match-item {
     display: grid;
     grid-template-columns: auto 1fr auto auto auto;
@@ -75,6 +80,61 @@
     color: var(--text-muted);
 }
 
+/* ─── Draft groups in match list ─────────────────────────────────── */
+
+.draft-group {
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.draft-group-header {
+    padding: 5px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Inside a draft group: flatten individual match items */
+.draft-group .match-item {
+    border-radius: 0;
+    border: none;
+    border-left: none !important; /* tier color is on the group */
+}
+
+.draft-group .match-item-wrap + .match-item-wrap {
+    border-top: 1px solid var(--border);
+}
+
+/* Tier border colors (left edge of the group) */
+.draft-tier-red    { border-left-color: var(--tier-mythic); animation: flame-flicker 2.4s ease-in-out infinite; }
+.draft-tier-gold   { border-left-color: var(--tier-gold); }
+.draft-tier-silver { border-left-color: var(--tier-silver); }
+.draft-tier-black  { border-left-color: var(--tier-black); }
+.draft-tier-brown  { border-left-color: var(--tier-brown); }
+
+/* Trophy label glow — mirrors flame-flicker but on the text */
+@keyframes trophy-text-glow {
+    0%   { color: #e01010; text-shadow: 0 0 6px rgba(224, 16, 16, 0.8); }
+    15%  { color: #ff5500; text-shadow: 0 0 10px rgba(255, 85, 0, 0.9); }
+    30%  { color: #c50000; text-shadow: 0 0 4px rgba(197, 0, 0, 0.7); }
+    50%  { color: #ff7820; text-shadow: 0 0 14px rgba(255, 120, 32, 0.9); }
+    65%  { color: #e01010; text-shadow: 0 0 8px rgba(224, 16, 16, 0.8); }
+    80%  { color: #ff3300; text-shadow: 0 0 12px rgba(255, 51, 0, 0.9); }
+    100% { color: #e01010; text-shadow: 0 0 6px rgba(224, 16, 16, 0.8); }
+}
+
+.draft-tier-red .draft-group-record {
+    animation: trophy-text-glow 2.4s ease-in-out infinite;
+}
+
 /* ─── Matches page — format cards ──────────────────────────────────── */
 
 .matches-format-cards-grid {
@@ -88,8 +148,7 @@
     border: 2px solid var(--border);
     border-radius: 10px;
     padding: 10px 14px;
-    flex: 1 1 160px;
-    max-width: 280px;
+    flex: 0 0 auto;
     cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
     user-select: none;
@@ -105,24 +164,28 @@
     background: rgba(93, 95, 239, 0.08);
 }
 
-.mfc-header {
+.mfc-name {
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+    margin-bottom: 4px;
+}
+
+.mfc-stats-row {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: baseline;
+    gap: 12px;
     margin-bottom: 2px;
 }
 
-.mfc-name {
-    font-size: 13px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 70%;
+.mfc-meta-lines {
+    flex: 1;
+    min-width: 0;
 }
 
 .mfc-wr {
-    font-size: 17px;
+    font-size: 22px;
     font-weight: 700;
     flex-shrink: 0;
 }
@@ -130,7 +193,7 @@
 .mfc-meta {
     font-size: 11px;
     color: var(--text-muted);
-    margin-bottom: 2px;
+    margin-bottom: 1px;
 }
 
 /* Combo rows inside a format card */
@@ -187,4 +250,241 @@
     font-weight: 700;
     min-width: 36px;
     text-align: right;
+}
+
+.mfc-combo-trophy {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    min-width: 36px;
+    text-align: right;
+}
+
+/* ─── Match item wrapper ─────────────────────────────────────────────────── */
+
+.match-item-wrap {
+    display: flex;
+    flex-direction: column;
+}
+
+.match-item.has-deck {
+    cursor: pointer;
+}
+
+.match-item.has-deck:hover {
+    background: rgba(93, 95, 239, 0.04);
+}
+
+/* ─── Deck view panel ────────────────────────────────────────────────────── */
+
+.deck-view-panel {
+    display: flex;
+    gap: 0;
+    align-items: flex-start;
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.18);
+    border-top: 1px solid var(--border);
+    max-height: 500px;
+}
+
+.dv-main-area {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    max-height: 476px;
+    display: flex;
+    flex-direction: column;
+}
+
+.dv-main-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 1;
+    padding: 6px 0 8px;
+}
+
+.dv-search {
+    max-width: 180px;
+    padding: 4px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
+    font-family: inherit;
+}
+
+.dv-search::placeholder { color: var(--text-muted); }
+
+.dv-sort-btns {
+    display: flex;
+    gap: 4px;
+}
+
+.dv-sort-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.dv-sort-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.dv-sort-btn:hover:not(.active) {
+    border-color: var(--primary);
+    color: var(--text);
+}
+
+.dv-tables-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 4px;
+}
+
+.dv-table-group {
+    width: 100%;
+}
+
+.dv-table-header {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 3px;
+}
+
+.dv-table-count {
+    font-weight: 400;
+    opacity: 0.65;
+}
+
+.dv-table-list,
+.dv-sb-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.dv-empty {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 6px 0;
+}
+
+/* Card rows */
+.dv-card-row {
+    display: grid;
+    grid-template-columns: 22px 1fr 58px;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 3px;
+    border-radius: 4px;
+    transition: background 0.1s;
+}
+
+.dv-card-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.dv-card-pips {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.dv-card-name {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.dv-card-name span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.dv-card-wr {
+    font-size: 11px;
+    font-weight: 700;
+    text-align: right;
+    flex-shrink: 0;
+    border-radius: 4px;
+    padding: 1px 5px;
+}
+
+.dv-card-wr.tier-mythic { color: var(--tier-mythic); background: rgba(224, 16, 16, 0.14); }
+.dv-card-wr.tier-gold   { color: var(--tier-gold);   background: rgba(255, 215, 0, 0.14); }
+.dv-card-wr.tier-silver { color: #c0c0c0; background: linear-gradient(105deg, #404e5c 0%, #303c4a 45%, #3a4856 100%); }
+.dv-card-wr.tier-black  { color: #c8d0d8; background: var(--tier-black); }
+.dv-card-wr.tier-brown  { color: var(--tier-brown);  background: rgba(123, 80, 32, 0.16); }
+.dv-card-wr.tier-none   { color: var(--text-muted); font-weight: 400; font-style: italic; }
+
+/* Sideboard */
+.dv-sb-area {
+    flex-shrink: 0;
+    width: 300px;
+    border-left: 1px solid var(--border);
+    margin-left: 14px;
+    padding-left: 14px;
+    overflow-y: auto;
+    max-height: 476px;
+}
+
+.dv-sb-header {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 7px;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 1;
+}
+
+.dv-sb-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 7px;
+    position: sticky;
+    top: 22px;
+    background: var(--bg);
+    z-index: 1;
+    padding-bottom: 4px;
+}
+
+.dv-sb-controls .dv-search {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
 }

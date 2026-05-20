@@ -57,15 +57,16 @@ describe('coalesceEvents', () => {
     expect(byId['d2'].data.currentPack.pick).toBe(2);
   });
 
-  test('non-draft events appear before surviving DRAFT_UPDATE events', () => {
+  test('DRAFT_UPDATE at first occurrence position, before interleaved non-draft events', () => {
+    // DRAFT_UPDATE appears first in input → kept first so activeDraftId is set before MATCH_END.
     const events = [
       draftEv('d1', 1, 1),
       otherEv('MATCH_END'),
       draftEv('d1', 1, 2),
     ];
     const result = coalesceEvents(events);
-    expect(result[0].type).toBe('MATCH_END');
-    expect(result[1].type).toBe('DRAFT_UPDATE');
+    expect(result[0].type).toBe('DRAFT_UPDATE');
+    expect(result[1].type).toBe('MATCH_END');
   });
 
   test('non-draft events preserve their original relative order', () => {

@@ -28,9 +28,9 @@ class LogParserV5 {
     this.draftParser.reset();
     this.processedEvents.clear();
 
-    // Pre-scan deck metadata before the main line loop
+    // Pre-scan deck names (used to label matches by event/format name).
+    // Deck *cards* are picked up inline by parseLine when deckMessage arrives.
     this.matchParser.extractDeckNames(lines);
-    this.matchParser.extractDeckCards(lines);
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];

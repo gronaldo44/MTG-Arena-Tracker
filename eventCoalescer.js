@@ -14,20 +14,27 @@
  * @returns {Array<{type:string, data:object}>}
  */
 function coalesceEvents(events) {
-  const nonDraft = [];
-  const lastByDraft = new Map(); // draftId → event
-
+  // Build map of draftId → last DRAFT_UPDATE (most up-to-date state for renderer).
+  const lastByDraft = new Map();
   for (const event of events) {
     if (event.type === 'DRAFT_UPDATE') {
       lastByDraft.set(event.data?.draftId, event);
-    } else {
-      nonDraft.push(event);
     }
   }
 
-  return lastByDraft.size === 0
-    ? nonDraft
-    : [...nonDraft, ...lastByDraft.values()];
+  if (lastByDraft.size === 0) return events;
+
+  // Walk events in order. Keep each DRAFT_UPDATE at its *first* occurrence
+  // position (so activeDraftId is set before that draft's MATCH_END events)
+  // but substitute the *last* occurrence's data (freshest state for renderer).
+  const seen = new Set();
+  return events.map(event => {
+    if (event.type !== 'DRAFT_UPDATE') return event;
+    const draftId = event.data?.draftId;
+    if (seen.has(draftId)) return null;
+    seen.add(draftId);
+    return lastByDraft.get(draftId);
+  }).filter(Boolean);
 }
 
 module.exports = { coalesceEvents };
