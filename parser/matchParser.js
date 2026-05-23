@@ -457,7 +457,8 @@ class MatchParser {
     if (name.includes('sealed'))           draftType = 'Sealed';
     else if (name.includes('quick'))       draftType = 'Quick Draft';
     else if (name.includes('traditional') || name.includes('trad')) draftType = 'Traditional Draft';
-    else if (name.includes('premier') || name.includes('contender')) draftType = 'Premier Draft';
+    else if (name.includes('contender'))   draftType = 'Contender Draft';
+    else if (name.includes('premier'))     draftType = 'Premier Draft';
     else                                   draftType = 'Draft';
 
     const setCode = eventName
@@ -466,7 +467,7 @@ class MatchParser {
 
     if (setCode) {
       const setName = SET_NAMES[setCode] ?? setCode;
-      if (draftType === 'Premier Draft') return `Premier Draft ${setName}`;
+      if (draftType === 'Premier Draft' || draftType === 'Contender Draft') return `${draftType} ${setName}`;
       return `${setName} ${draftType}`;
     }
     return draftType;

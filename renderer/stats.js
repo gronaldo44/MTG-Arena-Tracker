@@ -2,7 +2,7 @@
 
 const { ipcRenderer } = require('electron');
 const { isDraftLimited } = require('../sets');
-const { cardEyeballHtml } = require('./shared');
+const { cardEyeballHtml, formatCardGroupKey } = require('./shared');
 
 // ─── Local state ──────────────────────────────────────────────────────────────
 
@@ -13,6 +13,24 @@ let _cardStatsSortDir = -1;         // -1 = desc, 1 = asc
 let _cardStatsFormats = [];
 let _cardStatsFormat  = null;
 
+// ─── Format grouping ──────────────────────────────────────────────────────────
+
+// Merges "Premier Draft X" and "Contender Draft X" entries for the same set
+// into a single "Draft X" key, summing all stats. Non-draft formats pass through.
+function groupFormatStats(formats) {
+    const grouped = {};
+    for (const [fmt, data] of Object.entries(formats)) {
+        const key = formatCardGroupKey(fmt);
+        if (!grouped[key]) grouped[key] = { total: 0, wins: 0, losses: 0, draws: 0, originals: [] };
+        grouped[key].total   += data.total;
+        grouped[key].wins    += data.wins;
+        grouped[key].losses  += data.losses;
+        grouped[key].draws   += (data.draws || 0);
+        grouped[key].originals.push(fmt);
+    }
+    return grouped;
+}
+
 // ─── Stats page ───────────────────────────────────────────────────────────────
 
 async function loadStats() {
@@ -20,23 +38,28 @@ async function loadStats() {
 
     const formatTbody = document.getElementById('stats-formats-table').querySelector('tbody');
     const formats = stats.formats || {};
-    formatTbody.innerHTML = Object.keys(formats).length === 0
+    const groupedFormats = groupFormatStats(formats);
+
+    formatTbody.innerHTML = Object.keys(groupedFormats).length === 0
         ? `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);">No data available</td></tr>`
-        : Object.entries(formats).sort((a, b) => b[1].total - a[1].total).map(([format, data]) => {
+        : Object.entries(groupedFormats).sort((a, b) => b[1].total - a[1].total).map(([key, data]) => {
             const contested = data.wins + data.losses;
             const wr = contested > 0 ? Math.round((data.wins / contested) * 100) : 0;
-            const safeFormat = format.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-            const draftClickable = isDraftLimited(format);
+            const draftClickable = isDraftLimited(key);
+            const linkFormat = data.originals.find(f => isDraftLimited(f)) || data.originals[0];
+            const safeLink = linkFormat.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             const nameEl = draftClickable
-                ? `<strong onclick="selectCardStatsFormat('${safeFormat}')" class="format-name-link">${format}</strong>`
-                : `<strong>${format}</strong>`;
+                ? `<strong onclick="selectCardStatsFormat('${safeLink}')" class="format-name-link">${key}</strong>`
+                : `<strong>${key}</strong>`;
+            const formatsAttr = JSON.stringify(data.originals).replace(/"/g, '&quot;');
             return `<tr>
                 <td>${nameEl}</td>
                 <td>${data.total}</td>
                 <td class="positive">${data.wins}</td>
                 <td class="negative">${data.losses}</td>
                 <td class="${wr >= 50 ? 'positive' : 'negative'}">${wr}%</td>
-                <td><button onclick="deleteFormat('${safeFormat}')" title="Delete all data for this format"
+                <td><button data-formats="${formatsAttr}" onclick="deleteFormats(JSON.parse(this.dataset.formats))"
+                    title="Delete all data for this format"
                     style="background:none;border:none;cursor:pointer;font-size:15px;color:var(--text-muted);padding:0 4px;"
                     onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'">🗑</button></td>
             </tr>`;
@@ -192,9 +215,10 @@ function renderCardStatsTable() {
         </tr>`).join('');
 }
 
-async function deleteFormat(format) {
-    if (!confirm(`Delete all data for "${format}"? This cannot be undone.`)) return;
-    await ipcRenderer.invoke('delete-format', format);
+async function deleteFormats(formats) {
+    const label = formats.length === 1 ? `"${formats[0]}"` : `these ${formats.length} related formats`;
+    if (!confirm(`Delete all data for ${label}? This cannot be undone.`)) return;
+    await Promise.all(formats.map(f => ipcRenderer.invoke('delete-format', f)));
     loadStats();
 }
 
@@ -211,11 +235,12 @@ async function clearCardStats() {
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
+    groupFormatStats,
     loadStats,
     renderCardStatsTable,
     renderCardStatsFormatSelector,
     selectCardStatsFormat,
     sortCardStats,
-    deleteFormat,
+    deleteFormats,
     clearCardStats,
 };

@@ -5,8 +5,15 @@ const {
     _dotColor, _dotBorder, SPLASH_THRESHOLD,
     colorLabel, isSplashColor, getColorCombo, comboDotsHtml,
     renderMatchColorPips, cardEyeballHtml, draftCardColorPips, gihWrTierClass,
+    formatCardGroupKey,
     isDraftFormat, groupIntoDraftRuns, draftComboTrophyStats,
 } = require('./shared');
+
+// Short label for match rows: strips the set name from Premier/Contender drafts.
+function matchRowFormatLabel(fmt) {
+    const m = (fmt || '').match(/^(Premier Draft|Contender Draft) /);
+    return m ? m[1] : (fmt || 'Unknown Format');
+}
 
 // ─── Local state ──────────────────────────────────────────────────────────────
 
@@ -16,14 +23,17 @@ let _matchesSelectedCombos = new Set();
 
 // ─── Draft pagination state ───────────────────────────────────────────────────
 
-const DRAFT_PAGE_SIZE = 4;
-let _draftRuns      = [];   // all runs for current filter, newest-first
-let _draftTotals    = {};   // draftId → { wins, losses } across all matches
-let _draftRunsShown = 0;    // how many runs are currently rendered
+const DRAFT_PAGE_SIZE = 8;
+let _draftRuns           = [];   // all runs for current filter, newest-first
+let _draftTotals         = {};   // draftId → { wins, losses } across all matches
+let _draftRunsShown      = 0;    // how many runs are currently rendered
+let _expandedDraftIds    = new Set(); // draft keys that are currently expanded
+let _draftExpandedFormat = null; // the format _expandedDraftIds belongs to
 
 // ─── Deck view state ──────────────────────────────────────────────────────────
 
-let _expandedMatchId   = null;
+let _selectorResizeObserver = null;
+let _expandedMatchId        = null;
 let _cardCache         = new Map();   // matchId → { deckCards, sbCards }
 let _expandedMainCards = [];
 let _expandedSbCards   = [];
@@ -45,7 +55,7 @@ function renderMatchItem(match) {
             <div class="match-item ${match.result} has-deck" onclick="toggleDeckView('${match.id}')">
                 <div class="match-badge ${match.result}">${match.result}</div>
                 <div class="match-info">
-                    <h4>${match.format || 'Unknown Format'}</h4>
+                    <h4>${matchRowFormatLabel(match.format)}</h4>
                     ${opp ? `<p>${opp}</p>` : ''}
                 </div>
                 ${pipsHtml}
@@ -70,7 +80,7 @@ function draftTierClass(wins) {
     if (wins >= 7) return 'draft-tier-red';
     if (wins >= 5) return 'draft-tier-gold';
     if (wins === 4) return 'draft-tier-silver';
-    if (wins >= 1) return 'draft-tier-black';
+    if (wins === 3) return 'draft-tier-black';
     return 'draft-tier-brown';
 }
 
@@ -81,106 +91,227 @@ async function loadMatches() {
     // Default to the most recently played format so the list always shows
     // something meaningful on first load. Users click a format card to switch.
     if (!_matchesFormat && _matchesAllMatches.length > 0) {
-        _matchesFormat = _matchesAllMatches[0].format || 'Unknown';
+        _matchesFormat = formatCardGroupKey(_matchesAllMatches[0].format || 'Unknown');
     }
     renderMatchFormatCards();
     renderMatchList();
 }
 
-function renderMatchFormatCards() {
-    const container = document.getElementById('matches-format-cards');
-    if (!container) return;
-    if (_matchesAllMatches.length === 0) { container.innerHTML = ''; return; }
-
+function _buildFmtMap() {
     const fmtMap = {};
     for (const m of _matchesAllMatches) {
-        const fmt   = m.format || 'Unknown';
+        const key   = formatCardGroupKey(m.format || 'Unknown');
         const combo = getColorCombo(m.deckColors, m.deckColorCounts);
-        if (!fmtMap[fmt]) fmtMap[fmt] = { total: 0, wins: 0, losses: 0, combos: {}, matches: [] };
-        fmtMap[fmt].total++;
-        fmtMap[fmt].matches.push(m);
-        if (m.result === 'win')  fmtMap[fmt].wins++;
-        if (m.result === 'loss') fmtMap[fmt].losses++;
+        if (!fmtMap[key]) fmtMap[key] = { total: 0, wins: 0, losses: 0, combos: {}, matches: [], premierMatches: [], contenderMatches: [] };
+        fmtMap[key].total++;
+        fmtMap[key].matches.push(m);
+        if ((m.format || '').startsWith('Premier Draft'))        fmtMap[key].premierMatches.push(m);
+        else if ((m.format || '').startsWith('Contender Draft')) fmtMap[key].contenderMatches.push(m);
+        if (m.result === 'win')  fmtMap[key].wins++;
+        if (m.result === 'loss') fmtMap[key].losses++;
         if (combo) {
-            if (!fmtMap[fmt].combos[combo]) fmtMap[fmt].combos[combo] = { total: 0, wins: 0, losses: 0 };
-            fmtMap[fmt].combos[combo].total++;
-            if (m.result === 'win')  fmtMap[fmt].combos[combo].wins++;
-            if (m.result === 'loss') fmtMap[fmt].combos[combo].losses++;
+            if (!fmtMap[key].combos[combo]) fmtMap[key].combos[combo] = { total: 0, wins: 0, losses: 0 };
+            fmtMap[key].combos[combo].total++;
+            if (m.result === 'win')  fmtMap[key].combos[combo].wins++;
+            if (m.result === 'loss') fmtMap[key].combos[combo].losses++;
         }
     }
+    return fmtMap;
+}
 
-    // Pre-compute draft run stats for draft formats
+function _buildDraftFmtStats(fmtMap) {
     const draftFmtStats = {};
     for (const [fmt, data] of Object.entries(fmtMap)) {
         if (!isDraftFormat(fmt)) continue;
-        const runs        = groupIntoDraftRuns(data.matches);
-        const trophies    = runs.filter(r => r.trophy).length;
-        const comboStats  = draftComboTrophyStats(runs, getColorCombo);
-        draftFmtStats[fmt] = { totalRuns: runs.length, trophies, comboStats };
+        const allRuns       = groupIntoDraftRuns(data.matches);
+        const premierRuns   = groupIntoDraftRuns(data.premierMatches);
+        const contenderRuns = groupIntoDraftRuns(data.contenderMatches);
+        draftFmtStats[fmt] = {
+            totalRuns:         allRuns.length,
+            comboStats:        draftComboTrophyStats(allRuns, getColorCombo),
+            premierRuns:       premierRuns.length,
+            premierTrophies:   premierRuns.filter(r => r.trophy).length,
+            contenderRuns:     contenderRuns.length,
+            contenderTrophies: contenderRuns.filter(r => r.trophy).length,
+        };
+    }
+    return draftFmtStats;
+}
+
+function _buildMetaHtml(data, ds) {
+    if (ds) {
+        const matchWord = data.total !== 1 ? 'matches' : 'match';
+        const draftWord = ds.totalRuns !== 1 ? 'drafts' : 'draft';
+        let html = `<span class="mfc-meta-label">${data.total} ${matchWord}</span><span class="mfc-meta-value">${ds.totalRuns} ${draftWord}</span>`;
+        if (ds.premierRuns > 0) {
+            const pct = Math.round(ds.premierTrophies / ds.premierRuns * 100);
+            html += `<span class="mfc-meta-label">Premier Trophy:</span><span class="mfc-meta-value">${pct}% (${ds.premierTrophies}/${ds.premierRuns})</span>`;
+        }
+        if (ds.contenderRuns > 0) {
+            const pct = Math.round(ds.contenderTrophies / ds.contenderRuns * 100);
+            html += `<span class="mfc-meta-label">Contender Trophy:</span><span class="mfc-meta-value">${pct}% (${ds.contenderTrophies}/${ds.contenderRuns})</span>`;
+        }
+        return html;
+    }
+    return `<span class="mfc-meta">${data.total} match${data.total !== 1 ? 'es' : ''}</span>`;
+}
+
+function _buildSelectorCombosHtml(top3, ds, maxPips) {
+    if (!top3 || top3.length === 0) return '';
+    const dotW = maxPips * 15; // fixed width keeps columns aligned across all 3 rows
+    const rows = top3.map(([combo, cd]) => {
+        const contested  = cd.wins + cd.losses;
+        const wr         = contested > 0 ? Math.round(cd.wins / contested * 100) : 0;
+        const trophyText = ds?.comboStats?.[combo]
+            ? `${ds.comboStats[combo].trophies}/${ds.comboStats[combo].runs} T`
+            : '';
+        return `<div class="sel-combo-row">
+            <div class="sel-combo-dots" style="min-width:${dotW}px">${comboDotsHtml(combo)}</div>
+            <span class="sel-combo-count">${cd.total} match${cd.total !== 1 ? 'es' : ''}</span>
+            <span class="sel-combo-wr ${wr >= 50 ? 'positive' : 'negative'}">${wr}%</span>
+            <span class="sel-combo-trophy">${trophyText}</span>
+        </div>`;
+    }).join('');
+    return `<div class="sel-combos">${rows}</div>`;
+}
+
+function _updateSelectorStages(listEl) {
+    for (const row of listEl.querySelectorAll('.format-selector-row')) {
+        const w         = row.offsetWidth;
+        const tPips     = +row.dataset.tPips    || Infinity;
+        const tWr       = +row.dataset.tWr      || Infinity;
+        const tMatches  = +row.dataset.tMatches || Infinity;
+        const tTrophies = (row.dataset.tTrophies !== '' && row.dataset.tTrophies)
+            ? +row.dataset.tTrophies : Infinity;
+        row.classList.remove('sel-stage-1', 'sel-stage-2', 'sel-stage-3', 'sel-stage-4');
+        if      (w >= tTrophies) row.classList.add('sel-stage-4');
+        else if (w >= tMatches)  row.classList.add('sel-stage-3');
+        else if (w >= tWr)       row.classList.add('sel-stage-2');
+        else if (w >= tPips)     row.classList.add('sel-stage-1');
+    }
+}
+
+function renderMatchFormatCards() {
+    const listEl = document.getElementById('format-selector-list');
+    const cardEl = document.getElementById('selected-format-card-area');
+    if (!listEl || !cardEl) return;
+    if (_matchesAllMatches.length === 0) { listEl.innerHTML = ''; cardEl.innerHTML = ''; return; }
+
+    const fmtMap       = _buildFmtMap();
+    const draftFmtStats = _buildDraftFmtStats(fmtMap);
+    const sorted       = Object.entries(fmtMap).sort((a, b) => b[1].total - a[1].total);
+
+    // Ensure a valid selection
+    if (!_matchesFormat || !fmtMap[_matchesFormat]) {
+        _matchesFormat = sorted[0][0];
     }
 
-    const cardsHtml = Object.entries(fmtMap)
+    // ── Scrollable selector list ────────────────────────────────────────────
+    listEl.innerHTML = sorted.map(([fmt, data]) => {
+        const contested  = data.wins + data.losses;
+        const wr         = contested > 0 ? Math.round(data.wins / contested * 100) : 0;
+        const safeF      = fmt.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const isActive   = fmt === _matchesFormat;
+        const ds         = draftFmtStats[fmt];
+        const top3       = Object.entries(data.combos)
+            .sort((a, b) => b[1].total - a[1].total)
+            .slice(0, 3);
+        const maxPips    = top3.reduce((mx, [combo]) =>
+            Math.max(mx, (combo.match(/[WUBRG]/g) || []).length), 0);
+        const combosHtml = _buildSelectorCombosHtml(top3, ds, maxPips);
+        return `<div class="format-selector-row${isActive ? ' active' : ''}"
+            onclick="selectMatchFormat('${safeF}')"
+            data-max-pips="${maxPips}"
+            data-has-draft="${ds ? '1' : '0'}">
+            <div class="mfc-name" title="${fmt}">
+                <span class="sel-fmt-name">${fmt}</span>
+                <span class="mfc-wr ${wr >= 50 ? 'positive' : 'negative'}">${wr}%</span>
+            </div>
+            <div class="mfc-stats-row">
+                <div class="mfc-meta-lines">${_buildMetaHtml(data, ds)}</div>
+                ${combosHtml}
+            </div>
+        </div>`;
+    }).join('');
+
+    // ── Selected format card (with combo rows) ──────────────────────────────
+    const [selFmt, selData] = sorted.find(([fmt]) => fmt === _matchesFormat) || sorted[0];
+    const ds = draftFmtStats[selFmt];
+    const selContested = selData.wins + selData.losses;
+    const selWr        = selContested > 0 ? Math.round(selData.wins / selContested * 100) : 0;
+    const safeSelF     = selFmt.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+    const comboRows = Object.entries(selData.combos)
         .sort((a, b) => b[1].total - a[1].total)
-        .map(([fmt, data]) => {
-            const contested = data.wins + data.losses;
-            const wr        = contested > 0 ? Math.round(data.wins / contested * 100) : 0;
-            const isActive  = fmt === _matchesFormat;
-            const safeF     = fmt.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-            const ds        = draftFmtStats[fmt];
-
-            const countLine = ds
-                ? `${data.total} match${data.total !== 1 ? 'es' : ''} · ${ds.totalRuns} draft${ds.totalRuns !== 1 ? 's' : ''}`
-                : `${data.total} match${data.total !== 1 ? 'es' : ''}`;
-            let trophyLine = '';
-            if (ds) {
-                const trophyPct = ds.totalRuns > 0
-                    ? Math.round(ds.trophies / ds.totalRuns * 100) : 0;
-                trophyLine = `Trophy ${trophyPct}% (${ds.trophies}/${ds.totalRuns})`;
-            }
-
-            const comboRows = Object.entries(data.combos)
-                .sort((a, b) => b[1].total - a[1].total)
-                .map(([combo, cd]) => {
-                    const cContested = cd.wins + cd.losses;
-                    const cWr        = cContested > 0 ? Math.round(cd.wins / cContested * 100) : 0;
-                    const rowActive  = isActive && _matchesSelectedCombos.has(combo);
-
-                    let trophyHtml = '';
-                    if (ds?.comboStats[combo]) {
-                        const cs = ds.comboStats[combo];
-                        trophyHtml = `<span class="mfc-combo-trophy">${cs.trophies}/${cs.runs} T</span>`;
-                    }
-
-                    return `<div class="mfc-combo-row${rowActive ? ' active' : ''}"
-                        onclick="event.stopPropagation(); toggleMatchCombo('${safeF}','${combo}')">
-                        <div class="mfc-combo-dots">${comboDotsHtml(combo)}</div>
-                        <span class="mfc-combo-count">${cd.total} match${cd.total !== 1 ? 'es' : ''}</span>
-                        <span class="mfc-combo-wr ${cWr >= 50 ? 'positive' : 'negative'}">${cWr}%</span>
-                        ${trophyHtml}
-                    </div>`;
-                }).join('');
-
-            return `<div class="matches-format-card${isActive ? ' active' : ''}" onclick="selectMatchFormat('${safeF}')">
-                <div class="mfc-name" title="${fmt}">${fmt}</div>
-                <div class="mfc-stats-row">
-                    <div class="mfc-meta-lines">
-                        <div class="mfc-meta">${countLine}</div>
-                        ${trophyLine ? `<div class="mfc-meta">${trophyLine}</div>` : ''}
-                    </div>
-                    <span class="mfc-wr ${wr >= 50 ? 'positive' : 'negative'}">${wr}%</span>
-                </div>
-                ${comboRows ? `<div class="mfc-combo-list">${comboRows}</div>` : ''}
+        .map(([combo, cd]) => {
+            const cContested = cd.wins + cd.losses;
+            const cWr        = cContested > 0 ? Math.round(cd.wins / cContested * 100) : 0;
+            const rowActive  = _matchesSelectedCombos.has(combo);
+            const trophyHtml = ds?.comboStats[combo]
+                ? `<span class="mfc-combo-trophy">${ds.comboStats[combo].trophies}/${ds.comboStats[combo].runs} T</span>`
+                : '';
+            return `<div class="mfc-combo-row${rowActive ? ' active' : ''}"
+                onclick="event.stopPropagation(); toggleMatchCombo('${safeSelF}','${combo}')">
+                <div class="mfc-combo-dots">${comboDotsHtml(combo)}</div>
+                <span class="mfc-combo-count">${cd.total} match${cd.total !== 1 ? 'es' : ''}</span>
+                <span class="mfc-combo-wr ${cWr >= 50 ? 'positive' : 'negative'}">${cWr}%</span>
+                ${trophyHtml}
             </div>`;
         }).join('');
 
-    container.innerHTML = `<div class="matches-format-cards-grid">${cardsHtml}</div>`;
+    // metaRows drives the WR% font-size: 3 rows (both premier + contender) → larger type.
+    const metaRows = !ds ? 1
+        : 1 + (ds.premierRuns > 0 ? 1 : 0) + (ds.contenderRuns > 0 ? 1 : 0);
+
+    cardEl.innerHTML = `<div class="matches-format-card mfc-rows-${metaRows}">
+        <div class="mfc-name" title="${selFmt}">${selFmt}</div>
+        <div class="mfc-stats-row">
+            <div class="mfc-meta-lines">${_buildMetaHtml(selData, ds)}</div>
+            <span class="mfc-wr ${selWr >= 50 ? 'positive' : 'negative'}">${selWr}%</span>
+        </div>
+        ${comboRows ? `<div class="mfc-combo-list">${comboRows}</div>` : ''}
+    </div>`;
+
+    // ── Sync list height to card height, compute combo stage thresholds ─────
+    requestAnimationFrame(() => {
+        const cardH = cardEl.offsetHeight;
+        const rows  = listEl.querySelectorAll('.format-selector-row');
+        const rowH  = rows.length > 0 ? rows[0].offsetHeight : 80;
+        listEl.style.paddingBottom = `${rowH}px`;
+        listEl.style.minHeight     = `${Math.min(rows.length, 2) * rowH}px`;
+        listEl.style.maxHeight     = cardH > 0 ? `${cardH}px` : 'none';
+
+        // Combo stage thresholds: row must be at least this wide to show each stage.
+        // BASE = row H-padding(24) + one stats-row gap(12) + combo section padding(20)
+        // WR% is now in the name bar, so it no longer contributes to the stats-row width.
+        const BASE = 56;
+        for (const row of rows) {
+            const maxPips = parseInt(row.dataset.maxPips || '0', 10);
+            if (maxPips === 0) continue;
+            const metaEl = row.querySelector('.mfc-meta-lines');
+            const metaW  = metaEl ? metaEl.offsetWidth : 80;
+            const dotCol = maxPips * 15;
+            const base   = BASE + metaW + dotCol;
+            row.dataset.tPips     = base;
+            row.dataset.tWr       = base + 36;   // + gap(4) + WR(32)
+            row.dataset.tMatches  = base + 100;  // + gap(4) + count(60) + gap(4) + WR(32)
+            row.dataset.tTrophies = row.dataset.hasDraft === '1'
+                ? base + 144  // + gap(4) + count(60) + gap(4) + WR(32) + gap(4) + trophy(40)
+                : '';
+        }
+        _updateSelectorStages(listEl);
+
+        if (_selectorResizeObserver) _selectorResizeObserver.disconnect();
+        _selectorResizeObserver = new ResizeObserver(() => _updateSelectorStages(listEl));
+        _selectorResizeObserver.observe(listEl);
+    });
 }
 
 function renderMatchList() {
     _expandedMatchId = null;
     const container = document.getElementById('all-matches');
     let visible = _matchesAllMatches;
-    if (_matchesFormat) visible = visible.filter(m => m.format === _matchesFormat);
+    if (_matchesFormat) visible = visible.filter(m => formatCardGroupKey(m.format) === _matchesFormat);
     if (_matchesSelectedCombos.size > 0) {
         visible = visible.filter(m => _matchesSelectedCombos.has(getColorCombo(m.deckColors, m.deckColorCounts)));
     }
@@ -219,6 +350,14 @@ function renderMatchList() {
     _draftRuns = groupIntoDraftRuns(visible);
     _draftRuns.sort((a, b) => latestTs(b) - latestTs(a));
 
+    // When the format changes, reset expanded state and auto-expand the latest run.
+    if (_matchesFormat !== _draftExpandedFormat) {
+        _expandedDraftIds.clear();
+        _draftExpandedFormat = _matchesFormat;
+        const firstKey = _draftRuns[0]?.matches[0]?.draftId || _draftRuns[0]?.matches[0]?.id;
+        if (firstKey) _expandedDraftIds.add(firstKey);
+    }
+
     const firstBatch = _draftRuns.slice(0, DRAFT_PAGE_SIZE);
     _draftRunsShown  = firstBatch.length;
 
@@ -228,7 +367,8 @@ function renderMatchList() {
 
 function _renderDraftRunHtml(run, state) {
     const taggedDraftId = run.matches[0]?.draftId || null;
-    const totals = taggedDraftId && _draftTotals[taggedDraftId]
+    const draftKey      = taggedDraftId || run.matches[0]?.id || 'unknown';
+    const totals        = taggedDraftId && _draftTotals[taggedDraftId]
         ? _draftTotals[taggedDraftId]
         : { wins: run.wins, losses: run.losses };
 
@@ -242,12 +382,41 @@ function _renderDraftRunHtml(run, state) {
             ? `${totals.wins}-${totals.losses} Trophy`
             : `${totals.wins}-${totals.losses}`;
 
-    const matchItems = [...run.matches].reverse().map(m => renderMatchItem(m)).join('');
-    return `<div class="draft-group ${tier}">
-        <div class="draft-group-header">
+    // IDs passed as a JSON array in the onclick — UUIDs are safe unescaped
+    const matchIdsJson = JSON.stringify(run.matches.map(m => m.id));
+    const safeKey      = draftKey.replace(/'/g, "\\'");
+    const deleteBtn    = `<button class="btn btn-secondary draft-delete-btn"
+        onclick="event.stopPropagation(); deleteDraftRun(${matchIdsJson})"
+        style="padding:4px 10px;font-size:11px;flex-shrink:0;">Delete</button>`;
+
+    if (_expandedDraftIds.has(draftKey)) {
+        const matchItems = [...run.matches].reverse().map(m => renderMatchItem(m)).join('');
+        return `<div class="draft-group ${tier}" data-draft-key="${draftKey}">
+            <div class="draft-group-header" onclick="toggleDraftCollapse('${safeKey}')">
+                <span class="draft-group-record">${label}</span>
+                <span class="draft-header-spacer"></span>
+                ${deleteBtn}
+            </div>
+            ${matchItems}
+        </div>`;
+    }
+
+    // Collapsed: one summary row
+    const latestMatch = run.matches[run.matches.length - 1];
+    const fmt         = matchRowFormatLabel(latestMatch?.format || '');
+    const pipsHtml    = renderMatchColorPips(latestMatch || {});
+    const date        = latestMatch
+        ? new Date(latestMatch.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+        : '';
+    return `<div class="draft-group ${tier} collapsed" data-draft-key="${draftKey}">
+        <div class="draft-group-header" onclick="toggleDraftCollapse('${safeKey}')">
             <span class="draft-group-record">${label}</span>
+            <span class="draft-header-format">${fmt}</span>
+            <span class="draft-header-spacer"></span>
+            ${pipsHtml}
+            <span class="draft-header-date">${date}</span>
+            ${deleteBtn}
         </div>
-        ${matchItems}
     </div>`;
 }
 
@@ -401,7 +570,7 @@ function _renderMainTablesHtml() {
 
     if (_deckSort === 'gihWr') {
         const sorted = [...nonLandCards].sort((a, b) => (b.gihWr ?? -1) - (a.gihWr ?? -1));
-        return _deckTableHtml('Cards', sorted) + landsTable;
+        return _deckTableHtml('Spells', sorted) + landsTable;
     }
 
     if (_deckSort === 'color') {
@@ -558,6 +727,41 @@ function setSbSearch(query) {
     if (sbList) sbList.innerHTML = _renderSbListHtml();
 }
 
+// ─── Draft collapse / delete ──────────────────────────────────────────────────
+
+function toggleDraftCollapse(draftKey) {
+    if (_expandedDraftIds.has(draftKey)) {
+        _expandedDraftIds.delete(draftKey);
+    } else {
+        _expandedDraftIds.add(draftKey);
+    }
+
+    const run = _draftRuns.find(r => (r.matches[0]?.draftId || r.matches[0]?.id) === draftKey);
+    if (!run) return;
+
+    // Clear any open deck view that belongs to this run
+    if (_expandedMatchId && run.matches.some(m => m.id === _expandedMatchId)) {
+        _expandedMatchId = null;
+    }
+
+    const state    = require('./state');
+    const draftEl  = document.querySelector(`#all-matches [data-draft-key="${draftKey.replace(/"/g, '\\"')}"]`);
+    if (!draftEl) return;
+
+    const temp = document.createElement('div');
+    temp.innerHTML = _renderDraftRunHtml(run, state);
+    draftEl.replaceWith(temp.firstElementChild);
+}
+
+async function deleteDraftRun(matchIds) {
+    const count = matchIds.length;
+    if (!confirm(`Delete this draft (${count} match${count !== 1 ? 'es' : ''})? This cannot be undone.`)) return;
+    await Promise.all(matchIds.map(id => ipcRenderer.invoke('delete-match', id)));
+    _matchesAllMatches = await ipcRenderer.invoke('get-matches');
+    renderMatchFormatCards();
+    renderMatchList();
+}
+
 // ─── Data actions ─────────────────────────────────────────────────────────────
 
 async function deleteMatch(matchId) {
@@ -601,6 +805,8 @@ module.exports = {
     renderMatchList,
     selectMatchFormat,
     toggleMatchCombo,
+    toggleDraftCollapse,
+    deleteDraftRun,
     deleteMatch,
     exportData,
     importData,

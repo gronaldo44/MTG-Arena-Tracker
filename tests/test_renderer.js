@@ -463,9 +463,9 @@ describe('comboDotsHtml', () => {
     expect(comboDotsHtml('')).toBe('');
   });
 
-  test('black pip carries a border style', () => {
+  test('black pip uses the dark purple background color', () => {
     const html = comboDotsHtml('B');
-    expect(html).toContain('border:');
+    expect(html).toContain('#521785');
   });
 
   test('white pip uses the correct background color', () => {

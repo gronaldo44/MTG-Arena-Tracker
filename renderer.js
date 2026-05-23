@@ -228,6 +228,12 @@ if (typeof document !== 'undefined') {
         await draftAssist.updateCsvStatusUI();
         dashboard.loadDashboard();
         draftAssist.initDraftView();
+
+        const versionEl = document.getElementById('app-version');
+        if (versionEl) {
+            const v = await ipcRenderer.invoke('get-app-version');
+            versionEl.textContent = `v${v}`;
+        }
     });
 }
 

@@ -2,8 +2,8 @@
 
 // ─── Color constants ──────────────────────────────────────────────────────────
 
-const _dotColor  = { W: '#f5f0e0', U: '#1e6daf', B: '#555', R: '#c1160e', G: '#1a6b3a' };
-const _dotBorder = { B: 'border:1px solid #888;' };
+const _dotColor  = { W: '#f5f0e0', U: '#1e6daf', B: '#521785', R: '#c1160e', G: '#1a6b3a' };
+const _dotBorder = {};
 
 const SPLASH_THRESHOLD = 4;
 
@@ -46,7 +46,7 @@ function renderMatchColorPips(match) {
             ? `${colorLabel(c)}: ${count} card${count !== 1 ? 's' : ''}`
             : colorLabel(c);
         const pipStyle = isSplash
-            ? `background:transparent;border:2px solid ${c === 'B' ? '#888' : _dotColor[c]};`
+            ? `background:transparent;border:2px solid ${_dotColor[c]};`
             : `background:${_dotColor[c]};${_dotBorder[c] || ''}`;
         return `<span class="match-pip-dot" style="${pipStyle}" title="${title}"></span>`;
     });
@@ -171,6 +171,12 @@ function rarityColor(r) {
 }
 
 // ─── Draft run helpers ────────────────────────────────────────────────────────
+
+// Maps "Premier Draft X" and "Contender Draft X" to "Draft X" for grouped
+// format card display. All other formats pass through unchanged.
+function formatCardGroupKey(fmt) {
+    return (fmt || '').replace(/^(?:Premier|Contender) (Draft .+)$/, '$1');
+}
 
 function isDraftFormat(format) {
     const f = (format || '').toLowerCase();
@@ -333,5 +339,6 @@ module.exports = {
     cardEyeballHtml, extractScryfallImageUrl,
     prevCoord, nextCoord,
     gihWrTierClass, colorPip, rarityGem, rarityLabel, rarityColor,
+    formatCardGroupKey,
     isDraftFormat, groupIntoDraftRuns, draftComboTrophyStats,
 };

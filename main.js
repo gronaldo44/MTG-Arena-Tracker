@@ -512,6 +512,8 @@ function handleGameEvent(event) {
 }
 
 // IPC handlers
+ipcMain.handle('get-app-version', () => app.getVersion());
+
 ipcMain.handle('get-inventory', async () => {
   if (!dataStore) return null;
   return dataStore.getInventory();

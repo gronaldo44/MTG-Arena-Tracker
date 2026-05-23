@@ -85,13 +85,16 @@
 .draft-group {
     border-radius: 10px;
     border: 1px solid var(--border);
-    border-left: 4px solid var(--border);
+    border-left: 6px solid var(--border);
     overflow: hidden;
     display: flex;
     flex-direction: column;
 }
 
 .draft-group-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 5px 14px;
     font-size: 11px;
     font-weight: 700;
@@ -100,6 +103,41 @@
     text-transform: uppercase;
     border-bottom: 1px solid var(--border);
     background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    user-select: none;
+}
+
+.draft-group-header:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Collapsed groups have no content below the header */
+.draft-group.collapsed .draft-group-header {
+    border-bottom: none;
+}
+
+.draft-header-spacer {
+    flex: 1;
+}
+
+/* Format label in the collapsed summary row — mirrors match-info h4 */
+.draft-header-format {
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--text);
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Date in the collapsed summary row */
+.draft-header-date {
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 /* Inside a draft group: flatten individual match items */
@@ -114,7 +152,8 @@
 }
 
 /* Tier border colors (left edge of the group) */
-.draft-tier-red    { border-left-color: var(--tier-mythic); animation: flame-flicker 2.4s ease-in-out infinite; }
+.draft-tier-red                  { border-left-color: var(--tier-mythic); animation: flame-flicker 2.4s ease-in-out infinite; }
+.draft-group.collapsed.draft-tier-red { animation: none; }
 .draft-tier-gold   { border-left-color: var(--tier-gold); }
 .draft-tier-silver { border-left-color: var(--tier-silver); }
 .draft-tier-black  { border-left-color: var(--tier-black); }
@@ -135,45 +174,204 @@
     animation: trophy-text-glow 2.4s ease-in-out infinite;
 }
 
-/* ─── Matches page — format cards ──────────────────────────────────── */
+/* ─── Matches page — header area (selector list + selected card) ─────── */
 
-.matches-format-cards-grid {
+#matches-header-area {
     display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+/* Scrollable format selector list */
+#format-selector-list {
+    flex: 1;
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+    background: var(--card);
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    /* min-height, max-height, and padding-bottom set dynamically via JS */
+}
+
+.format-selector-row {
+    background: var(--card);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+    user-select: none;
+    border-bottom: 1px solid var(--border);
+}
+
+.format-selector-row:last-child {
+    border-bottom: none;
+}
+
+.format-selector-row:hover {
+    background: rgba(93, 95, 239, 0.06);
+}
+
+.format-selector-row.active {
+    box-shadow: inset 3px 0 0 var(--primary);
+    background: rgba(93, 95, 239, 0.1);
+}
+
+/* Selector row name bar: format name on the left, WR% badge on the right */
+.format-selector-row .mfc-name {
+    border-radius: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Name text: truncates if the row is narrow */
+.sel-fmt-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Selector row: meta on left, combos pushed to right, growing space between */
+.format-selector-row .mfc-stats-row {
+    justify-content: space-between;
+}
+
+/* Meta section: both columns content-sized; label column right-aligned */
+.format-selector-row .mfc-meta-lines {
+    flex: 0 0 auto;
+    grid-template-columns: auto auto;
+}
+
+.format-selector-row .mfc-meta-label {
+    text-align: left;
+}
+
+/* ─── Selector row combo columns ──────────────────────────────────────────── */
+
+/* Hidden until a sel-stage-N class is applied to the row */
+.sel-combos {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    align-self: center;
+    padding: 0 10px;
+}
+
+.sel-combo-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sel-combo-dots {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+}
+
+.sel-combo-count,
+.sel-combo-wr,
+.sel-combo-trophy {
+    display: none;
+    font-size: 11px;
+    line-height: 1; /* keeps height equal to pip dots so rows don't grow between stages */
+    white-space: nowrap;
+}
+
+.sel-combo-wr {
+    font-weight: 700;
+    min-width: 32px;
+    text-align: right;
+}
+
+.sel-combo-count {
+    min-width: 60px;
+    text-align: right;
+    color: var(--text-muted);
+}
+
+.sel-combo-trophy {
+    font-weight: 600;
+    min-width: 40px;
+    text-align: right;
+    color: var(--text-muted);
+}
+
+/* Stage 1: pips */
+.sel-stage-1 .sel-combos,
+.sel-stage-2 .sel-combos,
+.sel-stage-3 .sel-combos,
+.sel-stage-4 .sel-combos {
+    display: flex;
+}
+
+/* Stage 2: pips + WR% */
+.sel-stage-2 .sel-combo-wr,
+.sel-stage-3 .sel-combo-wr,
+.sel-stage-4 .sel-combo-wr {
+    display: block;
+}
+
+/* Stage 3: pips + count + WR% */
+.sel-stage-3 .sel-combo-count,
+.sel-stage-4 .sel-combo-count {
+    display: block;
+}
+
+/* Doubled gap between count (col 2) and WR% (col 3) when count is visible */
+.sel-stage-3 .sel-combo-wr,
+.sel-stage-4 .sel-combo-wr {
+    margin-left: 4px;
+}
+
+/* Stage 4: pips + count + WR% + trophy */
+.sel-stage-4 .sel-combo-trophy {
+    display: block;
+}
+
+/* Selected format card panel — pushed to the right edge */
+#selected-format-card-area {
+    flex-shrink: 0;
+    margin-left: auto;
 }
 
 .matches-format-card {
     background: var(--card);
     border: 2px solid var(--border);
     border-radius: 10px;
-    padding: 10px 14px;
-    flex: 0 0 auto;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
+    padding: 10px 12px;
+    min-width: 300px;
     user-select: none;
 }
 
-.matches-format-card:hover {
-    border-color: rgba(93, 95, 239, 0.5);
-    background: rgba(93, 95, 239, 0.04);
+/* Align meta value column (drafts, trophy %) with combo count column.
+   96px label + 10px gap = 106px = combo row padding(6) + dots(90) + gap(10). */
+.matches-format-card .mfc-meta-lines {
+    grid-template-columns: 96px 1fr;
 }
 
-.matches-format-card.active {
-    border-color: var(--primary);
-    background: rgba(93, 95, 239, 0.08);
+/* Scale WR% up when all 3 meta rows are visible (both premier + contender runs).
+   Derived proportionally from 22px at 2 rows: 22 × (3-row height / 2-row height). */
+.matches-format-card.mfc-rows-3 .mfc-wr {
+    font-size: 34px;
 }
 
 .mfc-name {
     font-size: 16px;
     font-weight: 700;
     white-space: nowrap;
-    margin-bottom: 4px;
+    background: rgba(93, 95, 239, 0.25);
+    border-radius: 8px 8px 0 0;
+    margin: -10px -12px 8px -12px;
+    padding: 8px 12px;
 }
 
 .mfc-stats-row {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 2px;
@@ -182,18 +380,33 @@
 .mfc-meta-lines {
     flex: 1;
     min-width: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 10px;
+    row-gap: 2px;
+    align-content: start;
 }
 
 .mfc-wr {
     font-size: 22px;
     font-weight: 700;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
+.mfc-meta-label,
+.mfc-meta-value {
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+/* Non-draft formats: single value spans both columns */
 .mfc-meta {
     font-size: 11px;
-    color: var(--text-muted);
-    margin-bottom: 1px;
+    line-height: 1.4;
+    grid-column: 1 / -1;
 }
 
 /* Combo rows inside a format card */
@@ -229,7 +442,7 @@
 .mfc-combo-dots {
     display: flex;
     gap: 3px;
-    min-width: 75px; /* enough for 5 dots */
+    min-width: 90px;
 }
 
 .mfc-pip-dot {

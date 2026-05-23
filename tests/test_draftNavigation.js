@@ -64,7 +64,7 @@ const draftAssist = require('../renderer/draftAssistant');
 
 const {
   navPrevPick, navNextPick, navCurrent,
-  navPrevDraft, navNextDraft,
+  navPrevPack, navNextPack,
 } = draftAssist;
 
 // updateNavButtons is not in the public exports — call it via a round-trip
@@ -259,93 +259,141 @@ describe('navCurrent', () => {
   });
 });
 
-// ─── navPrevDraft ─────────────────────────────────────────────────────────────
-// draftList is newest-first (index 0 = newest).
-// navPrevDraft goes to a higher index (older draft).
+// ─── navPrevPack ──────────────────────────────────────────────────────────────
 
-describe('navPrevDraft', () => {
-  const oldestBundle = makeBundle({ draftId: 'draft-1', startedAt: 1000 });
+describe('navPrevPack', () => {
+  const threePacks = [
+    { pack: 1, pick: 1,  options: [mkCard(101)], picked: 101 },
+    { pack: 1, pick: 14, options: [mkCard(114)], picked: 114 },
+    { pack: 2, pick: 1,  options: [mkCard(201)], picked: 201 },
+    { pack: 2, pick: 4,  options: [mkCard(204)], picked: null },
+    { pack: 3, pick: 1,  options: [mkCard(301)], picked: null },
+  ];
 
   beforeEach(() => {
+    state.bundle = makeBundle({ picks: threePacks, liveCoord: { pack: 3, pick: 1 } });
+  });
+
+  test('from Pack 2 mid-pick: jumps to Pack 2 Pick 1', () => {
+    state.viewingCoord = { pack: 2, pick: 4 };
+    navPrevPack();
+    expect(state.viewingCoord).toEqual({ pack: 2, pick: 1 });
+  });
+
+  test('from Pack 2 Pick 1 (already at pack start): jumps to Pack 1 Pick 1', () => {
+    state.viewingCoord = { pack: 2, pick: 1 };
+    navPrevPack();
+    expect(state.viewingCoord).toEqual({ pack: 1, pick: 1 });
+  });
+
+  test('from Pack 3 Pick 1 (at pack start): jumps to Pack 2 Pick 1', () => {
+    state.viewingCoord = { pack: 3, pick: 1 };
+    navPrevPack();
+    expect(state.viewingCoord).toEqual({ pack: 2, pick: 1 });
+  });
+
+  test('from Pack 1 mid-pick: jumps to Pack 1 Pick 1', () => {
+    state.viewingCoord = { pack: 1, pick: 14 };
+    navPrevPack();
+    expect(state.viewingCoord).toEqual({ pack: 1, pick: 1 });
+  });
+
+  test('no-op when already at Pack 1 Pick 1', () => {
+    state.viewingCoord = { pack: 1, pick: 1 };
+    navPrevPack();
+    expect(state.viewingCoord).toEqual({ pack: 1, pick: 1 });
+  });
+
+  test('no-op when bundle is null', () => {
+    state.bundle       = null;
+    state.viewingCoord = { pack: 2, pick: 1 };
+    navPrevPack();
+    expect(state.viewingCoord).toEqual({ pack: 2, pick: 1 });
+  });
+
+  test('no-op when viewingCoord is null', () => {
+    state.viewingCoord = null;
+    navPrevPack(); // must not throw
+    expect(state.viewingCoord).toBeNull();
+  });
+
+  test('does not make any IPC calls', () => {
     ipcRenderer.invoke.mockClear();
-    ipcRenderer.invoke.mockResolvedValue(oldestBundle);
-    state.draftList = [
-      { draftId: 'draft-3', startedAt: 3000, pickCount: 10 },
-      { draftId: 'draft-2', startedAt: 2000, pickCount: 10 },
-      { draftId: 'draft-1', startedAt: 1000, pickCount: 10 },
-    ];
-  });
-
-  test('from newest draft: loads the next-older draft', async () => {
-    state.bundle       = makeBundle({ draftId: 'draft-3' });
-    state.viewingCoord = { pack: 1, pick: 1 };
-    await navPrevDraft();
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith('view-draft-record', 'draft-2');
-  });
-
-  test('from middle draft: loads the next-older draft', async () => {
-    state.bundle       = makeBundle({ draftId: 'draft-2' });
-    state.viewingCoord = { pack: 1, pick: 1 };
-    await navPrevDraft();
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith('view-draft-record', 'draft-1');
-  });
-
-  test('no-op when already at the oldest draft', async () => {
-    state.bundle       = makeBundle({ draftId: 'draft-1' });
-    state.viewingCoord = { pack: 1, pick: 1 };
-    await navPrevDraft();
-    expect(ipcRenderer.invoke).not.toHaveBeenCalled();
-  });
-
-  test('no-op when draftList is empty', async () => {
-    state.draftList = [];
-    state.bundle    = makeBundle({ draftId: 'draft-1' });
-    await navPrevDraft();
+    state.viewingCoord = { pack: 2, pick: 1 };
+    navPrevPack();
     expect(ipcRenderer.invoke).not.toHaveBeenCalled();
   });
 });
 
-// ─── navNextDraft ─────────────────────────────────────────────────────────────
-// navNextDraft goes to a lower index (newer draft).
+// ─── navNextPack ──────────────────────────────────────────────────────────────
 
-describe('navNextDraft', () => {
-  const newestBundle = makeBundle({ draftId: 'draft-3', startedAt: 3000 });
+describe('navNextPack', () => {
+  const threePacks = [
+    { pack: 1, pick: 1,  options: [mkCard(101)], picked: 101 },
+    { pack: 1, pick: 14, options: [mkCard(114)], picked: 114 },
+    { pack: 2, pick: 1,  options: [mkCard(201)], picked: 201 },
+    { pack: 2, pick: 4,  options: [mkCard(204)], picked: 204 },
+    { pack: 3, pick: 1,  options: [mkCard(301)], picked: null },
+  ];
+  const live = { pack: 3, pick: 1 };
 
   beforeEach(() => {
-    ipcRenderer.invoke.mockClear();
-    ipcRenderer.invoke.mockResolvedValue(newestBundle);
-    state.draftList = [
-      { draftId: 'draft-3', startedAt: 3000, pickCount: 10 },
-      { draftId: 'draft-2', startedAt: 2000, pickCount: 10 },
-      { draftId: 'draft-1', startedAt: 1000, pickCount: 10 },
+    state.bundle = makeBundle({ picks: threePacks, liveCoord: live });
+  });
+
+  test('from Pack 1: jumps to Pack 2 Pick 1', () => {
+    state.viewingCoord = { pack: 1, pick: 14 };
+    navNextPack();
+    expect(state.viewingCoord).toEqual({ pack: 2, pick: 1 });
+  });
+
+  test('from Pack 2: jumps to Pack 3 Pick 1', () => {
+    state.viewingCoord = { pack: 2, pick: 4 };
+    navNextPack();
+    expect(state.viewingCoord).toEqual({ pack: 3, pick: 1 });
+  });
+
+  test('from last pack not at live: jumps to liveCoord', () => {
+    const extended = [
+      ...threePacks,
+      { pack: 3, pick: 5, options: [mkCard(305)], picked: null },
     ];
+    state.bundle       = makeBundle({ picks: extended, liveCoord: { pack: 3, pick: 5 } });
+    state.viewingCoord = { pack: 3, pick: 1 };
+    navNextPack();
+    expect(state.viewingCoord).toEqual({ pack: 3, pick: 5 });
   });
 
-  test('from oldest draft: loads the next-newer draft', async () => {
-    state.bundle       = makeBundle({ draftId: 'draft-1' });
+  test('no-op when on last pack and already at liveCoord', () => {
+    state.viewingCoord = { pack: 3, pick: 1 };
+    navNextPack();
+    expect(state.viewingCoord).toEqual({ pack: 3, pick: 1 });
+  });
+
+  test('no-op when bundle is null', () => {
+    state.bundle       = null;
     state.viewingCoord = { pack: 1, pick: 1 };
-    await navNextDraft();
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith('view-draft-record', 'draft-2');
+    navNextPack();
+    expect(state.viewingCoord).toEqual({ pack: 1, pick: 1 });
   });
 
-  test('from middle draft: loads the next-newer draft', async () => {
-    state.bundle       = makeBundle({ draftId: 'draft-2' });
+  test('no-op when viewingCoord is null', () => {
+    state.viewingCoord = null;
+    navNextPack(); // must not throw
+    expect(state.viewingCoord).toBeNull();
+  });
+
+  test('no-op when on last pack and bundle has no liveCoord', () => {
+    state.bundle       = makeBundle({ picks: threePacks, liveCoord: null });
+    state.viewingCoord = { pack: 3, pick: 1 };
+    navNextPack();
+    expect(state.viewingCoord).toEqual({ pack: 3, pick: 1 });
+  });
+
+  test('does not make any IPC calls', () => {
+    ipcRenderer.invoke.mockClear();
     state.viewingCoord = { pack: 1, pick: 1 };
-    await navNextDraft();
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith('view-draft-record', 'draft-3');
-  });
-
-  test('no-op when already at the newest draft', async () => {
-    state.bundle       = makeBundle({ draftId: 'draft-3' });
-    state.viewingCoord = { pack: 1, pick: 1 };
-    await navNextDraft();
-    expect(ipcRenderer.invoke).not.toHaveBeenCalled();
-  });
-
-  test('no-op when draftList is empty', async () => {
-    state.draftList = [];
-    state.bundle    = makeBundle({ draftId: 'draft-3' });
-    await navNextDraft();
+    navNextPack();
     expect(ipcRenderer.invoke).not.toHaveBeenCalled();
   });
 });
@@ -368,38 +416,65 @@ describe('updateNavButtons', () => {
     ipcRenderer.invoke.mockResolvedValue(null);
   });
 
-  // ── << prev-draft ──────────────────────────────────────────────────────────
+  // ── << prev-pack ───────────────────────────────────────────────────────────
 
-  test('<< disabled when on the oldest draft (last index)', () => {
-    state.draftList    = [{ draftId: 'new', startedAt: 2 }, { draftId: 'old', startedAt: 1 }];
-    state.bundle       = makeBundle({ draftId: 'old', picks: twoPicks });
+  const multiPackPicks = [
+    { pack: 1, pick: 1, options: [mkCard(101)], picked: 101 },
+    { pack: 1, pick: 2, options: [mkCard(102)], picked: 102 },
+    { pack: 2, pick: 1, options: [mkCard(201)], picked: null },
+  ];
+
+  test('<< disabled when already at Pack 1 Pick 1', () => {
+    state.draftList    = [{ draftId: 'draft-1', startedAt: 1 }];
+    state.bundle       = makeBundle({ picks: multiPackPicks, liveCoord: { pack: 2, pick: 1 } });
     state.viewingCoord = { pack: 1, pick: 1 };
     updateNavButtons();
     expect(el('draft-nav-prev-draft').disabled).toBe(true);
   });
 
-  test('<< enabled when not on the oldest draft', () => {
-    state.draftList    = [{ draftId: 'new', startedAt: 2 }, { draftId: 'old', startedAt: 1 }];
-    state.bundle       = makeBundle({ draftId: 'new', picks: twoPicks });
-    state.viewingCoord = { pack: 1, pick: 1 };
+  test('<< enabled when on Pack 1 but not at Pick 1', () => {
+    state.draftList    = [{ draftId: 'draft-1', startedAt: 1 }];
+    state.bundle       = makeBundle({ picks: multiPackPicks, liveCoord: { pack: 2, pick: 1 } });
+    state.viewingCoord = { pack: 1, pick: 2 };
     updateNavButtons();
     expect(el('draft-nav-prev-draft').disabled).toBe(false);
   });
 
-  // ── >> next-draft ──────────────────────────────────────────────────────────
+  test('<< enabled when on Pack 2', () => {
+    state.draftList    = [{ draftId: 'draft-1', startedAt: 1 }];
+    state.bundle       = makeBundle({ picks: multiPackPicks, liveCoord: { pack: 2, pick: 1 } });
+    state.viewingCoord = { pack: 2, pick: 1 };
+    updateNavButtons();
+    expect(el('draft-nav-prev-draft').disabled).toBe(false);
+  });
 
-  test('>> disabled when on the newest draft (index 0)', () => {
-    state.draftList    = [{ draftId: 'new', startedAt: 2 }, { draftId: 'old', startedAt: 1 }];
-    state.bundle       = makeBundle({ draftId: 'new', picks: twoPicks });
-    state.viewingCoord = { pack: 1, pick: 1 };
+  // ── >> next-pack ───────────────────────────────────────────────────────────
+
+  test('>> disabled when on the last pack and already at liveCoord', () => {
+    state.draftList    = [{ draftId: 'draft-1', startedAt: 1 }];
+    state.bundle       = makeBundle({ picks: multiPackPicks, liveCoord: { pack: 2, pick: 1 } });
+    state.viewingCoord = { pack: 2, pick: 1 };
     updateNavButtons();
     expect(el('draft-nav-next-draft').disabled).toBe(true);
   });
 
-  test('>> enabled when not on the newest draft', () => {
-    state.draftList    = [{ draftId: 'new', startedAt: 2 }, { draftId: 'old', startedAt: 1 }];
-    state.bundle       = makeBundle({ draftId: 'old', picks: twoPicks });
+  test('>> enabled when a next pack exists', () => {
+    state.draftList    = [{ draftId: 'draft-1', startedAt: 1 }];
+    state.bundle       = makeBundle({ picks: multiPackPicks, liveCoord: { pack: 2, pick: 1 } });
     state.viewingCoord = { pack: 1, pick: 1 };
+    updateNavButtons();
+    expect(el('draft-nav-next-draft').disabled).toBe(false);
+  });
+
+  test('>> enabled when on the last pack but not at liveCoord', () => {
+    const extPicks = [
+      { pack: 1, pick: 1, options: [mkCard(101)], picked: 101 },
+      { pack: 2, pick: 1, options: [mkCard(201)], picked: 201 },
+      { pack: 2, pick: 3, options: [mkCard(203)], picked: null },
+    ];
+    state.draftList    = [{ draftId: 'draft-1', startedAt: 1 }];
+    state.bundle       = makeBundle({ picks: extPicks, liveCoord: { pack: 2, pick: 3 } });
+    state.viewingCoord = { pack: 2, pick: 1 };
     updateNavButtons();
     expect(el('draft-nav-next-draft').disabled).toBe(false);
   });
@@ -472,13 +547,15 @@ describe('updateNavButtons', () => {
       .toHaveBeenCalledWith('at-live', false);
   });
 
-  test('all pick buttons disabled and at-live removed when no bundle is loaded', () => {
+  test('all buttons disabled and at-live removed when no bundle is loaded', () => {
     state.bundle       = null;
     state.viewingCoord = null;
     state.draftList    = [];
     updateNavButtons();
+    expect(el('draft-nav-prev-draft').disabled).toBe(true);
     expect(el('draft-nav-prev-pick').disabled).toBe(true);
     expect(el('draft-nav-next-pick').disabled).toBe(true);
+    expect(el('draft-nav-next-draft').disabled).toBe(true);
     expect(el('draft-nav-current').disabled).toBe(true);
     expect(el('draft-nav-current').classList.remove).toHaveBeenCalledWith('at-live');
   });

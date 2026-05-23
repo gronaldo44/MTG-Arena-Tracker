@@ -18,6 +18,9 @@ let _loadingDraftId    = null;
 
 const MISSING_PICK_MSG = 'Pick missing from log (likely auto-pick during disconnect)';
 
+// Double-faced cards have names like "Front // Back" — only show the front face.
+function shortCardName(name) { return (name || '').split(' // ')[0]; }
+
 // ─── Coord helpers ────────────────────────────────────────────────────────────
 
 function getViewingPick() {
@@ -152,7 +155,7 @@ function renderCurrentPack(pick) {
             <div class="draft-card-row ${tierClass}" data-idx="${idx}" onclick="toggleCardDetail(${idx})">
                 <div class="draft-card-name">
                     ${draftCardColorPips(colorStr, card.manaCost || '')}
-                    <span title="${name}">${name}</span>
+                    <span title="${name}">${shortCardName(name)}</span>
                     ${lowSample && gihWr !== null ? '<span class="low-sample-dot" title="Low sample size"></span>' : ''}
                     ${cardEyeballHtml(card.arena_id, card.name, card.set)}
                 </div>
@@ -316,7 +319,7 @@ function _renderFilteredPicks() {
                 <div class="pick-num">P${pick.pack ?? '?'}p${pick.pick ?? '?'}</div>
                 <div class="pick-colors">${draftCardColorPips(colorStr, card?.manaCost || '')}</div>
                 <div class="pick-name">
-                    <span title="${name}">${name}</span>
+                    <span title="${name}">${shortCardName(name)}</span>
                     ${cardEyeballHtml(card?.arena_id, card?.name, null)}
                 </div>
                 <div class="pick-wr ${wrClass}">${wrText}</div>
@@ -335,30 +338,43 @@ function updateNavButtons() {
     const nextPickBtn  = document.getElementById('draft-nav-next-pick');
     const nextDraftBtn = document.getElementById('draft-nav-next-draft');
 
-    const hasDraft = !!(state.bundle && state.viewingCoord);
+    const hasDraft  = !!(state.bundle && state.viewingCoord);
     const draftList = Array.isArray(state.draftList) ? state.draftList : [];
-    const draftIdx  = hasDraft ? draftList.findIndex(d => d.draftId === state.bundle.draftId) : -1;
     const picks     = hasDraft ? (state.bundle.picks || []) : [];
     const coord     = state.viewingCoord;
 
-    prevDraftBtn.disabled = !hasDraft || draftIdx < 0 || draftIdx >= draftList.length - 1;
-    nextDraftBtn.disabled = !hasDraft || draftIdx <= 0;
-
     if (hasDraft) {
+        // Single-pick navigation
         const prev = prevCoord(picks, coord);
         prevPickBtn.disabled = prev.pack === coord.pack && prev.pick === coord.pick;
         const next = nextCoord(picks, coord);
         nextPickBtn.disabled = next.pack === coord.pack && next.pick === coord.pick;
+
+        // Current button / at-live highlight
         const isNewestDraft = draftList.length > 0 && state.bundle.draftId === draftList[0].draftId;
-        const atLive = isNewestDraft && state.bundle.liveCoord
-            && coord.pack === state.bundle.liveCoord.pack
-            && coord.pick === state.bundle.liveCoord.pick;
+        const liveCoord = state.bundle.liveCoord;
+        const atLive = isNewestDraft && liveCoord
+            && coord.pack === liveCoord.pack && coord.pick === liveCoord.pick;
         currentBtn.classList.toggle('at-live', !!atLive);
         currentBtn.disabled = false;
+
+        // << prev-pack: disabled when already at Pack 1 Pick 1
+        const p1First = picks.find(p => p.pack === 1);
+        prevDraftBtn.disabled = !p1First
+            || (coord.pack === p1First.pack && coord.pick === p1First.pick);
+
+        // >> next-pack: disabled when on the latest pack and already at the live/last pick
+        const hasNextPack = picks.some(p => p.pack === coord.pack + 1);
+        const atEnd = liveCoord
+            ? (coord.pack === liveCoord.pack && coord.pick === liveCoord.pick)
+            : (next.pack === coord.pack && next.pick === coord.pick);
+        nextDraftBtn.disabled = !hasNextPack && atEnd;
     } else {
-        prevPickBtn.disabled = true;
-        nextPickBtn.disabled = true;
-        currentBtn.disabled  = true;
+        prevDraftBtn.disabled = true;
+        prevPickBtn.disabled  = true;
+        nextPickBtn.disabled  = true;
+        nextDraftBtn.disabled = true;
+        currentBtn.disabled   = true;
         currentBtn.classList.remove('at-live');
     }
 }
@@ -391,18 +407,36 @@ async function navCurrent() {
     }
 }
 
-async function navPrevDraft() {
-    if (!Array.isArray(state.draftList) || !state.bundle) return;
-    const idx = state.draftList.findIndex(d => d.draftId === state.bundle.draftId);
-    if (idx < 0 || idx >= state.draftList.length - 1) return;
-    await onDraftSelectChange(state.draftList[idx + 1].draftId);
+function navPrevPack() {
+    if (!state.bundle || !state.viewingCoord) return;
+    const picks       = state.bundle.picks || [];
+    const { pack: currentPack, pick: currentPick } = state.viewingCoord;
+    const packFirst   = picks.find(p => p.pack === currentPack);
+    // Already at the first pick of this pack → go to start of the previous pack.
+    const atPackStart = packFirst && packFirst.pick === currentPick;
+    const targetPack  = atPackStart && currentPack > 1 ? currentPack - 1 : currentPack;
+    const target      = picks.find(p => p.pack === targetPack);
+    if (!target) return;
+    if (target.pack === currentPack && target.pick === currentPick) return;
+    state.viewingCoord = { pack: target.pack, pick: target.pick };
+    renderDraftPage();
 }
 
-async function navNextDraft() {
-    if (!Array.isArray(state.draftList) || !state.bundle) return;
-    const idx = state.draftList.findIndex(d => d.draftId === state.bundle.draftId);
-    if (idx <= 0) return;
-    await onDraftSelectChange(state.draftList[idx - 1].draftId);
+function navNextPack() {
+    if (!state.bundle || !state.viewingCoord) return;
+    const picks         = state.bundle.picks || [];
+    const nextPackFirst = picks.find(p => p.pack === state.viewingCoord.pack + 1);
+    if (nextPackFirst) {
+        state.viewingCoord = { pack: nextPackFirst.pack, pick: nextPackFirst.pick };
+        renderDraftPage();
+        return;
+    }
+    // Already on latest pack: jump to live/current pick
+    const liveCoord = state.bundle.liveCoord;
+    if (liveCoord && !(state.viewingCoord.pack === liveCoord.pack && state.viewingCoord.pick === liveCoord.pick)) {
+        state.viewingCoord = liveCoord;
+        renderDraftPage();
+    }
 }
 
 // ─── Card detail drawer ───────────────────────────────────────────────────────
@@ -558,7 +592,7 @@ module.exports = {
     navPrevPick,
     navNextPick,
     navCurrent,
-    navPrevDraft,
-    navNextDraft,
+    navPrevPack,
+    navNextPack,
     updateNavButtons,
 };

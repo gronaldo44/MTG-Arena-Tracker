@@ -1,7 +1,7 @@
 'use strict';
 
 const { ipcRenderer } = require('electron');
-const { isDraftFormat, groupIntoDraftRuns, draftComboTrophyStats, getColorCombo } = require('./shared');
+const { formatCardGroupKey, isDraftFormat, groupIntoDraftRuns, draftComboTrophyStats, getColorCombo } = require('./shared');
 
 // ─── Inventory widget ─────────────────────────────────────────────────────────
 
@@ -61,9 +61,9 @@ async function loadDashboard() {
     // Pre-compute draft run stats per format from full match list
     const matchesByFormat = {};
     for (const m of matches) {
-        const fmt = m.format || 'Unknown';
-        if (!matchesByFormat[fmt]) matchesByFormat[fmt] = [];
-        matchesByFormat[fmt].push(m);
+        const key = formatCardGroupKey(m.format || 'Unknown');
+        if (!matchesByFormat[key]) matchesByFormat[key] = [];
+        matchesByFormat[key].push(m);
     }
     const draftFmtStats = {};
     for (const [fmt, fmtMatches] of Object.entries(matchesByFormat)) {
@@ -83,7 +83,18 @@ async function loadDashboard() {
                 <p>No matches recorded yet. Start playing MTG Arena!</p>
             </div>`;
     } else {
-        formatContainer.innerHTML = Object.entries(formats)
+        // Merge Premier Draft and Contender Draft into a single "Draft [Set]" card.
+        const groupedFormats = {};
+        for (const [fmt, data] of Object.entries(formats)) {
+            const key = formatCardGroupKey(fmt);
+            if (!groupedFormats[key]) groupedFormats[key] = { total: 0, wins: 0, losses: 0, draws: 0 };
+            groupedFormats[key].total  += data.total;
+            groupedFormats[key].wins   += data.wins;
+            groupedFormats[key].losses += data.losses;
+            groupedFormats[key].draws  += (data.draws || 0);
+        }
+
+        formatContainer.innerHTML = Object.entries(groupedFormats)
             .sort((a, b) => b[1].total - a[1].total)
             .map(([format, data]) => {
                 const winRate = data.total > 0 ? Math.round((data.wins / data.total) * 100) : 0;

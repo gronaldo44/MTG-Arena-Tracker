@@ -27,6 +27,10 @@ Card-level win-rate stats across your entire match history.
 ### History by Format
 Browse and filter all your past matches organized by format and deck.
 
+- **Format selector** — left panel lists every format you've played with win rate, match count, and top color combos. Columns appear progressively as space allows.
+- **Draft runs** — draft matches are grouped into runs and displayed with tier color coding based on win count (0–2 brown, 3 black, 4 silver, 5–6 gold, 7 red/trophy). Runs are collapsible: the latest is expanded by default; click the record header to toggle. Collapsed runs show the record, format, color pips, date, and a delete button.
+- **Match rows** — each match shows result, deck name, format, opponent colors, and timestamp.
+
 ![History](images/History.jpg)
 
 ## How It Works

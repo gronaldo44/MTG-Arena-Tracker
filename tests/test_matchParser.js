@@ -61,7 +61,7 @@ describe('MatchParser', () => {
       ['Draft_QuickDraft_SOS',       'Secrets of Strixhaven Quick Draft'],
       ['PremierDraft_SOS_20250601',   'Premier Draft Secrets of Strixhaven'],
       ['Draft_PremierDraft_SOS',      'Premier Draft Secrets of Strixhaven'],
-      ['ContenderDraft_SOS_20260501', 'Premier Draft Secrets of Strixhaven'],
+      ['ContenderDraft_SOS_20260501', 'Contender Draft Secrets of Strixhaven'],
       ['TradDraft_SOS_20250601',     'Secrets of Strixhaven Traditional Draft'],
       ['Sealed_Event',               'Sealed'],
       ['Constructed_Event',          'Constructed'],

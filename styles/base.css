@@ -3,8 +3,8 @@
     --success: #22c55e;
     --danger: #ef4444;
     --warning: #f59e0b;
-    --bg: #1a1a2e;
-    --card: #16213e;
+    --bg: #1e2240;
+    --card: #18284a;
     --text: #f1f1f1;
     --text-muted: #888;
     --border: #0f3460;
@@ -21,6 +21,16 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+}
+
+a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+a:hover {
+    opacity: 0.85;
+    text-decoration: underline;
 }
 
 body {

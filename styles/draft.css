@@ -106,6 +106,7 @@
 }
 .draft-card-row.tier-gold   { border-left-color: var(--tier-gold); }
 .draft-card-row.tier-silver { border-left-color: rgba(220, 228, 236, 0.8); }
+.draft-card-row.tier-black  { border-left-color: var(--tier-black); }
 .draft-card-row.tier-brown  { border-left-color: rgba(123, 80, 32, 0.45); }
 
 /* Removed-since-last-view section (wheel correlation) */
@@ -239,7 +240,7 @@
 
 .color-W { background: #f5f0e0; color: #333; }
 .color-U { background: #1e6daf; color: #fff; }
-.color-B { background: #1a1a1a; color: #aaa; border: 1px solid #444; }
+.color-B { background: #521785; color: #e8d0ff; border: 1px solid #8b45c8; }
 .color-R { background: #c1160e; color: #fff; }
 .color-G { background: #1a6b3a; color: #fff; }
 .color-multi { background: linear-gradient(135deg, #ffd700, #c1160e); color: #fff; }
