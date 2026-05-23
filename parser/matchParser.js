@@ -457,7 +457,7 @@ class MatchParser {
     if (name.includes('sealed'))           draftType = 'Sealed';
     else if (name.includes('quick'))       draftType = 'Quick Draft';
     else if (name.includes('traditional') || name.includes('trad')) draftType = 'Traditional Draft';
-    else if (name.includes('premier'))     draftType = 'Premier Draft';
+    else if (name.includes('premier') || name.includes('contender')) draftType = 'Premier Draft';
     else                                   draftType = 'Draft';
 
     const setCode = eventName
