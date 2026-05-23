@@ -357,6 +357,174 @@ describe('DataStore — importFromFile', () => {
     fs.writeFileSync(tmpFile, 'not valid json');
     expect(() => ds.importFromFile(tmpFile)).toThrow();
   });
+
+  test('imports cardStats from v1.1 export file', () => {
+    writeExportFile(tmpFile, {
+      version: '1.1',
+      cardStats: {
+        processedGames: ['match1_game1'],
+        statsByFormat: {
+          'Premier Draft SOS': {
+            '100': { gamesInDeck: 5, gamesInHand: 3, gamesWonInHand: 2, gamesOpenHand: 1, gamesWonOpenHand: 1 },
+          },
+        },
+      },
+    });
+    ds.importFromFile(tmpFile);
+    expect(ds.cardStats.processedGames.has('match1_game1')).toBe(true);
+    expect(ds.cardStats.statsByFormat['Premier Draft SOS']['100'].gamesInDeck).toBe(5);
+  });
+
+  test('merges cardStats without overwriting existing entries for same grpId', () => {
+    ds.cardStats.statsByFormat['Premier Draft SOS'] = {
+      '100': { gamesInDeck: 2, gamesInHand: 1, gamesWonInHand: 1, gamesOpenHand: 0, gamesWonOpenHand: 0 },
+    };
+    writeExportFile(tmpFile, {
+      version: '1.1',
+      cardStats: {
+        processedGames: [],
+        statsByFormat: {
+          'Premier Draft SOS': {
+            '100': { gamesInDeck: 3, gamesInHand: 2, gamesWonInHand: 1, gamesOpenHand: 1, gamesWonOpenHand: 1 },
+          },
+        },
+      },
+    });
+    ds.importFromFile(tmpFile);
+    expect(ds.cardStats.statsByFormat['Premier Draft SOS']['100'].gamesInDeck).toBe(5);
+    expect(ds.cardStats.statsByFormat['Premier Draft SOS']['100'].gamesInHand).toBe(3);
+  });
+
+  test('cardStats persisted to disk after import', () => {
+    writeExportFile(tmpFile, {
+      version: '1.1',
+      cardStats: {
+        processedGames: ['g1'],
+        statsByFormat: { 'SOS': { '200': { gamesInDeck: 1, gamesInHand: 0, gamesWonInHand: 0, gamesOpenHand: 0, gamesWonOpenHand: 0 } } },
+      },
+    });
+    ds.importFromFile(tmpFile);
+    const ds2 = new DataStore();
+    expect(ds2.cardStats.processedGames.has('g1')).toBe(true);
+    expect(ds2.cardStats.statsByFormat['SOS']['200'].gamesInDeck).toBe(1);
+  });
+
+  test('imports drafts from v1.1 export file', () => {
+    writeExportFile(tmpFile, {
+      version: '1.1',
+      drafts: {
+        'd1': { draftId: 'd1', startedAt: 1000, picks: [{ pack: 1, pick: 1, options: [10], picked: 10 }] },
+      },
+    });
+    ds.importFromFile(tmpFile);
+    expect(ds.getDraft('d1')).not.toBeNull();
+    expect(ds.getDraft('d1').picks).toHaveLength(1);
+  });
+
+  test('does not overwrite existing drafts on import', () => {
+    ds.upsertDraft({ draftId: 'd1', picks: [{ pack: 1, pick: 1, options: [10], picked: 10 }], currentPack: null });
+    writeExportFile(tmpFile, {
+      version: '1.1',
+      drafts: {
+        'd1': { draftId: 'd1', startedAt: 9999, picks: [] },
+      },
+    });
+    ds.importFromFile(tmpFile);
+    expect(ds.getDraft('d1').picks).toHaveLength(1);
+  });
+
+  test('drafts persisted to disk after import', () => {
+    writeExportFile(tmpFile, {
+      version: '1.1',
+      drafts: {
+        'd1': { draftId: 'd1', startedAt: 1000, picks: [] },
+      },
+    });
+    ds.importFromFile(tmpFile);
+    const ds2 = new DataStore();
+    expect(ds2.getDraft('d1')).not.toBeNull();
+  });
+
+  test('v1.0 export file (no cardStats/drafts) is silently ignored for those fields', () => {
+    writeExportFile(tmpFile, { version: '1.0', matches: [{ id: 'm1', result: 'win' }] });
+    expect(() => ds.importFromFile(tmpFile)).not.toThrow();
+    expect(ds.getMatches()).toHaveLength(1);
+  });
+});
+
+// ── exportToFile ─────────────────────────────────────────────────────────────
+
+describe('DataStore — exportToFile', () => {
+  let ds;
+  let tmpFile;
+
+  beforeEach(() => {
+    MOCK_USERDATA = fs.mkdtempSync(path.join(os.tmpdir(), 'mtg-ds-'));
+    tmpFile       = path.join(os.tmpdir(), `mtg-export-${Date.now()}.json`);
+    ds = new DataStore();
+  });
+
+  afterEach(() => {
+    fs.rmSync(MOCK_USERDATA, { recursive: true, force: true });
+    if (fs.existsSync(tmpFile)) fs.rmSync(tmpFile);
+  });
+
+  test('export includes matches', () => {
+    ds.data.matches.push({ id: 'm1', result: 'win' });
+    ds.exportToFile(tmpFile);
+    const parsed = JSON.parse(fs.readFileSync(tmpFile, 'utf8'));
+    expect(parsed.matches).toHaveLength(1);
+    expect(parsed.matches[0].id).toBe('m1');
+  });
+
+  test('export includes cardStats with processedGames as array', () => {
+    ds.cardStats.processedGames.add('match1_game1');
+    ds.cardStats.statsByFormat['SOS'] = { '100': { gamesInDeck: 3, gamesInHand: 1, gamesWonInHand: 1, gamesOpenHand: 0, gamesWonOpenHand: 0 } };
+    ds.exportToFile(tmpFile);
+    const parsed = JSON.parse(fs.readFileSync(tmpFile, 'utf8'));
+    expect(parsed.cardStats).toBeDefined();
+    expect(Array.isArray(parsed.cardStats.processedGames)).toBe(true);
+    expect(parsed.cardStats.processedGames).toContain('match1_game1');
+    expect(parsed.cardStats.statsByFormat['SOS']['100'].gamesInDeck).toBe(3);
+  });
+
+  test('export includes drafts', () => {
+    ds.upsertDraft({ draftId: 'd1', picks: [{ pack: 1, pick: 1, options: [10], picked: 10 }], currentPack: null });
+    ds.exportToFile(tmpFile);
+    const parsed = JSON.parse(fs.readFileSync(tmpFile, 'utf8'));
+    expect(parsed.drafts).toBeDefined();
+    expect(parsed.drafts['d1']).not.toBeUndefined();
+    expect(parsed.drafts['d1'].picks).toHaveLength(1);
+  });
+
+  test('export sets version to 1.1', () => {
+    ds.exportToFile(tmpFile);
+    const parsed = JSON.parse(fs.readFileSync(tmpFile, 'utf8'));
+    expect(parsed.version).toBe('1.1');
+  });
+
+  test('export-then-import round-trips cardStats faithfully', () => {
+    ds.cardStats.processedGames.add('g1');
+    ds.cardStats.statsByFormat['FMT'] = {
+      '999': { gamesInDeck: 7, gamesInHand: 4, gamesWonInHand: 3, gamesOpenHand: 2, gamesWonOpenHand: 2 },
+    };
+    ds.exportToFile(tmpFile);
+
+    const ds2 = new DataStore();
+    ds2.importFromFile(tmpFile);
+    expect(ds2.cardStats.processedGames.has('g1')).toBe(true);
+    expect(ds2.cardStats.statsByFormat['FMT']['999'].gamesInDeck).toBe(7);
+  });
+
+  test('export-then-import round-trips drafts faithfully', () => {
+    ds.upsertDraft({ draftId: 'd1', picks: [{ pack: 1, pick: 1, options: [10, 11], picked: 10 }], currentPack: null });
+    ds.exportToFile(tmpFile);
+
+    const ds2 = new DataStore();
+    ds2.importFromFile(tmpFile);
+    expect(ds2.getDraft('d1')).not.toBeNull();
+    expect(ds2.getDraft('d1').picks[0].picked).toBe(10);
+  });
 });
 
 // ─── Migration: _backfillPremierDraft ─────────────────────────────────────────

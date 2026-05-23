@@ -533,15 +533,20 @@ class DataStore {
   exportToFile(filePath) {
     const exportData = {
       ...this.data,
+      cardStats: {
+        processedGames: Array.from(this.cardStats.processedGames),
+        statsByFormat:  this.cardStats.statsByFormat,
+      },
+      drafts:     this.drafts,
       exportDate: new Date().toISOString(),
-      version: '1.0'
+      version:    '1.1'
     };
     fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
   }
 
   /**
    * Import data from a single exported JSON file.
-   * Merges matches and decks without overwriting records that already exist.
+   * Merges matches, decks, cardStats, and drafts without overwriting existing records.
    */
   importFromFile(filePath) {
     const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -555,6 +560,40 @@ class DataStore {
       this.data.decks = { ...this.data.decks, ...data.decks };
     }
     this.saveData();
+
+    if (data.cardStats) {
+      for (const gameKey of (data.cardStats.processedGames || [])) {
+        this.cardStats.processedGames.add(gameKey);
+      }
+      for (const [fmt, fmtStats] of Object.entries(data.cardStats.statsByFormat || {})) {
+        if (!this.cardStats.statsByFormat[fmt]) {
+          this.cardStats.statsByFormat[fmt] = fmtStats;
+        } else {
+          for (const [grpId, s] of Object.entries(fmtStats)) {
+            const existing = this.cardStats.statsByFormat[fmt][grpId];
+            if (existing) {
+              existing.gamesInDeck      += s.gamesInDeck      || 0;
+              existing.gamesInHand      += s.gamesInHand      || 0;
+              existing.gamesWonInHand   += s.gamesWonInHand   || 0;
+              existing.gamesOpenHand    += s.gamesOpenHand    || 0;
+              existing.gamesWonOpenHand += s.gamesWonOpenHand || 0;
+            } else {
+              this.cardStats.statsByFormat[fmt][grpId] = { ...s };
+            }
+          }
+        }
+      }
+      this.saveCardStats();
+    }
+
+    if (data.drafts && typeof data.drafts === 'object') {
+      for (const [draftId, draft] of Object.entries(data.drafts)) {
+        if (!this.drafts[draftId]) {
+          this.drafts[draftId] = draft;
+        }
+      }
+      this.saveDrafts();
+    }
   }
 
   // ─── Personal card game stats ────────────────────────────────────────────
