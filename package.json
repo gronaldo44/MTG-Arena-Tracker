@@ -1,6 +1,6 @@
 {
   "name": "mtg-arena-auto-tracker",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Standalone MTG Arena auto-tracker - no Overwolf required",
   "main": "main.js",
   "scripts": {

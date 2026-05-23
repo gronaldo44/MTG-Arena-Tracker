@@ -99,7 +99,12 @@ class DraftAssistant {
    */
   getCardStats(cardName) {
     if (!cardName) return null;
-    return this.cardStats.get(cardName.toLowerCase()) ?? null;
+    const key = cardName.toLowerCase();
+    const direct = this.cardStats.get(key);
+    if (direct) return direct;
+    if (!key.includes('//')) return null;
+    const [front, back] = key.split('//').map(s => s.trim());
+    return this.cardStats.get(front) ?? this.cardStats.get(back) ?? null;
   }
 
   /**

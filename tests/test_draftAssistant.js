@@ -144,6 +144,20 @@ describe('DraftAssistant', () => {
       expect(stats.gihWr).toBeCloseTo(0.64);
       expect(stats.lowSample).toBe(false);
     });
+
+    test('resolves double-faced card via front half when full name not found', () => {
+      expect(assistant.getCardStats('Lightning Bolt // Forest')).not.toBeNull();
+      expect(assistant.getCardStats('Lightning Bolt // Forest').name).toBe('Lightning Bolt');
+    });
+
+    test('resolves double-faced card via back half when front half not found', () => {
+      expect(assistant.getCardStats('Unknown // Forest')).not.toBeNull();
+      expect(assistant.getCardStats('Unknown // Forest').name).toBe('Forest');
+    });
+
+    test('returns null when neither half of double-faced name is found', () => {
+      expect(assistant.getCardStats('Unknown A // Unknown B')).toBeNull();
+    });
   });
 
   // ── _computeSetStats ──────────────────────────────────────────────────────
