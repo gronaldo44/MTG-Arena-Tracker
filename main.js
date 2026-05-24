@@ -313,13 +313,31 @@ function startLogWatcher(logPath) {
           if (events.length > 0) {
             console.log(`[AutoScan] Parsed ${events.length} events from full log`);
             let matchCount = 0;
+            let lastDraftEvent = null;
             for (const event of events) {
-              if (event.type === 'MATCH_END') {
-                matchCount++;
-                console.log(`[AutoScan] Found match: ${event.data.matchId} - Result: ${event.data.result}`);
+              if (event.type === 'DRAFT_UPDATE') {
+                // Upsert all drafts but hold the renderer update until the end
+                // so it only fires once (for the live draft) instead of once per
+                // historical draft, which causes the draft tab to flicker.
+                if (dataStore && event.data?.draftId) dataStore.upsertDraft(event.data);
+                const { draftId } = event.data;
+                if (activeDraftId && activeDraftId !== draftId) endActiveDraft();
+                if (activeDraftId !== draftId) {
+                  activeDraftId   = draftId;
+                  activeDraftWins = 0;
+                  activeDraftLoss = 0;
+                }
+                lastDraftEvent = event;
+              } else {
+                if (event.type === 'MATCH_END') {
+                  matchCount++;
+                  console.log(`[AutoScan] Found match: ${event.data.matchId} - Result: ${event.data.result}`);
+                }
+                handleGameEvent(event);
               }
-              handleGameEvent(event);
             }
+            // Push only the final live draft state to the renderer.
+            if (lastDraftEvent) handleGameEvent(lastDraftEvent);
             console.log(`[AutoScan] Processed ${matchCount} matches`);
           }
 

@@ -169,8 +169,21 @@ ipcRenderer.on('draft-update', (event, data) => {
     if (isNewDraft) state.liveDraftEnded = false;
     state.liveDraftId = data.draftId;
     if (!replayMode) {
-        state.bundle       = data;
-        state.viewingCoord = data.liveCoord;
+        const oldLiveCoord    = state.bundle?.liveCoord;
+        const oldViewingCoord = state.viewingCoord;
+        state.bundle = data;
+
+        // Only advance to the new live pick if the user was already following live,
+        // is now on a different (older) pack, or this is a brand-new draft.
+        // If they're browsing an earlier pick within the current pack, leave them there.
+        const wasOnLivePick = oldLiveCoord && oldViewingCoord &&
+            oldLiveCoord.pack === oldViewingCoord.pack &&
+            oldLiveCoord.pick === oldViewingCoord.pick;
+        const samePack = oldViewingCoord && data.liveCoord &&
+            oldViewingCoord.pack === data.liveCoord.pack;
+        if (isNewDraft || wasOnLivePick || !samePack) {
+            state.viewingCoord = data.liveCoord;
+        }
     }
 
     if (!state.draftList.some(d => d.draftId === data.draftId)) {
