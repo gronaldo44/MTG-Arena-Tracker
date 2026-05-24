@@ -14,6 +14,7 @@ const setEnricher = require('./setEnricher');
 const DraftAssistant = require('./draftAssistant');
 const draftPipeline = require('./draftPipeline');
 const { coalesceEvents } = require('./eventCoalescer');
+const { formatCardGroupKey } = require('./renderer/shared');
 const { clear } = require('console');
 
 let mainWindow;
@@ -589,7 +590,25 @@ ipcMain.handle('get-card-stat-formats', async () => {
 
 ipcMain.handle('get-card-game-stats', async (event, format) => {
   if (!dataStore || !format) return [];
-  const raw = dataStore.getAllCardGameStats(format);
+  // If format is a merged group key (e.g. "Draft SOS"), collect and merge all matching raw formats.
+  const allRawFormats = dataStore.getCardStatFormats();
+  const matchingFormats = allRawFormats.filter(f => f === format || formatCardGroupKey(f) === format);
+  let raw;
+  if (matchingFormats.length <= 1) {
+    raw = dataStore.getAllCardGameStats(matchingFormats[0] ?? format);
+  } else {
+    raw = {};
+    for (const fmt of matchingFormats) {
+      for (const [grpId, s] of Object.entries(dataStore.getAllCardGameStats(fmt))) {
+        if (!raw[grpId]) raw[grpId] = { gamesInDeck: 0, gamesInHand: 0, gamesWonInHand: 0, gamesOpenHand: 0, gamesWonOpenHand: 0 };
+        raw[grpId].gamesInDeck      += s.gamesInDeck      || 0;
+        raw[grpId].gamesInHand      += s.gamesInHand      || 0;
+        raw[grpId].gamesWonInHand   += s.gamesWonInHand   || 0;
+        raw[grpId].gamesOpenHand    += s.gamesOpenHand    || 0;
+        raw[grpId].gamesWonOpenHand += s.gamesWonOpenHand || 0;
+      }
+    }
+  }
   const assistantLoaded = draftAssistant.isLoaded();
 
   const results = Object.entries(raw).map(([grpId, s]) => {

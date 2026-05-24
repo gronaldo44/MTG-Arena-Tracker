@@ -46,8 +46,7 @@ async function loadStats() {
             const contested = data.wins + data.losses;
             const wr = contested > 0 ? Math.round((data.wins / contested) * 100) : 0;
             const draftClickable = isDraftLimited(key);
-            const linkFormat = data.originals.find(f => isDraftLimited(f)) || data.originals[0];
-            const safeLink = linkFormat.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const safeLink = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             const nameEl = draftClickable
                 ? `<strong onclick="selectCardStatsFormat('${safeLink}')" class="format-name-link">${key}</strong>`
                 : `<strong>${key}</strong>`;
@@ -66,7 +65,14 @@ async function loadStats() {
         }).join('');
 
     const allFormats = await ipcRenderer.invoke('get-card-stat-formats');
-    const draftFormats = allFormats.filter(isDraftLimited);
+    const rawDraftFormats = allFormats.filter(isDraftLimited);
+    // Merge "Premier Draft X" and "Contender Draft X" into a single "Draft X" key.
+    const seen = new Set();
+    const draftFormats = [];
+    for (const fmt of rawDraftFormats) {
+        const key = formatCardGroupKey(fmt);
+        if (!seen.has(key)) { seen.add(key); draftFormats.push(key); }
+    }
 
     const previousMode = _cardStatsMode;
     if (draftFormats.length > 0) {

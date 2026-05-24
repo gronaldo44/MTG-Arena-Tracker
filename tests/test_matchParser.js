@@ -187,6 +187,22 @@ describe('LogParserV5 — match events', () => {
       const log = [gameRoomLine(), `{"InternalEventName":"Draft_QuickDraft_SOS"}`].join('\n');
       expect(parser.parse(log)[0].data.format).toBe('Secrets of Strixhaven Quick Draft');
     });
+
+    test('format uses player own eventId from reservedPlayers, not opponent', () => {
+      // Opponent is in PremierDraft (seat 1); player is in ContenderDraft (seat 2).
+      // Parser must not use the opponent's eventId when detecting format.
+      const reservedPlayers = JSON.stringify([
+        { userId: 'OPP', playerName: 'Opponent', systemSeatId: 1, teamId: 1, eventId: 'PremierDraft_SOS_20260421' },
+        { userId: 'ME',  playerName: 'Player',   systemSeatId: 2, teamId: 2, eventId: 'ContenderDraft_SOS_20260522' },
+      ]);
+      const log = [
+        gameRoomLine(),
+        `{"systemSeatIds":[2]}`,
+        `{"reservedPlayers":${reservedPlayers},"matchId":"test-match"}`,
+      ].join('\n');
+      const start = parser.parse(log).find(e => e.type === 'MATCH_START');
+      expect(start.data.format).toBe('Contender Draft Secrets of Strixhaven');
+    });
   });
 
   // ── match end ─────────────────────────────────────────────────────────────

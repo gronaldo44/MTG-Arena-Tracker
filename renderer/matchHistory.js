@@ -123,7 +123,8 @@ function _buildDraftFmtStats(fmtMap) {
     const draftFmtStats = {};
     for (const [fmt, data] of Object.entries(fmtMap)) {
         if (!isDraftFormat(fmt)) continue;
-        const allRuns       = groupIntoDraftRuns(data.matches);
+        const otherMatches  = data.matches.filter(m => !m.format?.startsWith('Premier Draft') && !m.format?.startsWith('Contender Draft'));
+        const allRuns       = groupIntoDraftRuns(data.premierMatches).concat(groupIntoDraftRuns(data.contenderMatches)).concat(groupIntoDraftRuns(otherMatches));
         const premierRuns   = groupIntoDraftRuns(data.premierMatches);
         const contenderRuns = groupIntoDraftRuns(data.contenderMatches);
         draftFmtStats[fmt] = {
@@ -346,9 +347,17 @@ function renderMatchList() {
         else if (m.result === 'loss')  _draftTotals[m.draftId].losses++;
     }
 
-    const latestTs = run => Math.max(...run.matches.map(m => new Date(m.timestamp).getTime()));
-    _draftRuns = groupIntoDraftRuns(visible);
-    _draftRuns.sort((a, b) => latestTs(b) - latestTs(a));
+    // Partition by exact format before grouping so Premier and Contender drafts
+    // are always separate runs even when both appear under the same merged format key.
+    const byExactFormat = {};
+    for (const m of visible) {
+        const fmt = m.format || 'Unknown';
+        if (!byExactFormat[fmt]) byExactFormat[fmt] = [];
+        byExactFormat[fmt].push(m);
+    }
+    _draftRuns = Object.values(byExactFormat).flatMap(fmtMatches => groupIntoDraftRuns(fmtMatches));
+    const firstTs = run => Math.min(...run.matches.map(m => new Date(m.timestamp).getTime()));
+    _draftRuns.sort((a, b) => firstTs(b) - firstTs(a));
 
     // When the format changes, reset expanded state and auto-expand the latest run.
     if (_matchesFormat !== _draftExpandedFormat) {
@@ -477,8 +486,9 @@ const _WUBRG = ['W', 'U', 'B', 'R', 'G'];
 
 function _parseCmc(manaCost) {
     if (!manaCost) return 0;
+    const front = manaCost.split(' // ')[0];
     let cmc = 0;
-    for (const t of (manaCost.match(/\{[^}]+\}/g) || [])) {
+    for (const t of (front.match(/\{[^}]+\}/g) || [])) {
         const inner = t.slice(1, -1);
         if (/^\d+$/.test(inner)) cmc += parseInt(inner, 10);
         else if (inner !== 'X' && inner !== 'Y') cmc += 1;

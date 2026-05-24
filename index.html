@@ -53,10 +53,6 @@
                 </svg></span>
                 <span class="nav-label">Deck Builder</span>
             </div>
-            <div class="nav-item" data-page="stats" title="Statistics" onclick="showPage('stats')">
-                <span class="icon">📈</span>
-                <span class="nav-label">Statistics</span>
-            </div>
             <div class="nav-item" data-page="matches" title="History" onclick="showPage('matches')">
                 <span class="icon"><svg viewBox="0 0 20 20" width="18" height="18" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
                     <rect x="4" y="2" width="12" height="16" rx="2"/>
@@ -67,6 +63,10 @@
                     <path d="M7.5 16.5L6 18.5L8 17.5Z" fill="white" opacity="0.75"/>
                 </svg></span>
                 <span class="nav-label">History</span>
+            </div>
+            <div class="nav-item" data-page="stats" title="Statistics" onclick="showPage('stats')">
+                <span class="icon">📈</span>
+                <span class="nav-label">Statistics</span>
             </div>
             <div class="nav-item" data-page="settings" title="Settings" onclick="showPage('settings')">
                 <span class="icon">⚙️</span>
@@ -472,6 +472,18 @@
                 <div class="card">
                     <h3>Recent Updates</h3>
                     <div class="updates-list">
+                        <div class="update-item">
+                            <div class="update-version">v1.2.1</div>
+                            <div class="update-date">2026-05-24</div>
+                            <ul class="update-changes">
+                                <li>Fix: Contender Draft matches incorrectly labeled as Premier Draft when opponent was in a different event type</li>
+                                <li>Fix: converted mana cost for double-faced cards now only considers the front face</li>
+                                <li>History: Premier Draft and Contender Draft are now separate draft run groups within the same set view</li>
+                                <li>History: draft runs sorted by when the draft started, not when the last game was played</li>
+                                <li>History tab moved above Statistics in the sidebar</li>
+                                <li>Statistics: card stats for a draft set now merges Premier and Contender Draft data together</li>
+                            </ul>
+                        </div>
                         <div class="update-item">
                             <div class="update-version">v1.2.0</div>
                             <div class="update-date">2026-05-23</div>

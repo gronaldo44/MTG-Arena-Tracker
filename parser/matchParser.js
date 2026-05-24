@@ -147,13 +147,22 @@ class MatchParser {
           if (this.deckNames.has(formatMatch[1])) deckName = this.deckNames.get(formatMatch[1]);
         }
       }
-      if (format === 'Unknown' && checkLine.includes('"eventId"')) {
-        const eventMatch = checkLine.match(/"eventId"\s*:\s*"([^"]+)"/);
-        if (eventMatch) format = this.detectFormatFromEventName(eventMatch[1]);
-      }
       if (!reservedPlayersData && checkLine.includes('"reservedPlayers"')) {
         const playersMatch = checkLine.match(/"reservedPlayers"\s*:\s*(\[.*?\])/);
-        if (playersMatch) reservedPlayersData = playersMatch[1];
+        if (playersMatch) {
+          reservedPlayersData = playersMatch[1];
+          if (format === 'Unknown') {
+            try {
+              const players = JSON.parse(playersMatch[1]);
+              const me = players.find(p => p.systemSeatId === this.playerSeatId);
+              if (me?.eventId) format = this.detectFormatFromEventName(me.eventId);
+            } catch { /* ignore */ }
+          }
+        }
+      }
+      if (format === 'Unknown' && checkLine.includes('"eventId"') && !checkLine.includes('"reservedPlayers"')) {
+        const eventMatch = checkLine.match(/"eventId"\s*:\s*"([^"]+)"/);
+        if (eventMatch) format = this.detectFormatFromEventName(eventMatch[1]);
       }
       if (checkLine.includes('"CourseName"') || checkLine.includes('"courseName"')) {
         const m = checkLine.match(/"[Cc]ourseName"\s*:\s*"([^"]+)"/);
