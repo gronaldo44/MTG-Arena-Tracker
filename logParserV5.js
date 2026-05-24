@@ -58,6 +58,38 @@ class LogParserV5 {
     return events;
   }
 
+  /**
+   * Parse only new data appended to the log since the last call.
+   * Unlike parse(), this preserves matchParser/draftParser state so an
+   * in-progress match or draft carries over between incremental chunks.
+   */
+  parseIncremental(data) {
+    const events = [];
+    const lines  = data.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+
+      const event =
+        this.matchParser.parseLine(line, lines, i) ||
+        this.draftParser.parseLine(line);
+      if (!event) continue;
+
+      const eventKey = this._makeKey(event, i);
+      if (!this.processedEvents.has(eventKey)) {
+        this.processedEvents.add(eventKey);
+        events.push(event);
+      }
+    }
+
+    if (this.processedEvents.size > 1000) {
+      this.processedEvents = new Set(Array.from(this.processedEvents).slice(-500));
+    }
+
+    return events;
+  }
+
   _makeKey(event, lineIndex) {
     const matchId = event.data.matchId || 'unknown';
     const result  = event.data.result  || 'none';

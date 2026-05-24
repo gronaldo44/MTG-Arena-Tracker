@@ -73,6 +73,50 @@ class GREParser {
     return events;
   }
 
+  /**
+   * Incremental variant of parse() — preserves this.currentGame across calls
+   * so a game that started in a previous chunk is correctly completed here.
+   */
+  parseIncremental(logData) {
+    const events = [];
+    const lines = logData.split('\n');
+    const processedThisScan = new Set();
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.includes('GreToClientEvent')) continue;
+
+      const jsonLine = lines[i + 1];
+      if (!jsonLine || jsonLine[0] !== '{') continue;
+
+      if (
+        !jsonLine.includes('"connectResp"') &&
+        !jsonLine.includes('ZoneType_Hand') &&
+        !jsonLine.includes('GameStage_GameOver') &&
+        !jsonLine.includes('GameStateType_Full')
+      ) continue;
+
+      let data;
+      try { data = JSON.parse(jsonLine); } catch { continue; }
+
+      const messages = data.greToClientEvent?.greToClientMessages;
+      if (!Array.isArray(messages)) continue;
+
+      for (const msg of messages) {
+        const event = this._processMessage(msg);
+        if (!event) continue;
+
+        const key = `${event.data.matchId}_game${event.data.gameNumber}`;
+        if (!processedThisScan.has(key)) {
+          processedThisScan.add(key);
+          events.push(event);
+        }
+      }
+    }
+
+    return events;
+  }
+
   // ─── Message dispatch ──────────────────────────────────────────────────────
 
   _processMessage(msg) {

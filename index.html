@@ -473,6 +473,15 @@
                     <h3>Recent Updates</h3>
                     <div class="updates-list">
                         <div class="update-item">
+                            <div class="update-version">v1.2.3</div>
+                            <div class="update-date">2026-05-24</div>
+                            <ul class="update-changes">
+                                <li>Fix: dramatically reduced memory usage — log file is now read incrementally (new bytes only) instead of re-reading the full file on every scan</li>
+                                <li>Fix: scans now trigger only when the log file actually changes instead of on a fixed 2-second timer, eliminating idle CPU usage when MTGA is not running</li>
+                                <li>Fix: in-progress match and game state is preserved correctly across incremental scan boundaries</li>
+                            </ul>
+                        </div>
+                        <div class="update-item">
                             <div class="update-version">v1.2.2</div>
                             <div class="update-date">2026-05-24</div>
                             <ul class="update-changes">

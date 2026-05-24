@@ -286,92 +286,139 @@ async function initialLogScan(logPath) {
   }
 }
 
-function startLogWatcher(logPath) {
-  if (scanInterval) clearInterval(scanInterval);
+// startOffset: byte offset to begin scanning from. Pass the file size after
+// initialLogScan() so we only read bytes written after startup.
+// Defaults to 0 for cases like a user changing the log path in settings.
+function startLogWatcher(logPath, startOffset = 0) {
+  if (scanInterval) clearTimeout(scanInterval);
+  scanInterval = null;
 
-  // Start at 0 so the first interval tick always processes the full log.
-  // initialLogScan() already ran at startup; the dedup in parser + dataStore
-  // prevents double-counting any events it already processed.
-  let lastSize = 0;
+  // When called with no offset (e.g. log path changed), reset to a clean parser
+  // so stale in-progress match state from the old file is discarded.
+  if (startOffset === 0) {
+    parser = new LogParser();
+    greParser = new GREParser();
+  }
 
-  scanInterval = setInterval(async () => {
+  // lastProcessedOffset tracks the byte position we've read up to.
+  let lastProcessedOffset = startOffset;
+
+  // Reads and processes only the bytes appended since lastProcessedOffset.
+  let _scanCount = 0;
+
+  async function doScan() {
+    _scanCount++;
+    if (_scanCount % 10 === 0) {
+      const mb = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1);
+      console.log(`[Scan] Heap: ${mb} MB (scan #${_scanCount})`);
+    }
     try {
-      const stats = fs.statSync(logPath);
-      const currentSize = stats.size;
+      const stat = fs.statSync(logPath);
+      const currentSize = stat.size;
 
-      if (currentSize > 0) {
-        if (Math.abs(currentSize - lastSize) > 100 || !lastSize) {
-          lastSize = currentSize;
-          const fullData = fs.readFileSync(logPath, 'utf8');
+      // Detect log rotation (MTGA restarted, file truncated).
+      let rotated = false;
+      if (currentSize < lastProcessedOffset) {
+        console.log('[Scan] Log rotated, resetting to start');
+        lastProcessedOffset = 0;
+        rotated = true;
+      }
 
-          if (!parser) {
-            parser = new LogParser();
-          }
+      if (currentSize <= lastProcessedOffset) return;
 
-          const events = coalesceEvents(parser.parse(fullData));
+      // Read only the bytes we haven't seen yet.
+      const readFrom    = lastProcessedOffset;
+      const bytesToRead = currentSize - readFrom;
+      let chunk;
 
-          if (events.length > 0) {
-            console.log(`[AutoScan] Parsed ${events.length} events from full log`);
-            let matchCount = 0;
-            let lastDraftEvent = null;
-            for (const event of events) {
-              if (event.type === 'DRAFT_UPDATE') {
-                // Upsert all drafts but hold the renderer update until the end
-                // so it only fires once (for the live draft) instead of once per
-                // historical draft, which causes the draft tab to flicker.
-                if (dataStore && event.data?.draftId) dataStore.upsertDraft(event.data);
-                const { draftId } = event.data;
-                if (activeDraftId && activeDraftId !== draftId) endActiveDraft();
-                if (activeDraftId !== draftId) {
-                  activeDraftId   = draftId;
-                  activeDraftWins = 0;
-                  activeDraftLoss = 0;
-                }
-                lastDraftEvent = event;
-              } else {
-                if (event.type === 'MATCH_END') {
-                  matchCount++;
-                  console.log(`[AutoScan] Found match: ${event.data.matchId} - Result: ${event.data.result}`);
-                }
-                handleGameEvent(event);
-              }
+      const fd = fs.openSync(logPath, 'r');
+      try {
+        const buffer    = Buffer.allocUnsafe(bytesToRead);
+        const bytesRead = fs.readSync(fd, buffer, 0, bytesToRead, readFrom);
+        chunk = buffer.slice(0, bytesRead).toString('utf8');
+      } finally {
+        fs.closeSync(fd);
+      }
+
+      lastProcessedOffset = currentSize;
+
+      if (!parser) parser = new LogParser();
+
+      // Full parse (with reset + extractDeckNames) on first scan or after rotation.
+      // Incremental parse otherwise — preserves in-progress match/draft state.
+      const useFull = rotated || readFrom === 0;
+      const events = useFull
+        ? coalesceEvents(parser.parse(chunk))
+        : coalesceEvents(parser.parseIncremental(chunk));
+
+      if (events.length > 0) {
+        console.log(`[Scan] ${events.length} events from ${(bytesToRead / 1024).toFixed(1)} KB`);
+        let matchCount = 0;
+        let lastDraftEvent = null;
+        for (const event of events) {
+          if (event.type === 'DRAFT_UPDATE') {
+            // Upsert all drafts but hold the renderer update until the end
+            // so it only fires once (for the live draft) instead of once per
+            // historical draft, which causes the draft tab to flicker.
+            if (dataStore && event.data?.draftId) dataStore.upsertDraft(event.data);
+            const { draftId } = event.data;
+            if (activeDraftId && activeDraftId !== draftId) endActiveDraft();
+            if (activeDraftId !== draftId) {
+              activeDraftId   = draftId;
+              activeDraftWins = 0;
+              activeDraftLoss = 0;
             }
-            // Push only the final live draft state to the renderer.
-            if (lastDraftEvent) handleGameEvent(lastDraftEvent);
-            console.log(`[AutoScan] Processed ${matchCount} matches`);
+            lastDraftEvent = event;
+          } else {
+            if (event.type === 'MATCH_END') {
+              matchCount++;
+              console.log(`[Scan] Match: ${event.data.matchId} - ${event.data.result}`);
+            }
+            handleGameEvent(event);
           }
+        }
+        // Push only the final live draft state to the renderer.
+        if (lastDraftEvent) handleGameEvent(lastDraftEvent);
+        if (matchCount > 0) console.log(`[Scan] Processed ${matchCount} matches`);
+      }
 
-          // GRE parser: track personal card stats
-          if (dataStore) {
-            const greEvents = greParser.parse(fullData);
-            let newGames = 0;
-            for (const ev of greEvents) {
-              if (ev.type === 'GAME_STATS') {
-                const format = dataStore.getMatchFormat(ev.data.matchId) ?? 'Unknown';
-                if (dataStore.updateCardGameStats(ev.data, format)) newGames++;
-                dataStore.updateMatchColors(ev.data.matchId, deriveColors(ev.data.deckGrpIds), deriveColorCounts(ev.data.deckCardsRaw));
-        dataStore.updateMatchPlayerDeck(ev.data.matchId, ev.data.deckCardsRaw);
-              }
-            }
-            if (newGames > 0) {
-              console.log(`[GREParser] Recorded stats for ${newGames} new game(s)`);
-              if (mainWindow) mainWindow.webContents.send('card-stats-updated');
-            }
+      // GRE parser: track personal card stats
+      if (dataStore) {
+        const greEvents = useFull
+          ? greParser.parse(chunk)
+          : greParser.parseIncremental(chunk);
+        let newGames = 0;
+        for (const ev of greEvents) {
+          if (ev.type === 'GAME_STATS') {
+            const format = dataStore.getMatchFormat(ev.data.matchId) ?? 'Unknown';
+            if (dataStore.updateCardGameStats(ev.data, format)) newGames++;
+            dataStore.updateMatchColors(ev.data.matchId, deriveColors(ev.data.deckGrpIds), deriveColorCounts(ev.data.deckCardsRaw));
+            dataStore.updateMatchPlayerDeck(ev.data.matchId, ev.data.deckCardsRaw);
           }
-        } else {
-          console.log('[AutoScan] No changes detected (log size unchanged)');
+        }
+        if (newGames > 0) {
+          console.log(`[Scan] Card stats for ${newGames} new game(s)`);
+          if (mainWindow) mainWindow.webContents.send('card-stats-updated');
         }
       }
     } catch (error) {
-      console.error('[AutoScan] Error in periodic log check:', error);
+      console.error('[Scan] Error:', error);
     }
-  }, 2000);
+  }
+
+  // Schedule a scan at most once per 2 seconds. Rapid successive writes to the
+  // log (common mid-game) collapse into a single scan that reads all new bytes.
+  function scheduleScan() {
+    if (scanInterval) return; // scan already queued
+    scanInterval = setTimeout(async () => {
+      scanInterval = null;
+      await doScan();
+    }, 2000);
+  }
 
   if (logWatcher) {
     logWatcher.close();
   }
-
-  parser = new LogParser();
 
   if (!fs.existsSync(logPath)) {
     console.log('Log file not found at:', logPath);
@@ -383,46 +430,16 @@ function startLogWatcher(logPath) {
     persistent: true,
     usePolling: true,
     interval: 1000,
-    binaryInterval: 1000,
-    awaitWriteFinish: {
-      stabilityThreshold: 500,
-      pollInterval: 100
-    }
   });
 
-  console.log('[AutoScan] Starting auto-scan every 2 seconds...');
-
-  logWatcher.on('change', async (filePath) => {
-    try {
-      const stats = fs.statSync(filePath);
-      const currentSize = stats.size;
-
-      if (currentSize < lastSize) {
-        // Log was rotated (game restarted)
-        console.log('Log file rotated, re-reading...');
-        const fullData = fs.readFileSync(filePath, 'utf8');
-        lastSize = fullData.length;
-
-        if (!parser) {
-          parser = new LogParser();
-        }
-
-        const events = coalesceEvents(parser.parse(fullData));
-        for (const event of events) {
-          handleGameEvent(event);
-        }
-      }
-    } catch (error) {
-      console.error('Error reading log file:', error);
-    }
-  });
-
+  // Scan only when the file actually changes; rapid writes coalesce into one scan.
+  logWatcher.on('change', scheduleScan);
   logWatcher.on('error', error => {
     console.error('Log watcher error:', error);
     updateTrayStatus('Error watching log');
   });
 
-  console.log('Started watching log file:', logPath);
+  console.log('[Scan] Watching for changes from offset', startOffset);
   updateTrayStatus('Connected - Watching for matches');
   return true;
 }
@@ -1153,7 +1170,11 @@ app.whenReady().then(async () => {
   // history right away without needing to hit "Scan Now".
   await initialLogScan(logPath);
 
-  startLogWatcher(logPath);
+  // Start the watcher from the current end of the file so the interval only
+  // processes bytes written after startup — not the entire 100+ MB log again.
+  let scanStartOffset = 0;
+  try { scanStartOffset = fs.statSync(logPath).size; } catch { /* file absent */ }
+  startLogWatcher(logPath, scanStartOffset);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
