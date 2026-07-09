@@ -3,14 +3,14 @@
 /**
  * Set Enricher
  *
- * Merges pre-baked SOS/SOA card data (sos-card-data.json) into the user's
+ * Merges a pre-baked card data bundle (enrichment-data.json) into the user's
  * cards.json. The pre-baked file ships with the installer; no Python or
  * SQLite is needed at runtime.
  *
  * To support the next unmapped set:
- *   1. Update sos-card-import/generate_enrichment_data.py with the new set codes.
- *   2. Run:  python sos-card-import/generate_enrichment_data.py
- *   3. Commit the updated sos-card-data.json and rebuild the installer.
+ *   1. Run:  python card-import/generate_enrichment_data.py <set_specs>
+ *      e.g.: python card-import/generate_enrichment_data.py "MSH,MSC,MAR:MAR-MSH"
+ *   2. Commit the updated enrichment-data.json and rebuild the installer.
  */
 
 const path = require('path');
@@ -18,7 +18,7 @@ const fs   = require('fs');
 
 // Path to the pre-baked enrichment bundle shipped with the app.
 // Electron's fs transparently handles reads from inside the asar archive.
-let ENRICHMENT_FILE = path.join(__dirname, 'sos-card-data.json');
+let ENRICHMENT_FILE = path.join(__dirname, 'enrichment-data.json');
 let CARDS_FILE      = path.join(__dirname, 'cards.json');
 
 function init(userDataPath) {

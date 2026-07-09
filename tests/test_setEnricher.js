@@ -5,7 +5,7 @@ jest.mock('fs');
 const fs   = require('fs');
 const path = require('path');
 
-const ENRICHMENT_FILE = path.resolve(__dirname, '..', 'sos-card-data.json');
+const ENRICHMENT_FILE = path.resolve(__dirname, '..', 'enrichment-data.json');
 const CARDS_FILE      = path.resolve(__dirname, '..', 'cards.json');
 
 const { needsEnrichment, enrich } = require('../setEnricher');

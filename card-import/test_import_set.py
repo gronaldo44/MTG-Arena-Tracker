@@ -1,11 +1,11 @@
-"""Quick assertions for import_sos and check_orphans helpers.
-Run: python test_import_sos.py"""
+"""Quick assertions for set_import_lib and check_orphans helpers.
+Run: python test_import_set.py"""
 
 import json
 import os
 import tempfile
 
-from import_sos import mtga_mana_to_scryfall, strip_html, normalize_name
+from set_import_lib import mtga_mana_to_scryfall, strip_html, normalize_name, parse_set_specs
 from check_orphans import find_orphans
 
 
@@ -34,6 +34,18 @@ check(strip_html("<nobr>Quill-Blade</nobr> Laureate"), "Quill-Blade Laureate", "
 check(strip_html("Plain text"), "Plain text", "no html")
 check(normalize_name("<nobr>Quill-Blade</nobr> Laureate"), "quill-blade laureate", "normalize tagged")
 check(normalize_name("Jadzi’s Pact"), "jadzi's pact", "smart apostrophe")
+
+
+# Set spec parsing — plain codes pull a whole ExpansionCode, "CODE:DRS" pulls
+# only the slice of a reused/shared pool tagged with that DigitalReleaseSet
+check(parse_set_specs("SOS,SOA"), (["SOS", "SOA"], []), "full codes only")
+check(parse_set_specs("SPG:SPG-SOS"), ([], [("SPG", "SPG-SOS")]), "guest filter only")
+check(
+    parse_set_specs("MSH,MSC,MAR:MAR-MSH"),
+    (["MSH", "MSC"], [("MAR", "MAR-MSH")]),
+    "mixed full codes and guest filter",
+)
+check(parse_set_specs(" msh , mar:MAR-MSH "), (["MSH"], [("MAR", "MAR-MSH")]), "whitespace and case")
 
 
 # Orphan detection — case-insensitive name matching, ignores BOM and whitespace

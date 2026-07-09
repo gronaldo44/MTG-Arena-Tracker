@@ -283,6 +283,52 @@ function writeExportFile(filePath, data) {
   }));
 }
 
+// ── getCardsBySet ─────────────────────────────────────────────────────────
+
+describe('DataStore — getCardsBySet', () => {
+  let ds;
+
+  beforeEach(() => {
+    MOCK_USERDATA = fs.mkdtempSync(path.join(os.tmpdir(), 'mtg-ds-'));
+    ds = new DataStore();
+    ds.cards = {
+      '104892': { name: 'The Coming of Galactus', set: 'MSH', digitalReleaseSet: '' },
+      '104853': { name: 'Leyline Binding', set: 'MAR', digitalReleaseSet: 'MAR-MSH' },
+      '104854': { name: 'Nine Lives', set: 'MAR', digitalReleaseSet: 'MAR-SPM' },
+      '102826': { name: 'Archaeomancer', set: 'SPG', digitalReleaseSet: 'SPG-SOS' },
+      '102460': { name: 'Opt', set: 'SOS', digitalReleaseSet: '' },
+    };
+  });
+
+  afterEach(() => {
+    fs.rmSync(MOCK_USERDATA, { recursive: true, force: true });
+  });
+
+  test('returns [] for an empty set code', () => {
+    expect(ds.getCardsBySet('')).toEqual([]);
+  });
+
+  test('includes cards whose set matches the code directly', () => {
+    const result = ds.getCardsBySet('MSH');
+    expect(result.map(c => c.grpId)).toContain('104892');
+  });
+
+  test('includes guest-pool cards tagged for this release via any reused pool, not just SPG', () => {
+    const result = ds.getCardsBySet('MSH');
+    expect(result.map(c => c.grpId)).toContain('104853'); // MAR-MSH
+  });
+
+  test('excludes guest-pool cards tagged for a different release', () => {
+    const result = ds.getCardsBySet('MSH');
+    expect(result.map(c => c.grpId)).not.toContain('104854'); // MAR-SPM
+  });
+
+  test('still matches the original SPG-<code> convention', () => {
+    const result = ds.getCardsBySet('SOS');
+    expect(result.map(c => c.grpId)).toEqual(expect.arrayContaining(['102460', '102826']));
+  });
+});
+
 // ── importFromFile ────────────────────────────────────────────────────────
 
 describe('DataStore — importFromFile', () => {

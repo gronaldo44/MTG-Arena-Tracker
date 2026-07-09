@@ -18,7 +18,7 @@ data/
 *.json
 !cards.json
 !package.json
-!sos-card-data.json
+!enrichment-data.json
 *.mtga
 
 # Logs

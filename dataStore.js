@@ -85,7 +85,8 @@ class DataStore {
 
   /**
    * Returns the precomputed list of main draftable sets, ordered most-recent-first.
-   * Each entry: { code, primaryCount, firstGrpId }. Populated by import_sos.py.
+   * Each entry: { code, primaryCount, firstGrpId }. Populated by card-import/import_set.py
+   * and card-import/generate_enrichment_data.py.
    */
   getMainDraftSets() {
     return this.mainDraftSets || [];
@@ -93,16 +94,17 @@ class DataStore {
 
   /**
    * Returns [{ grpId, name, manaCost, type }] for every card whose `set`
-   * matches the given code. Special Guests for the same parent set
-   * (digitalReleaseSet === `SPG-${setCode}`) are included so the browse view
-   * mirrors the actual draft pool.
+   * matches the given code. Cards from a reused/shared pool tagged for this
+   * release (digitalReleaseSet ending in `-${setCode}`, e.g. SPG-SOS or
+   * MAR-MSH) are included too, so the browse view mirrors the actual draft
+   * pool regardless of which shared pool a given release draws guests from.
    */
   getCardsBySet(setCode) {
     if (!setCode) return [];
-    const spgKey = `SPG-${setCode}`;
+    const guestSuffix = `-${setCode}`;
     const result = [];
     for (const [grpId, card] of Object.entries(this.cards)) {
-      if (card.set === setCode || card.digitalReleaseSet === spgKey) {
+      if (card.set === setCode || (card.digitalReleaseSet && card.digitalReleaseSet.endsWith(guestSuffix))) {
         result.push({ grpId, ...card });
       }
     }

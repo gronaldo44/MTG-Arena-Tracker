@@ -756,8 +756,8 @@ ipcMain.handle('delete-format', async (event, format) => {
 
 // Main draftable sets (≥100 primary cards, no DigitalReleaseSet) for the
 // Personal Card Stats browse-by-set dropdown. The list is precomputed by
-// import_sos.py and read from cards.json so the renderer never needs the
-// MTGA SQLite DB at runtime.
+// card-import/import_set.py (or generate_enrichment_data.py) and read from
+// cards.json so the renderer never needs the MTGA SQLite DB at runtime.
 ipcMain.handle('get-main-draft-sets', async () => {
   if (!dataStore) return [];
   return dataStore.getMainDraftSets();

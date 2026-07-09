@@ -1,6 +1,6 @@
 {
   "name": "mtg-arena-auto-tracker",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Standalone MTG Arena auto-tracker - no Overwolf required",
   "main": "main.js",
   "scripts": {
@@ -24,8 +24,9 @@
       "!*.log",
       "!.git/**",
       "!debug.js",
-      "!sos-card-import/**",
-      "sos-card-data.json"
+      "!card-import/**",
+      "!data-backup/**",
+      "enrichment-data.json"
     ],
     "win": {
       "target": "nsis"
