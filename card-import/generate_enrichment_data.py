@@ -4,27 +4,35 @@ generate_enrichment_data.py  —  Developer tool only.
 Reads card data for the given set spec from the MTGA SQLite DB and writes
 enrichment-data.json to the project root. That JSON file ships with the
 installer; end users never need Python or the MTGA DB — setEnricher.js
-merges it into their cards.json at boot.
+merges it into their cards.json at boot, and can bootstrap a fresh
+cards.json from this bundle alone (no network needed) if the app's own
+Scryfall refresh hasn't run yet.
 
-Existing enrichment-data.json content is preserved and merged with (not
-replaced by) whatever this run adds, so bridging a new set never regresses
-an older one that Scryfall hasn't fully caught up on yet.
+If a Scryfall bulk JSON is also given, the bundle becomes a comprehensive
+baseline — every Scryfall arena_id-linked card (same set cardUpdater.js
+keeps at runtime), with the set-specific MTGA-DB rows layered on top for
+whatever Scryfall hasn't linked yet. Without it, only the MTGA-DB rows are
+written, same as before. Either way, existing enrichment-data.json content
+is preserved and merged with (not replaced by) whatever this run adds, so
+bridging a new set never regresses an older one.
 
-Run this whenever a new MTGA set needs bridging, then commit the updated
-enrichment-data.json.
+Run this whenever a new MTGA set needs bridging (and periodically to refresh
+the Scryfall-linked baseline), then commit the updated enrichment-data.json.
 
 Usage:
-    python generate_enrichment_data.py <set_specs> [<mtga_db_path>]
+    python generate_enrichment_data.py <set_specs> [<mtga_db_path>] [<scryfall_json_path>]
 
 <set_specs> is a comma-separated list of "CODE" or "CODE:DIGITAL_RELEASE_SET"
 tokens — see set_import_lib.py for the format. Example, for the Marvel Super
 Heroes release (MSH main set, MSC Commander precons, and the MAR-MSH slice of
-the reused MAR Special-Guests-style pool):
+the reused MAR Special-Guests-style pool), refreshing the full baseline from
+a local Scryfall bulk dump:
 
-    python generate_enrichment_data.py "MSH,MSC,MAR:MAR-MSH"
+    python generate_enrichment_data.py "MSH,MSC,MAR:MAR-MSH" "" all-cards.json
 
-If <mtga_db_path> is omitted, the script searches this directory for a
-bundled Raw_CardDatabase_*.mtga file.
+If <mtga_db_path> is omitted (or ""), the script searches this directory for
+a bundled Raw_CardDatabase_*.mtga file. <scryfall_json_path> is optional —
+omit it to only update the MTGA-DB-sourced set bridge, same as before.
 """
 
 import json
@@ -37,6 +45,7 @@ from set_import_lib import (
     mtga_mana_to_scryfall,
     parse_set_specs,
     load_mtga_cards,
+    load_scryfall_arena_map,
     compute_main_draft_sets,
 )
 
@@ -68,17 +77,38 @@ def load_existing_bundle():
         return {'setCodes': [], 'cards': {}, 'mainDraftSets': []}
 
 
+def merge_layers(existing_cards, scryfall_base, mtga_overlay, existing_set_codes, full_codes):
+    """Layer priority: the previous bundle is the fallback floor, the fresh
+    Scryfall arena-id map is the broad base layer, and this run's
+    set-specific MTGA-DB rows overlay on top for whatever Scryfall hasn't
+    linked yet. Mirrors import_set.py's runtime priority — Scryfall wins
+    when available, MTGA DB only fills the gap — so a set that's already
+    Scryfall-linked is never downgraded by the MTGA-DB pass.
+
+    Reused/shared pools (guest_filters, e.g. SPG, MAR) are intentionally
+    excluded from full_codes/setCodes by the caller — they don't fully
+    belong to one release, so they shouldn't mark themselves "done" for
+    enrichedSets bookkeeping.
+
+    Returns (merged_cards, merged_set_codes).
+    """
+    merged_cards = {**existing_cards, **scryfall_base, **mtga_overlay}
+    merged_set_codes = list(dict.fromkeys([*existing_set_codes, *full_codes]))
+    return merged_cards, merged_set_codes
+
+
 def main():
-    if len(sys.argv) not in (2, 3):
-        print('Usage: python generate_enrichment_data.py <set_specs> [<mtga_db_path>]')
+    if len(sys.argv) not in (2, 3, 4):
+        print('Usage: python generate_enrichment_data.py <set_specs> [<mtga_db_path>] [<scryfall_json_path>]')
         print('       Example: python generate_enrichment_data.py "MSH,MSC,MAR:MAR-MSH"')
         sys.exit(1)
 
     set_specs = sys.argv[1]
     full_codes, guest_filters = parse_set_specs(set_specs)
 
-    if len(sys.argv) >= 3:
-        db_path = sys.argv[2]
+    db_arg = sys.argv[2] if len(sys.argv) >= 3 else ''
+    if db_arg:
+        db_path = db_arg
     else:
         db_path = find_bundled_db()
         if not db_path:
@@ -89,6 +119,8 @@ def main():
     if not os.path.isfile(db_path):
         print(f'ERROR: File not found: {db_path}')
         sys.exit(1)
+
+    scryfall_path = sys.argv[3] if len(sys.argv) >= 4 else ''
 
     print(f'Reading MTGA DB: {os.path.basename(db_path)}')
     print(f'Set spec: {set_specs}')
@@ -110,14 +142,16 @@ def main():
             'digitalReleaseSet':  drs or '',
         }
 
-    # Merge with whatever is already in enrichment-data.json so bridging a
-    # new set never drops a previously-bridged one. Reused/shared pools
-    # (guest_filters, e.g. SPG, MAR) are intentionally excluded from
-    # setCodes — they don't fully belong to this release, so they shouldn't
-    # mark themselves "done" for enrichedSets bookkeeping.
+    scryfall_base = {}
+    if scryfall_path:
+        print(f'Reading Scryfall bulk JSON: {os.path.basename(scryfall_path)}')
+        scryfall_base = load_scryfall_arena_map(scryfall_path)
+        print(f'  {len(scryfall_base)} arena_id-linked cards found')
+
     existing = load_existing_bundle()
-    merged_cards = {**existing['cards'], **cards}
-    merged_set_codes = list(dict.fromkeys([*existing['setCodes'], *full_codes]))
+    merged_cards, merged_set_codes = merge_layers(
+        existing['cards'], scryfall_base, cards, existing['setCodes'], full_codes
+    )
 
     data = {
         'setCodes':      merged_set_codes,
@@ -129,6 +163,7 @@ def main():
         json.dump(data, f, indent=2, ensure_ascii=False)
 
     print(f'Cards added this run: {len(cards)}  ({skipped_tokens} tokens skipped)')
+    print(f'Scryfall baseline cards: {len(scryfall_base)}')
     print(f'Cards total in bundle: {len(merged_cards)}')
     print(f'Set codes in bundle:   {", ".join(merged_set_codes)}')
     print(f'Draft sets:            {len(main_sets)}')

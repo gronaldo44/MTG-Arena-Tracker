@@ -4,11 +4,16 @@
  * Set Enricher
  *
  * Merges a pre-baked card data bundle (enrichment-data.json) into the user's
- * cards.json. The pre-baked file ships with the installer; no Python or
- * SQLite is needed at runtime.
+ * cards.json. The bundle is a comprehensive baseline — every Scryfall
+ * arena_id-linked card plus whatever newest set(s) Scryfall hasn't linked
+ * yet — so this alone can bootstrap a working cards.json from nothing (a
+ * fresh install with no network on first launch) as well as top up an
+ * existing one. The pre-baked file ships with the installer; no Python or
+ * SQLite is needed at runtime. cardUpdater.js's live 24h Scryfall refresh
+ * still runs on top of whatever this produces, for freshness/corrections.
  *
  * To support the next unmapped set:
- *   1. Run:  python card-import/generate_enrichment_data.py <set_specs>
+ *   1. Run:  python card-import/generate_enrichment_data.py <set_specs> [<mtga_db_path>] [<scryfall_json_path>]
  *      e.g.: python card-import/generate_enrichment_data.py "MSH,MSC,MAR:MAR-MSH"
  *   2. Commit the updated enrichment-data.json and rebuild the installer.
  */
@@ -58,7 +63,13 @@ async function enrich(opts = {}) {
   }
 
   try {
-    const cardsData = JSON.parse(fs.readFileSync(CARDS_FILE, 'utf8'));
+    let cardsData = { cards: {} };
+    try {
+      cardsData = JSON.parse(fs.readFileSync(CARDS_FILE, 'utf8'));
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+      // No cards.json yet (fresh install) — bootstrap one from the bundle below.
+    }
     const cards = cardsData.cards || {};
 
     let added = 0;

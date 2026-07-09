@@ -38,14 +38,20 @@ function makeCardsJson(overrides = {}) {
   return JSON.stringify(merged);
 }
 
+function enoent(filePath) {
+  const err = new Error(`ENOENT: no such file or directory, open '${filePath}'`);
+  err.code = 'ENOENT';
+  return err;
+}
+
 function setupFs({ cardsJson = makeCardsJson(), enrichmentJson = JSON.stringify(ENRICHMENT_DATA) } = {}) {
   fs.readFileSync.mockImplementation(filePath => {
     if (String(filePath) === ENRICHMENT_FILE) {
-      if (enrichmentJson === null) throw new Error('ENOENT');
+      if (enrichmentJson === null) throw enoent(filePath);
       return enrichmentJson;
     }
     if (String(filePath) === CARDS_FILE) {
-      if (cardsJson === null) throw new Error('ENOENT');
+      if (cardsJson === null) throw enoent(filePath);
       return cardsJson;
     }
     return '';
@@ -220,5 +226,25 @@ describe('enrich — missing enrichment bundle', () => {
     setupFs({ cardsJson: makeCardsJson({ enrichedSets: undefined }), enrichmentJson: null });
     expect(await enrich()).toBe(false);
     expect(fs.writeFileSync).not.toHaveBeenCalled();
+  });
+});
+
+// ── enrich — bootstraps cards.json when it doesn't exist yet ──────────────
+
+describe('enrich — cards.json does not exist yet (fresh install)', () => {
+  test('returns true instead of failing on ENOENT', async () => {
+    setupFs({ cardsJson: null });
+    expect(await enrich()).toBe(true);
+  });
+
+  test('writes a brand-new cards.json built entirely from the bundle', async () => {
+    setupFs({ cardsJson: null });
+    await enrich();
+    const written = JSON.parse(fs.writeFileSync.mock.calls[0][1]);
+    expect(written.cards['102460']).toMatchObject({ name: 'Opt', manaCost: '{U}' });
+    expect(written.cards['102461']).toMatchObject({ name: 'Lightning', manaCost: '{R}' });
+    expect(written.cards['102462']).toMatchObject({ name: 'Archive', manaCost: '{W}' });
+    expect(written.mainDraftSets).toEqual(ENRICHMENT_DATA.mainDraftSets);
+    expect(written.enrichedSets).toEqual(expect.arrayContaining(['SOS', 'SOA']));
   });
 });

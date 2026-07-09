@@ -223,3 +223,34 @@ def load_scryfall_maps(scryfall_path, target_codes):
         sys.exit(1)
 
     return target_map, all_map
+
+
+def load_scryfall_arena_map(scryfall_path):
+    """Stream the full Scryfall bulk JSON and return {str(arena_id): {name, manaCost, type}}
+    for every card with a linked arena_id — the same set cardUpdater.js keeps at runtime.
+    Used to build a comprehensive enrichment bundle instead of just a single-set slice.
+    """
+    if not _scryfall_available(scryfall_path):
+        return {}
+
+    result = {}
+    open_fn = gzip.open if scryfall_path.endswith(".gz") else open
+
+    try:
+        with open_fn(scryfall_path, "rb") as f:
+            for card in ijson.items(f, "item"):
+                arena_id = card.get("arena_id")
+                if not arena_id:
+                    continue
+                result[str(arena_id)] = {
+                    "name": card.get("name", ""),
+                    "manaCost": card.get("mana_cost", ""),
+                    "type": simplify_type(card.get("type_line", "")),
+                }
+    except Exception as e:
+        print(f"\n❌ Failed to parse Scryfall JSON: {e}")
+        print("👉 Your file is likely corrupted or not actually JSON.")
+        print("👉 Re-download from https://scryfall.com/docs/api/bulk-data")
+        sys.exit(1)
+
+    return result

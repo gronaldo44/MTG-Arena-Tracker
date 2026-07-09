@@ -63,19 +63,6 @@ function loadCards() {
   }
 }
 
-function migrateCardsJson() {
-  const devPath  = path.join(__dirname, 'cards.json');
-  const userPath = path.join(app.getPath('userData'), 'cards.json');
-  if (fs.existsSync(devPath) && !fs.existsSync(userPath)) {
-    try {
-      fs.copyFileSync(devPath, userPath);
-      console.log('[Cards] Migrated cards.json to userData');
-    } catch (e) {
-      console.error('[Cards] Migration failed:', e.message);
-    }
-  }
-}
-
 // Default log path for MTG Arena on Windows
 const MTGA_LOG_DIR = path.join(
   process.env.USERPROFILE || process.env.HOME,
@@ -1094,10 +1081,10 @@ ipcMain.on('open-external', (event, url) => {
 
 
 app.whenReady().then(async () => {
-  // Point all modules that write cards.json to the writable userData directory,
-  // then migrate any existing dev-time cards.json from the project root.
+  // Point all modules that write cards.json to the writable userData directory.
+  // setEnricher can bootstrap cards.json from nothing using the bundled
+  // enrichment-data.json, so no separate dev-path migration step is needed.
   setEnricher.init(app.getPath('userData'));
-  migrateCardsJson();
 
   // Initialize dataStore and cards before creating the window so that IPC
   // handlers (list-drafts, view-draft-record, etc.) have data available when

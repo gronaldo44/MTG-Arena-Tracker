@@ -5,8 +5,15 @@ import json
 import os
 import tempfile
 
-from set_import_lib import mtga_mana_to_scryfall, strip_html, normalize_name, parse_set_specs
+from set_import_lib import (
+    mtga_mana_to_scryfall,
+    strip_html,
+    normalize_name,
+    parse_set_specs,
+    load_scryfall_arena_map,
+)
 from check_orphans import find_orphans
+from generate_enrichment_data import merge_layers
 
 
 def check(actual, expected, label):
@@ -46,6 +53,51 @@ check(
     "mixed full codes and guest filter",
 )
 check(parse_set_specs(" msh , mar:MAR-MSH "), (["MSH"], [("MAR", "MAR-MSH")]), "whitespace and case")
+
+
+# Scryfall arena-id map — only cards with a linked arena_id are kept, keyed
+# by string, with type_line simplified the same way as the MTGA-DB path
+with tempfile.TemporaryDirectory() as d:
+    scryfall_path = os.path.join(d, "scryfall.json")
+    with open(scryfall_path, "w", encoding="utf-8") as f:
+        json.dump([
+            {"arena_id": 12345, "name": "Test Bear", "mana_cost": "{2}{G}", "type_line": "Creature — Bear"},
+            {"name": "No Arena Link", "mana_cost": "{1}{U}", "type_line": "Instant"},
+            {"arena_id": 67890, "name": "Front // Back", "mana_cost": "{1}{R}",
+             "type_line": "Creature — Human Werewolf // Creature — Werewolf"},
+        ], f)
+    arena_map = load_scryfall_arena_map(scryfall_path)
+    check(set(arena_map.keys()), {"12345", "67890"}, "only arena_id-linked cards kept")
+    check(arena_map["12345"], {"name": "Test Bear", "manaCost": "{2}{G}", "type": "Creature"}, "arena map fields")
+    check(arena_map["67890"]["type"], "Creature", "type_line simplified past em dash")
+
+
+# merge_layers — Scryfall wins over the MTGA-DB fallback wherever both have
+# a card; the MTGA-DB overlay only fills gaps Scryfall doesn't cover; the
+# previous bundle is the lowest-priority fallback floor
+merged_cards, merged_codes = merge_layers(
+    existing_cards={"1": {"name": "Old Bundle Only"}, "2": {"name": "Stale MTGA Name"}},
+    scryfall_base={"2": {"name": "Fresh Scryfall Name"}},
+    mtga_overlay={"3": {"name": "New Set Card"}},
+    existing_set_codes=["SOS"],
+    full_codes=["MSH"],
+)
+check(merged_cards["1"], {"name": "Old Bundle Only"}, "previous bundle fills gaps neither fresh source covers")
+check(merged_cards["2"], {"name": "Fresh Scryfall Name"}, "Scryfall base wins over stale bundle entry")
+check(merged_cards["3"], {"name": "New Set Card"}, "MTGA overlay adds cards Scryfall doesn't have")
+check(merged_codes, ["SOS", "MSH"], "setCodes accumulate without duplicates")
+
+# MTGA overlay wins over Scryfall base for the same GrpId (shouldn't happen in
+# practice — Scryfall doesn't yet link arena_id for a brand-new set's cards —
+# but the overlay is applied last, so it should still take priority if it did)
+merged_cards, _ = merge_layers(
+    existing_cards={},
+    scryfall_base={"5": {"name": "Scryfall Version"}},
+    mtga_overlay={"5": {"name": "MTGA Version"}},
+    existing_set_codes=[],
+    full_codes=[],
+)
+check(merged_cards["5"], {"name": "MTGA Version"}, "MTGA overlay applied last wins on overlap")
 
 
 # Orphan detection — case-insensitive name matching, ignores BOM and whitespace
